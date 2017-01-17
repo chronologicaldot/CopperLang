@@ -1,0 +1,114 @@
+=====================
+2017/1/16
+v 0.11
+
+Goals:
+- Improve debugging mechanisms.
+- Finalize API.
+- Finalize core documentation.
+
+- Implemented debugging features.
+-- Added ID to FunctionContainer and made (Function*) constructor (Function*, unsigned int) for setting the ID.
+-- Added unsigned int Engine::generateFunctionID().
+-- Added void Logger::printFunctionError(unsigned int, unsigned int).
+-- Added Engine::printFunctionError(unsigned int, unsigned int) for printing function ID and bad token index.
+-- Modified Engine::FuncFound_processRunVariable() and Engine::runFunction() to save token index and use Engine::printFunctionError().
+-- Added void Engine::setStackTracePrintingEnabled(bool).
+- Changed COPPER_LANG_VERSION to 0.11.
+
+
+=====================
+2017/1/13, 2017/1/15
+v 0.1
+
+- LANG_CHANGE: Finished adding set_member() and type().
+- Fixed bug in Engine::process_sys_return() that set the last object using the param iterator when there was no parameter.
+- Fixed bug in Engine::processIfStatement() that failed to return when the function mailbox was set.
+- LANG CHANGE: Renamed "is_..." functions to "are_" functions whenever they processed more than one variable.
+-- Affected: is_fn(), is_empty(), is_bool(), is_string(), is_number().
+- Removed writeToInt(), writeToFloat(), and writeToDouble() from ObjectNumber and added getRawValue().
+- Fixed bug in Variable::getCopy() that deep copied pointers though it should only deep copy owned function containers.
+
+docs.html:
+- Added info about "end_main".
+- Added "is_owner()".
+- Added "set_member()".
+- Added "type()".
+- Changed "is_fn()", "is_empty()", "is_bool()", "is_string()", and "is_number()".
+- Minor fixes and updates.
+
+
+=====================
+2017/1/5 - 2017/1/6
+v 0.1
+
+- Changed List<T> to have and use IndexOutOfBoundsException for operator[](uint) and getFromBack(uint).
+- Changed List<T>::remove(Iter) to use NullListNodeException before attempting dereferencing the node pointer.
+- Removed List<T>::operator() ( uint, bool ).
+- Changed COPPER_VERSION to COPPER_LANG_VERSION and set it to 1.
+- Added COPPER_VIRTUAL_MACHINE_VERSION and set it to 0.11.
+- Removed stream parameter from tokenize.
+- Created blank implementations of copy constructors for Variable, Scope, and TaskFunctionFound. These are deleted when the COMPILE_FOR_C_PLUS_PLUS_11 flag is enabled.
+- Changed Logger::log functions to Logger::print.
+- Fixed bug in CharList(int) constructor that overflowed when the digit size was that of INT_MAX or close.
+- Added NumberObjectFactory and set up the Engine to use it during constructNumber. Added setter.
+- Moved const char* dataName() from class Data to class Object, and implemented empty version for FunctionContainer.
+- Added bool isObjectOfType( const Object&, const char* ).
+- Changed Object::dataName() to Object::typeName().
+- Fixed data leak of object copying:
+-- In static FunctionContainer* createInitialized(Object*), changed result.set() to result.setWithoutRef().
+-- Removed implementation of Object::copy() and implemented it for ObjectBool, ObjectString, and ObjectNumber. This is required to reduce the chance of accidental mismanagement of reference counting by object implementors.
+
+
+=====================
+2016/12/21-24, 2016/12/27-28
+v 0.1
+
+- Added constructor method CharList::CharList(const float&).
+- Added constructor method CharList::CharList(const int&).
+- Fixed String::String(float) error converting from float to string.
+- String::String(float) changed to String::String(double).
+- String::String(double) deprecated. Use CharList::CharList(double)
+- Fixed in String::operator+=() that failed to copy the second string.
+- String::operator+=() deprecated. Use CharList::append().
+- Optimized entire implementation of String::toFloat().
+- Changed String::String(uint) to String::String(int).
+- String::String(int) deprecated. Use CharList::CharList(int).
+- Added method String::operator(const CharList&).
+- Added virtual method void writeToString(String& out) to class Object.
+- Added method writeToFloat(float&) and basic implementation to Object base class and ObjectNumber.
+- LANG CHANGE: Added function "member_count", which accepts a single function and returns its scope occupancy.
+-- Added method EngineResult::Value	process_sys_member(TaskFunctionFound& task).
+-- Changed Engine::taskpushSystemFunction() and Engine::FuncFound_processRunSysFunction to process "member_count".
+- Fixed variable copying, making it deep copy.
+-- Added Variable::getCopy().
+-- Changed RefVariableStorage to perfom Variable copying in both of the initialized constructors.
+-- Changed ListVariableStorage to perform Variable copying in both of the initialized constructors.
+- LANG CHANGE: Added function "is_member", which accepts a function and string and sees if the string is a member name.
+-- Added methed EngineResult::Value	process_sys_is_member(TaskFunctionFound& task).
+-- Changed Engine::taskpushSystemFunction() and Engine::FuncFound_processRunSysFunction to process "is_member".
+- Added Object::writeToInt(int&) and basic implementation to Object base class and ObjectNumber.
+- Added Object::writeToDouble(double&) and basic implementation to Object base class and ObjectNumber.
+- Fixed bug that prevented loop termination when the return function was encountered during loop running.
+- Fixed bug that prevented if-statements from terminating when the return function was encountered during running.
+- Changed ForeignFunc::call() to use a constant list (instead of a mutable one).
+- Changed List::pop() to return void.
+- Changed alias for TT_end_main from "exit" to "end_main".
+- Added TaskResult::_done.
+- Added TT_exit and modified Engine to terminate when it encountered it in normal processing (not immediately, as with "end_main").
+- Fixed bug in Engine::FuncFound_processRunVariable() and Engine::runFunction() that used iterator for atEnd() instead of has(), like it should have.
+- LANG CHANGE: Changed name of "is_same" to "are_same" to remove confusion and indicate more than one variable is required.
+
+- Added version number.
+
+- Changed Printer::call() to use writeToString().
+- Created float math, integer math, and double math extensions.
+
+docs.html:
+- Added "member_count()".
+- Added "is_member()".
+
+=====================
+2016/12/3
+
+Technically, this project started a few months earlier and gradually picked up speed.
