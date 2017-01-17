@@ -1,0 +1,1 @@
+The tests provided in this folder are for automated verification of the functionality of the Copper virtual machine. Actual testing was done using value printing. In some cases, value printing tests are given where they may appear more honest.
