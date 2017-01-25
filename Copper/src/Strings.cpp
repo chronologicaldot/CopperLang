@@ -491,7 +491,7 @@ int String::toInt() const
 		}
 		out *= 10;
 		part = (unsigned)str[i] - '0';
-		if ( out > UINT_MAX - part ) {
+		if ( out > INT_MAX - part ) {
 			out = INT_MAX;
 			break;
 		}
@@ -503,8 +503,36 @@ int String::toInt() const
 	return ret;
 }
 
+unsigned long String::toUnsignedLong() const
+{
+	if ( len == 0 )
+		return 0;
+	unsigned long out = 0;
+	unsigned long part;
+	uint i = 0;
+	if ( str[0] == '-' ) // Awesome! Short curcuit here. Alternatively but stupidly we could return 2's compl.
+		return 0;
+	for ( ; i < len; ++i )
+	{
+		if ( str[i] == '.' ) break;
+		if ( out > ULONG_MAX / 10 ) {
+			out = ULONG_MAX;
+			break;
+		}
+		out *= 10;
+		part = (unsigned long)str[i] - '0';
+		if ( out > ULONG_MAX - part ) {
+			out = ULONG_MAX;
+			break;
+		}
+		out += part;
+	}
+	return out;
+}
+
 float String::toFloat() const
 {
+	// FIXME: Doesn't handle infinity or NaN bits.
 	if ( len == 0 )
 		return 0;
 	float little = 0;
@@ -539,6 +567,7 @@ float String::toFloat() const
 
 double String::toDouble() const
 {
+	// FIXME: Doesn't handle infinity or NaN bits.
 	if ( len == 0 )
 		return 0;
 	double little = 0;

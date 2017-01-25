@@ -59,9 +59,10 @@ public:
 	bool equals( const CharList& pList ) const;
 	bool equals( const char* pString ) const;
 	bool equalsIgnoreCase( const String& pOther ) const;
-	int toInt() const;
-	float toFloat() const;
-	double toDouble() const;
+	int toInt() const;				// DO NOT USE!
+	unsigned long toUnsignedLong() const;
+	float toFloat() const;			// DO NOT USE!
+	double toDouble() const;		// DO NOT USE!
 	void purgeNonPrintableASCII();
 	bool contains( char c ) const;
 

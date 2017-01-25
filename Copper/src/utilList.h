@@ -9,7 +9,7 @@ namespace util {
 class IndexOutOfBoundsException {};
 class NullListNodeException {};
 
-typedef unsigned int	uint;
+typedef unsigned long	uint;
 
 template<class T>
 class List

@@ -2,29 +2,30 @@
 -- Copyright 2017, Nicolaus Anderson
 
 -- Usage: premake5 --file=premake5.lua [gmake, vs2015, ..]
+-- The make config=[some configuration] requires that the configuration be in lowercase letters.
 
 workspace "Copper"
-	configurations { "ConsoleApp", "Debug_all", "Debug_fe" }
+	configurations { "ConsoleApp", "DebugAll", "DebugFe" }
 	location "build"
 
 	filter { "configurations:ConsoleApp" }
 		targetdir "bin/ConsoleApp"
 		optimize "Off"
 
-	filter { "configurations:Debug_all or Debug_fe" }
+	filter { "configurations:DebugAll or DebugFe" }
 		targetdir "bin/debug"
 --		optimize "Debug"
 
-	filter { "configurations:Debug_all" }
+	filter { "configurations:DebugAll" }
 		warnings "Extra"
 
-	filter { "configurations:Debug_all", "action:gmake" }
+	filter { "configurations:DebugAll", "action:gmake" }
 		buildoptions " -g "
 
-	filter { "configurations:Debug_fe" }
+	filter { "configurations:DebugFe" }
 		flags { "FatalWarnings" }
 
-	filter { "configurations:Debug_fe", "action:gmake" }
+	filter { "configurations:DebugFe", "action:gmake" }
 		buildoptions " -Wfatal-errors -g "
 
 project "Copper"
@@ -42,19 +43,19 @@ project "Copper"
 
 	excludes
 	{
-		"debug/RHHash_Driver.cpp"
+		"debug/**.*",
 	}
 
 	filter { "system:linux or bsd or hurd" }
 		linkoptions { " -rdynamic " }
 
-	filter { "configurations:Debug_all" }
+	filter { "configurations:DebugAll" }
 		includedirs { "debug" }
 		-- Um... I need to just append files somehow
 		files { "debug/driver.cpp" }
 		excludes { "console.cpp" }
 
-	filter { "configurations:Debug_fe" }
+	filter { "configurations:DebugFe" }
 		includedirs { "debug" }
 		-- Um... I need to just append files somehow
 		files { "debug/driver.cpp" }

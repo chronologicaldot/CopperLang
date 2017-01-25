@@ -46,11 +46,11 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_VIRTUAL_MACHINE_VERSION 0.11
+#define COPPER_VIRTUAL_MACHINE_VERSION 0.12
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 1.1
+#define COPPER_LANG_VERSION 1.2
 
 // ******* Language modifications *******
 
@@ -127,21 +127,7 @@ struct OSInfo {
 		OS_POSIX
 	};
 
-	// Alternatively, use "char" instead of size_t
-	const size_t sizeof_size_t;
-	const size_t sizeof_bool;
-	const size_t sizeof_char;
-	const size_t sizeof_short;
-	const size_t sizeof_int;
-	const size_t sizeof_long;
-
 	OSInfo()
-		: sizeof_size_t(sizeof(size_t))
-		, sizeof_bool(sizeof(bool))
-		, sizeof_char(sizeof(char))
-		, sizeof_short(sizeof(short))
-		, sizeof_int(sizeof(int))
-		, sizeof_long(sizeof(long))
 	{}
 
 	/* Checks the system's endianness.
@@ -540,6 +526,10 @@ enum TokenType {
 	/* Function declaration
 	Keyword "fn", this begins a function declaration. */
 	TT_function_declare,
+
+	/* Immediately run the function
+	Parameter-less call of a function. */
+	TT_immediate_run,
 
 	/* Name
 	Obeys name character limit (255 max). Begins with a letter and contains no special characters.
@@ -1044,20 +1034,23 @@ public:
 		if ( isNull(box) )
 			throw NullVariableException();
 
+		FunctionContainer* fc = REAL_NULL;
+
 		if ( pReuseStorage ) {
-//printf("pContainer into reusable\n");
+			pContainer->ref();
 			box->disown(this);
 			box->deref();
 			box = pContainer;
-			box->ref();
 			box->own(this);
 		} else {
-//printf("pContainer is copied\n");
-			// Data is either not owned or this is supposed to make a copy anyways
-			// Delinks from pointers (which is desired)
+			// Data is either not owned or this is supposed to make a copy anyways.
+			// Delinks from pointers (which is desired).
+			// Copy occurs here in case of assigning box's contents to itself.
+			// (See changelog.txt: 2017/1/24 v 0.12)
+			fc = (FunctionContainer*)(pContainer->copy());
 			box->disown(this);
 			box->deref();
-			box = (FunctionContainer*)(pContainer->copy());
+			box = fc;
 			box->own(this);
 		}
 	}

@@ -1,5 +1,19 @@
+====================
+2017/1/24
+v 0.12
+
+- Added String::toUnsignedLong().
+- Changed 0xffffffff comparisons with unsigned max to (unsigned int)-1.
+- LANG CHANGE: Added the immediate-run/parameterless call option.
+-- Added TT_immediate_run.
+-- Changed Engine::FuncFound_processFromStart() switch to check for it.
+-- Changed Engine::Engine::isSpecialCharacter() to translate it from the colon character.
+- Changed Variable::setFunc() to store container copy before dereferencing (for copies) and reference passed container before dereferencing (for pointers) in case of self-assignment. This does not fix a problem for normal usage (since the VM saves a reference to the data elsewhere) but would have affected deep hooks built in to the VM for IDEs.
+- Changed COPPER_LANG_VERSION to 1.2 given the syntax change significance.
+
+
 =====================
-2017/1/16
+2017/1/16 - 2017/1/16,21
 v 0.11
 
 Goals:
@@ -15,6 +29,13 @@ Goals:
 -- Modified Engine::FuncFound_processRunVariable() and Engine::runFunction() to save token index and use Engine::printFunctionError().
 -- Added void Engine::setStackTracePrintingEnabled(bool).
 - Changed COPPER_LANG_VERSION to 0.11.
+- Changed utilList.h uint from unsigned int to unsigned long.
+
+premake5.lua
+- Created premake file.
+
+To do:
+- Remove old build scripts.
 
 
 =====================

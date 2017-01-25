@@ -1270,6 +1270,7 @@ bool Engine::isSpecialCharacter( const char c, TokenType& pTokenType ) {
 	case ')': pTokenType = TT_parambody_close;			return true;
 	case '{': pTokenType = TT_body_open;				return true;
 	case '}': pTokenType = TT_body_close;				return true;
+	case ':': pTokenType = TT_immediate_run;			return true;
 	case CONSTANT_COMMENT_TOKEN: 
 				pTokenType = TT_comment;				return true;
 	// TT_string1 would allow TT_string2, but it's also a mess
@@ -1850,7 +1851,7 @@ TaskResult::Value Engine::FuncBuild_processFromBodyStart(TaskFunctionConstruct& 
 	switch( lastToken.type ) {
 	case TT_body_open:
 		task.openBodies += 1;
-		if ( task.openBodies == 0xffffffff ) {
+		if ( task.openBodies == (unsigned int)-1 ) {
 			//print( LogLevel::error, "ERROR: Too many nested bodies in given execution body." );
 			print( LogLevel::error, EngineMessage::ExceededBodyCountLimit);
 			return TaskResult::_error;
@@ -1954,6 +1955,8 @@ TaskResult::Value Engine::FuncFound_processFromStart(TaskFunctionFound& task, co
 		task.state = TASK_FF_collect_params;
 		task.openParamBodies = 1;
 		return TaskResult::_cycle;
+	case TT_immediate_run:
+		return FuncFound_processRun(task);
 	default:
 		if ( task.type == TASK_FFTYPE_variable ) {
 			lastObject.set( task.varPtr.raw()->getRawContainer() );
@@ -1998,7 +2001,7 @@ TaskResult::Value Engine::FuncFound_processAssignment(const Token& lastToken) {
 	}
 	//print( LogLevel::error, "ERROR: Invalid assignment.");
 	print( LogLevel::error, EngineMessage::InvalidAsgn );
-	//printf("[DEBUG: token id =%u\n", (unsigned int)lastToken.type); // TODO Please comment out later.
+	//printf("[DEBUG: token id =%u\n", (unsigned int)lastToken.type);
 	return TaskResult::_error;
 }
 
@@ -2051,7 +2054,7 @@ TaskResult::Value Engine::FuncFound_processCollectParams(TaskFunctionFound& task
 	switch( lastToken.type ) {
 	case TT_parambody_open:
 		task.openParamBodies += 1;
-		if ( task.openParamBodies == 0xffffffff ) {
+		if ( task.openParamBodies == (unsigned int)-1 ) {
 			//print( LogLevel::error, "ERROR: Too many open parameter bodies within parameter collection." );
 			print( LogLevel::error, EngineMessage::ExceededParamBodyCountLimit );
 			return TaskResult::_error;
