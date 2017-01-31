@@ -14,7 +14,7 @@
 //#define COPPER_USE_DEBUG_NAMES
 //#define COPPER_DEBUG_LOOP_STRUCTURE // Limits loops to 100 process() cycles
 
-#include <cstdio>
+//#include <cstdio>
 
 
 // ******* Null *******
@@ -46,7 +46,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_VIRTUAL_MACHINE_VERSION 0.12
+#define COPPER_VIRTUAL_MACHINE_VERSION 0.121
 
 // ******* Language version *******
 
@@ -64,6 +64,13 @@
 // Uncomment to allow defaulting strings to be purged of non-UTF-8 characters
 // CURRENTLY NOT IMPLEMENTED!!
 //#define COPPER_PURGE_NON_UTF8_INPUT_STRINGS
+
+// Uncomment to allow callback functions to have their own persistent scope.
+// Enabling this feature means you must save each callback FunctionContainer to a variable
+// so that its Function is not destroyed with "this" when the scope is cleared from the stack.
+// Example: [code]
+// Variable var; var.setFunc( callbackFunctionContainer );
+//#define COPPER_ENABLE_CALLBACK_THIS_POINTER
 
 // ******* Error templates *******
 
@@ -89,32 +96,6 @@ using util::CharList;
 using util::String;
 using util::RobinHoodHash;
 
-
-// ******* Constants *******
-
-// *** ATTENTION ***
-// When compiling with -Wall, GCC gives a false indicator that says these constants are not used.
-// There are actually used within the .cpp file, where they have been moved for now.
-/*
-static const char* CONSTANT_END_MAIN = "exit";
-static const char* CONSTANT_FUNCTION_DECLARE = "fn"; // "fn" is too boring. CopperLang should have lots of fun.
-static const char* CONSTANT_FUNCTION_SELF = "this"; // maybe change to "me"
-static const char* CONSTANT_FUNCTION_SUPER = "super";
-static const char* CONSTANT_FUNCTION_RETURN = "ret"; // "return" is too long.
-static const char* CONSTANT_TOKEN_IF = "if";
-static const char* CONSTANT_TOKEN_ELIF = "elif";
-static const char* CONSTANT_TOKEN_ELSE = "else";
-static const char* CONSTANT_TOKEN_LOOP = "loop";
-static const char* CONSTANT_TOKEN_ENDLOOP = "stop";
-static const char* CONSTANT_TOKEN_LOOPSKIP = "skip";
-//static const char* CONSTANT_TOKEN_OWN = "own";
-static const char* CONSTANT_TOKEN_TRUE = "true";
-static const char* CONSTANT_TOKEN_FALSE = "false";
-// Single character constants
-static const char CONSTANT_COMMENT_TOKEN = '#';
-static const char CONSTANT_STRING_TOKEN = '"';
-static const char CONSTANT_ESCAPE_CHARACTER_TOKEN = '\\';
-*/
 //-----------------
 
 struct OSInfo {
@@ -768,6 +749,10 @@ class Object : public Ref {
 protected:
 	ObjectType::Value type;
 public:
+	Object()
+		: type(ObjectType::Data)
+	{}
+
 	virtual ~Object() {}
 
 	ObjectType::Value getType() const {
@@ -786,24 +771,6 @@ public:
 		out = "{object}";
 	}
 
-/*
-	// Returns "true" if this object is a number and can be converted to int
-	virtual bool writeToInt(int& out) const {
-		out = 0;
-		return false;
-	}
-
-	// Returns "true" if this object is a number and can be converted to float
-	virtual bool writeToFloat(float& out) const {
-		out = 0;
-		return false;
-	}
-
-	virtual bool writeToDouble(double& out) const {
-		out = 0;
-		return false;
-	}
-*/
 	// Name of the data
 	/* The Data class can be extended to point to other types of data, such as huge numbers,
 	matrices, etc., and complemented by extension functions. */
@@ -1228,17 +1195,41 @@ public:
 };
 
 /*
+	Interface for all numbers.
+	This ensures all numbers will have the same functionality belonging to numbers.
+*/
+struct Number : public Data {
+	virtual ~Number() {}
+
+	virtual unsigned long getAsUnsignedLong() const = 0;
+
+	virtual const char* typeName() const {
+		return "number";
+	}
+};
+
+/*
 	Object numbers are base-10 numbers saved as strings.
 	This makes for easy integration with other libraries, like GNU MPC.
 */
-class ObjectNumber : public Data {
+class ObjectNumber : public Number {
 	String value; // Numeric-only string
+
 public:
 	 // TODO: A constructor using CharList
 
+	ObjectNumber()
+		: value()
+	{}
+
+	explicit ObjectNumber(const unsigned long pValue)
+		: value()
+	{
+		value = CharList(pValue);
+	}
+
 	explicit ObjectNumber(const String& pValue)
-		: Data()
-		, value()
+		: value()
 	{
 		// Slow constructor for long numbers, otherwise I have to create a filter in Engine::run()
 		// TODO: It should throw optional errors or print some warning message for debug,
@@ -1275,13 +1266,6 @@ public:
 		return value[index]; // Bounds checking done in String class
 	}
 
-	// Should have a getFormat() function that indicates the layout of the bytes
-	// such as ASCIInum, int, float, double
-
-	virtual const char* typeName() const {
-		return "number";
-	}
-
 	virtual void writeToString(String& out) const {
 		out = value.c_str();
 	}
@@ -1289,10 +1273,14 @@ public:
 	String& getRawValue() {
 		return value;
 	}
+
+	virtual unsigned long getAsUnsignedLong() const {
+		return value.toUnsignedLong();
+	}
 };
 
 struct NumberObjectFactory : public Ref {
-	virtual Object* createNumber(const String& pValue) {
+	virtual Number* createNumber(const String& pValue) {
 		return new ObjectNumber(pValue);
 	}
 };
@@ -1991,7 +1979,6 @@ bool isObjectEmptyFunction( const Object& pObject );
 bool isObjectBool( const Object& pObject );
 bool getBoolValue( const Object& pObject );
 bool isObjectString( const Object& pObject );
-String getStringValue( const Object& pObject );
 bool isObjectNumber( const Object& pObject );
 	// Use this for checking your own types
 bool isObjectOfType( const Object& pObject, const char* pTypeName );

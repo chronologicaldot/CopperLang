@@ -17,12 +17,13 @@ class CharList : public List<char>
 {
 public:
 	CharList();
-	CharList( const char* pString );
+	explicit CharList( const char* pString );
 	CharList( const char* pString, uint pLength );
 	CharList( const String& pString );
-	CharList( const int pValue );
-	CharList( const float pValue );
-	CharList( const double pValue );
+	explicit CharList( const int pValue );
+	explicit CharList( const unsigned long pValue );
+	explicit CharList( const float pValue );
+	explicit CharList( const double pValue );
 	~CharList();
 	CharList& operator= ( const CharList& pOther );
 	CharList& append( const CharList& pOther );

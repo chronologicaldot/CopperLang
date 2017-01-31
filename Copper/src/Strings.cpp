@@ -75,7 +75,7 @@ CharList::CharList( const int pValue )
 	int v = pValue;
 	bool flip = v < 0;
 	if ( flip ) v = -v;
-	int part = 0;
+	int part;
 	while( v > 0 ) {
 		part = v % 10;
 		push_front('0' + part);
@@ -86,6 +86,20 @@ CharList::CharList( const int pValue )
 	}
 	else if ( flip ) {
 		push_front('-');
+	}
+}
+
+CharList::CharList( const unsigned long pValue )
+{
+	unsigned long v = pValue;
+	unsigned long part;
+	while( v > 0 ) {
+		part = v % 10;
+		push_front('0' + part);
+		v = (v - part) / 10;
+	}
+	if ( pValue == 0 ) {
+		push_front('0');
 	}
 }
 

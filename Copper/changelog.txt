@@ -1,4 +1,20 @@
 ====================
+2017/1/25-30
+v 0.121
+
+- Created struct (interface) Number and changed NumberObjectFactory to use it. This interface inherits class Data (Object) and contains unsigned long getAsUnsignedLong() const.
+- Added ObjectNumber::getAsUnsignedLong().
+- Added constructor (const unsigned long) to CharList.
+- Added constructors () and (const unsigned long) to ObjectNumber.
+- Added default construction for Object that defaults the object type to data so users don't need to set it.
+- Changed all FunctionContainer constructors to set their type to ObjectType::Function.
+- LANG CHANGE: Made "this" pointer creation in runFunction optional, default off.
+-- Added define COPPER_ENABLE_CALLBACK_THIS_POINTER to allow enabling.
+- Removed function String Cu::getStringValue( const Object& ).
+- Fixed bug that prevented using the immediate-run token in a function execution body (a ={b:}). The task state needed to be set to TASK_FF_collect_params.
+
+
+====================
 2017/1/24
 v 0.12
 
@@ -13,7 +29,7 @@ v 0.12
 
 
 =====================
-2017/1/16 - 2017/1/16,21
+2017/1/16 - 2017/1/21
 v 0.11
 
 Goals:
@@ -72,7 +88,7 @@ v 0.1
 - Created blank implementations of copy constructors for Variable, Scope, and TaskFunctionFound. These are deleted when the COMPILE_FOR_C_PLUS_PLUS_11 flag is enabled.
 - Changed Logger::log functions to Logger::print.
 - Fixed bug in CharList(int) constructor that overflowed when the digit size was that of INT_MAX or close.
-- Added NumberObjectFactory and set up the Engine to use it during constructNumber. Added setter.
+- Created NumberObjectFactory and set up the Engine to use it during constructNumber. Added setter.
 - Moved const char* dataName() from class Data to class Object, and implemented empty version for FunctionContainer.
 - Added bool isObjectOfType( const Object&, const char* ).
 - Changed Object::dataName() to Object::typeName().

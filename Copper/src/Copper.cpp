@@ -7,7 +7,7 @@ namespace Cu {
 // ******* Constants *******
 static const char* CONSTANT_END_MAIN = "end_main";
 static const char* CONSTANT_EXIT = "exit";
-static const char* CONSTANT_FUNCTION_DECLARE = "fn"; // "fn" is too boring. CopperLang should have lots of fun.
+static const char* CONSTANT_FUNCTION_DECLARE = "fn"; // "fn" is boring. CopperLang should have lots of fun.
 static const char* CONSTANT_FUNCTION_SELF = "this"; // maybe change to "me"
 static const char* CONSTANT_FUNCTION_SUPER = "super";
 static const char* CONSTANT_FUNCTION_RETURN = "ret"; // "return" is too long.
@@ -17,7 +17,6 @@ static const char* CONSTANT_TOKEN_ELSE = "else";
 static const char* CONSTANT_TOKEN_LOOP = "loop";
 static const char* CONSTANT_TOKEN_ENDLOOP = "stop";
 static const char* CONSTANT_TOKEN_LOOPSKIP = "skip";
-//static const char* CONSTANT_TOKEN_OWN = "own";
 static const char* CONSTANT_TOKEN_TRUE = "true";
 static const char* CONSTANT_TOKEN_FALSE = "false";
 // Single character constants
@@ -85,6 +84,7 @@ FunctionContainer::FunctionContainer(Function* pFunction, unsigned int id)
 	, owner(REAL_NULL)
 	, ID(id)
 {
+	type = ObjectType::Function;
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer constructor (Function*) [%p]\n", (void*)this);
 #endif
@@ -97,6 +97,7 @@ FunctionContainer::FunctionContainer()
 	, owner(REAL_NULL)
 	, ID(0)
 {
+	type = ObjectType::Function;
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer constructor 2 [%p]\n", (void*)this);
 #endif
@@ -109,6 +110,7 @@ FunctionContainer::FunctionContainer(const FunctionContainer& pOther)
 	, owner(REAL_NULL)
 	, ID(pOther.ID)
 {
+	type = ObjectType::Function;
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer constructor 3 (const FunctionContainer&) [%p]\n", (void*)this);
 #endif
@@ -606,13 +608,6 @@ bool isObjectString( const Object& pObject ) {
 	return ( pObject.getType() == ObjectType::Data && util::equals( ((Data&)pObject).typeName(), "string") );
 }
 
-String getStringValue( const Object& pObject ) {
-	if ( isObjectString(pObject) ) {
-		return ((ObjectString&)pObject).getString();
-	}
-	return String();
-}
-
 bool isObjectNumber( const Object& pObject ) {
 	return ( pObject.getType() == ObjectType::Data && util::equals( ((Data&)pObject).typeName(), "number") );
 }
@@ -971,7 +966,7 @@ EngineResult::Value Engine::process( const Token& pToken )
 	// Legacy debug
 	//std::printf("[DEBUG VAR: pToken.name = %s\n", pToken.name.c_str());
 	//std::printf("[DEBUG VAR: pToken.type = %u\n", (unsigned)(pToken.type));
-	//std::printf("[DEBUG taskStack SIZE = %u\n", taskStack.size());
+	//std::printf("[DEBUG taskStack SIZE = %lu\n", taskStack.size());
 
 	// Immediate stoppage of processing.
 	if ( pToken.type == TT_end_main || systemExitTrigger ) {
@@ -1956,6 +1951,7 @@ TaskResult::Value Engine::FuncFound_processFromStart(TaskFunctionFound& task, co
 		task.openParamBodies = 1;
 		return TaskResult::_cycle;
 	case TT_immediate_run:
+		task.state = TASK_FF_collect_params;
 		return FuncFound_processRun(task);
 	default:
 		if ( task.type == TASK_FFTYPE_variable ) {
@@ -2210,8 +2206,10 @@ EngineResult::Value Engine::runFunction( FunctionContainer* pFunction, const Lis
 	}
 	// Add temporary stack context
 	stack.push();
+#ifdef COPPER_ENABLE_CALLBACK_THIS_POINTER
 	// Add self-reference to the temporary scope
 	stack.getTop().getScope().setVariableFrom(CONSTANT_FUNCTION_SELF, pFunction, true);
+#endif
 	// Add parameters to temporary scope
 	unsigned int pi=0;
 	List<Object*>::ConstIter paramsIter = pParams.constStart();
