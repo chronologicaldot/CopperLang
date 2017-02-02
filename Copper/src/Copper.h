@@ -46,7 +46,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_VIRTUAL_MACHINE_VERSION 0.121
+#define COPPER_VIRTUAL_MACHINE_VERSION 0.13
 
 // ******* Language version *******
 
@@ -346,8 +346,80 @@ struct EngineMessage {
 	SystemFunctionWrongParamCount,
 
 	// ERROR
-	// An incorrect parameter was passed to the system function.
+	// An incorrect parameter was passed to a system function.
 	SystemFunctionBadParam,
+
+	// ERROR
+	// member() was given the wrong number of parameters.
+	MemberWrongParamCount,
+
+	// ERROR
+	// First parameter passed to member() was not a function.
+	MemberParam1NotFunction,
+
+	// ERROR
+	// Destroyed function passed to member() function. Parameter was probably a pointer.
+	DestroyedFuncAsMemberParam,
+
+	// ERROR
+	// Second parameter passed to member() was not a string.
+	MemberParam2NotString,
+
+	// ERROR
+	// Invalid member name passed to member() function.
+	MemberFunctionInvalidNameParam,
+
+	// ERROR
+	// member_count() was given the wrong number of parameters.
+	MemberCountWrongParamCount,
+
+	// ERROR
+	// First parameter passed to member_count() was not a function.
+	MemberCountParam1NotFunction,
+
+	// ERROR
+	// Destroyed function passed to member_count() function. Parameter was probably a pointer.
+	DestroyedFuncAsMemberCountParam,
+
+	// ERROR
+	// is_member() was given the wrong number of parameters.
+	IsMemberWrongParamCount,
+
+	// ERROR
+	// First parameter passed to is_member() was not a function.
+	IsMemberParam1NotFunction,
+
+	// ERROR
+	// Destroyed function passed to is_member() function. Parameter was probably a pointer.
+	DestroyedFuncAsIsMemberParam,
+
+	// ERROR
+	// Second parameter passed to is_member() was not a string.
+	IsMemberParam2NotString,
+
+	// ERROR
+	// set_member() was given the wrong number of parameters.
+	SetMemberWrongParamCount,
+
+	// ERROR
+	// First parameter passed to set_member() was not a function.
+	SetMemberParam1NotFunction,
+
+	// ERROR
+	// Destroyed function passed to set_member() function. Parameter was probably a pointer.
+	DestroyedFuncAsSetMemberParam,
+
+	// ERROR
+	// Second parameter passed to set_member() was not a string.
+	SetMemberParam2NotString,
+
+	// WARNING
+	// Destroyed function passed to union() function. Parameter was probably a pointer.
+	DestroyedFuncAsUnionParam,
+
+	// WARNING
+	// A parameter passed to the union() function was not a function.
+	NonFunctionAsUnionParam,
 
 	// Total number of engine messages
 	COUNT
@@ -381,44 +453,6 @@ struct ObjectType {
 	Data
 	};
 };
-
-enum DataType {
-	DT_unknown, // usually for extensions
-	DT_bytes
-};
-
-
-/*
-	You need to think about this carefully. There are very good reasons for strict typing.
-	While strict typing is not quite allowed here, such rules are VERY necessary since people will
-	want to use them.
-	I don't really want multiple number formats competing. I want them to mesh well and treated as
-	though they were a single number type. Note that strings are also byte arrays.
-	Because of this, indexing is also something to consider. If every number is "positive", is there
-	ever negative indexing? How do you handle negative numbers? (Answered: -(0 123) or perhaps -(123))
-	How to do you prevent a value from going negative? How is negative stored?
-	There can be functions for incrementing, adding, etc., but these functions need to know how to
-	work with the data. It needs to be both powerful AND easy, otherwise all this crap will end
-	up being complicated bit-twiddling.
-*/
-/*
-struct ByteFormat {
-	enum Value {
-	// Size can be obtained via size()
-	raw=0,		// Generally unsigned integers, maybe longer.
-	boolean,	// Restricted to 0 and 1
-	nt,			// Null-terminated (generally a string)
-	i32,
-	f32,		// Generally IEEE floating-point format
-	//d32,
-	big,		// Built-in array of max size 4294967296 (or less)?
-				// - Whatever giant number library I use
-				// Note: Smaller bytes are converted up when interoperation occurs
-
-	COUNT		// NOT A TYPE - Indicates the number of possible formats
-	};
-};
-*/
 
 struct Result {
 	enum Value {
@@ -592,7 +626,9 @@ struct SystemFunction {
 	_member_count,
 	_is_member,
 	_set_member,
+	_union,
 	_type,
+	_are_same_type,
 	_are_bool,
 	_are_string,
 	_are_number,
@@ -1286,6 +1322,18 @@ struct NumberObjectFactory : public Ref {
 };
 
 
+//------------------
+
+/* To enable hooks into the engine, some functionality for returning objects via lists is needed.
+This interface stands in place for a more concrete list implementation, which would otherwise
+prohibit flexibility. */
+struct AppendObjectInterface {
+	// Append objects
+	// Implementers of this function are expected to call ref() on each object passed in.
+	virtual void append(Object* pObject)=0;
+};
+
+
 //-------------------
 
 	// External/Foreign Functions
@@ -1350,23 +1398,18 @@ public:
 // QUESTION: Should I leave the varPtr? It doesn't help anymore.
 class RefVariableStorage {
 	Variable* variable;
-	//RefPtr<Variable> varPtr;
 
 public:
 	RefVariableStorage()
 		: variable( new Variable() )
-		//: varPtr()
 	{
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 		std::printf("[DEBUG: RefVariableStorage cstor 1 [%p]\n", (void*)this);
 #endif
-		//varPtr.setWithoutRef(new Variable());
 	}
 
 	RefVariableStorage(Variable& refedVariable)
 		: variable(REAL_NULL)
-		//: variable( &refedVariable ) // <- old usage
-		//: varPtr()
 	{
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 		std::printf("[DEBUG: RefVariableStorage cstor 2 (Variable&) [%p]\n", (void*)this);
@@ -1374,15 +1417,10 @@ public:
 		// Note: Remove this line if there are copy problems.
 		// Copying should be the default, but it is expensive.
 		variable = refedVariable.getCopy();
-
-		//variable->ref();
-		//varPtr.set(&refedVariable);
 	}
 
 	RefVariableStorage(const RefVariableStorage& pOther)
 		: variable(REAL_NULL)
-		//: variable( pOther.var )
-		//: varPtr()
 	{
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 		std::printf("[DEBUG: RefVariableStorage cstor 3 (const RefVariableStorage&) [%p]\n", (void*)this);
@@ -1390,9 +1428,6 @@ public:
 		// Note: Remove this line if there are copy problems.
 		// Copying should be the default, but it is expensive.
 		variable = pOther.variable->getCopy();
-
-		//variable->ref();
-		//varPtr.set(pOther.varPtr.raw());
 	}
 
 	~RefVariableStorage() {
@@ -1426,7 +1461,6 @@ struct ListVariableStorage {
 
 	ListVariableStorage(const String& pName, Variable& pVariable)
 		: name(pName)
-		//, variable(&pVariable)
 		, variable(REAL_NULL)
 	{
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
@@ -1435,13 +1469,10 @@ struct ListVariableStorage {
 		// Note: Remove this line if there are copy problems.
 		// Copying should be the default, but it is expensive.
 		variable = pVariable.getCopy();
-
-		//variable->ref();
 	}
 
 	ListVariableStorage(const ListVariableStorage& pOther)
 		: name( pOther.name )
-		//, variable( pOther.variable )
 		, variable(REAL_NULL)
 	{
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
@@ -1450,8 +1481,6 @@ struct ListVariableStorage {
 		// Note: Remove this line if there are copy problems.
 		// Copying should be the default, but it is expensive.
 		variable = pOther.variable->getCopy();
-
-		//variable->ref();
 	}
 
 	~ListVariableStorage()
@@ -1528,6 +1557,13 @@ public:
 
 	// Sets the variable, creating the variable if it does not exist
 	void setVariableFrom(const String& pName, Object* pObject, bool pReuseStorage);
+
+	// Appends to the given list all the names of the members in this scope.
+	// Could be turned into List<Object> and return object strings but there is no built-in list class.
+	void appendNamesByInterface(AppendObjectInterface* aoi);
+
+	// Copies members from another scope to this one
+	void copyMembersFrom(Scope& pOther);
 
 	unsigned int occupancy();
 
@@ -2156,7 +2192,9 @@ private:
 	EngineResult::Value	process_sys_member_count(TaskFunctionFound& task);
 	EngineResult::Value	process_sys_is_member(TaskFunctionFound& task);
 	EngineResult::Value	process_sys_set_member(TaskFunctionFound& task);
+	void				process_sys_union(TaskFunctionFound& task);
 	void				process_sys_type(TaskFunctionFound& task);
+	void				process_sys_are_same_type(TaskFunctionFound& task);
 	void				process_sys_are_bool(TaskFunctionFound& task);
 	void				process_sys_are_string(TaskFunctionFound& task);
 	void				process_sys_are_number(TaskFunctionFound& task);

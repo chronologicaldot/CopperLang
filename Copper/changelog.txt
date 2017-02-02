@@ -1,4 +1,31 @@
 ====================
+2017/2/1
+v 0.13
+
+- Removed enum DataType.
+- Added void Scope::copyMembersFrom(Scope&).
+- Added void appendNamesToList(List<String>&).
+- Fixed unsigned int index creation to uint in Scope::copyAsgnFromHashTable().
+- LANG CHANGES:
+-- Added function "are_same_type".
+--- Changed SystemFunction to have are_same_type.
+--- Changed Engine::taskpushSystemFunction()
+--- Changed Engine::FuncFound_processRunSysFunction()
+--- Added void Engine::process_sys_are_same_type(TaskFunctionFound&)
+-- Added function "union", same way as "are_same_type".
+--- Added void process_sys_union(TaskFunctionFound&).
+- Added check for valid names in process_sys_set_member().
+- Changed process_sys_member_count() to allow passing no params to member_count().
+- Changed member, member_count, is_member, and set_member error messages.
+
+docs.html
+- Updated to include "are_same_type" and "union".
+
+EngMsgToStr.h
+- Updated engine messages.
+
+
+====================
 2017/1/25-30
 v 0.121
 

@@ -279,16 +279,122 @@ const char* getStringFromEngineMessage(const EngineMessage::Value& msg, EngineEr
 		return "Assertion failed!";
 
 	// ERROR
-	// An incorrect number of params (!=2) was passed to the member() function.
+	// An incorrect number of params (!=2) was passed to a system function.
 	case EngineMessage::SystemFunctionWrongParamCount:
 		errLevel = EngineErrorLevel::error;
-		return "Wrong number of parameters passed to system function.";
+		return "Wrong number of parameters passed to a system function.";
 
 	// ERROR
-	// An incorrect parameter was passed to the member() function.
+	// An incorrect parameter was passed to a system function.
 	case EngineMessage::SystemFunctionBadParam:
 		errLevel = EngineErrorLevel::error;
-		return "Bad parameter passed to system function.";
+		return "Bad parameter passed to a system function.";
+
+	// ERROR
+	// member() was given the wrong number of parameters.
+	case EngineMessage::MemberWrongParamCount:
+		errLevel = EngineErrorLevel::error;
+		return "Wrong number of parameters passed to member(). Should be 2.";
+
+	// ERROR
+	// First parameter passed to member() was not a function.
+	case EngineMessage::MemberParam1NotFunction:
+		errLevel = EngineErrorLevel::error;
+		return "1st parameter of member() was not a function.";
+
+	// ERROR
+	// Destroyed function passed to member() function. Parameter was probably a pointer.
+	case EngineMessage::DestroyedFuncAsMemberParam:
+		errLevel = EngineErrorLevel::error;
+		return "Destroyed function passed to member().";
+
+	// ERROR
+	// Second parameter passed to member() was not a string.
+	case EngineMessage::MemberParam2NotString:
+		errLevel = EngineErrorLevel::error;
+		return "2nd parameter passed to member() was not a string.";
+
+	// ERROR
+	// Invalid name passed to member() function.
+	case EngineMessage::MemberFunctionInvalidNameParam:
+		errLevel = EngineErrorLevel::error;
+		return "Invalid name passed as 2nd parameter to member().";
+
+	// ERROR
+	// member_count() was given the wrong number of parameters.
+	case EngineMessage::MemberCountWrongParamCount:
+		errLevel = EngineErrorLevel::error;
+		return "No parameters passed to member_count(). Default return is zero.";
+
+	// ERROR
+	// First parameter passed to member_count() was not a function.
+	case EngineMessage::MemberCountParam1NotFunction:
+		errLevel = EngineErrorLevel::error;
+		return "1st parameter of member_count() was not a function.";
+
+	// ERROR
+	// Destroyed function passed to member_count() function. Parameter was probably a pointer.
+	case EngineMessage::DestroyedFuncAsMemberCountParam:
+		errLevel = EngineErrorLevel::error;
+		return "Destroyed function passed to member_count().";
+
+	// ERROR
+	// is_member() was given the wrong number of parameters.
+	case EngineMessage::IsMemberWrongParamCount:
+		errLevel = EngineErrorLevel::error;
+		return "Wrong number of parameters passed to is_member(). Should be 2.";
+
+	// ERROR
+	// First parameter passed to is_member() was not a function.
+	case EngineMessage::IsMemberParam1NotFunction:
+		errLevel = EngineErrorLevel::error;
+		return "1st parameter of is_member() was not a function.";
+
+	// ERROR
+	// Destroyed function passed to is_member() function. Parameter was probably a pointer.
+	case EngineMessage::DestroyedFuncAsIsMemberParam:
+		errLevel = EngineErrorLevel::error;
+		return "Destroyed function passed to is_member().";
+
+	// ERROR
+	// Second parameter passed to is_member() was not a string.
+	case EngineMessage::IsMemberParam2NotString:
+		errLevel = EngineErrorLevel::error;
+		return "2nd parameter of is_member() was not a string.";
+
+	// ERROR
+	// set_member() was given the wrong number of parameters.
+	case EngineMessage::SetMemberWrongParamCount:
+		errLevel = EngineErrorLevel::error;
+		return "Wrong number of parameters passed to set_member(). Should be 3.";
+
+	// ERROR
+	// First parameter passed to set_member() was not a function.
+	case EngineMessage::SetMemberParam1NotFunction:
+		errLevel = EngineErrorLevel::error;
+		return "1st parameter of set_member() was not a function.";
+
+	// ERROR
+	// Second parameter passed to set_member() was not a string.
+	case EngineMessage::SetMemberParam2NotString:
+		errLevel = EngineErrorLevel::error;
+		return "2nd parameter of set_member() was not a string.";
+
+	// ERROR
+	// Destroyed function passed to set_member() function. Parameter was probably a pointer.
+	case EngineMessage::DestroyedFuncAsSetMemberParam:
+		errLevel = EngineErrorLevel::error;
+		return "Destroyed function passed to set_member().";
+
+	// WARNING
+	// Destroyed function passed to union() function. Parameter was probably a pointer.
+	case EngineMessage::DestroyedFuncAsUnionParam:
+		return "Destroyed function passed to union().";
+
+	// WARNING
+	// A parameter passed to the union() function was not a function.
+	case EngineMessage::NonFunctionAsUnionParam:
+		return "Param passed to union() was not a function.";
 
 	case EngineMessage::COUNT:
 		return "INFO: tick.";

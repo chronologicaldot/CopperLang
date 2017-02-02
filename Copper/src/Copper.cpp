@@ -259,7 +259,7 @@ void Scope::copyAsgnFromHashTable( RobinHoodHash<RefVariableStorage>& pTable ) {
 		robinHoodTable = new RobinHoodHash<RefVariableStorage>(pTable);
 		return;
 	} // else
-	unsigned int i=0;
+	uint i=0;
 	RobinHoodHash<RefVariableStorage>::Bucket* bucket;
 	if ( notNull(listTable) ) {
 		for(; i < pTable.getSize(); ++i) {
@@ -454,6 +454,53 @@ void Scope::setVariableFrom(const String& pName, Object* pObject, bool pReuseSto
 	} else {
 		var->reset();
 	}
+}
+
+void Scope::appendNamesByInterface(AppendObjectInterface* aoi) {
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: Scope::appendNamesToList\n");
+#endif
+	// This implementation is slow due to the need to copy strings.
+	// Saving string addresses is possible but not safe.
+	RobinHoodHash<RefVariableStorage>::Bucket* bucket;
+	Object* obj;
+	uint i=0;
+	if ( notNull(robinHoodTable) ) {
+		for(; i < robinHoodTable->getSize(); ++i) {
+			bucket = robinHoodTable->get(i);
+			if ( notNull(bucket->data) ) {
+				obj = new ObjectString(bucket->data->name);
+				aoi->append(obj);
+				obj->deref();
+			}
+		}
+		return;
+	}
+	if ( isNull(listTable) ) {
+		return;
+	}
+	List<ListVariableStorage>::Iter li = listTable->start();
+	if ( li.has() )
+	do {
+		obj = new ObjectString( (*li).name );
+		aoi->append(obj);
+		obj->deref();
+	} while( ++li );
+}
+
+void Scope::copyMembersFrom(Scope& pOther) {
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: Scope::copyMembersFrom\n");
+#endif
+	// Creating a new scope is required for proper copy construction to delink pointers
+	// Use a list version to make it easier to copy
+	Scope newScope(false);
+	newScope = pOther;
+	List<ListVariableStorage>::Iter li = newScope.listTable->start();
+	if ( li.has() )
+	do {
+		setVariable( (*li).name, &((*li).getVariable()), false );
+	} while( ++li );
 }
 
 unsigned int Scope::occupancy() {
@@ -1537,8 +1584,16 @@ bool Engine::taskpushSystemFunction( const String& pName ) {
 		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_set_member)) );
 		return true;
 	}
+	if ( pName.equals("union") ) {
+		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_union)) );
+		return true;
+	}
 	if ( pName.equals("type") ) {
 		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_type)) );
+		return true;
+	}
+	if ( pName.equals("are_same_type") ) {
+		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_are_same_type)) );
 		return true;
 	}
 	if ( pName.equals("are_bool") ) {
@@ -2322,8 +2377,14 @@ TaskResult::Value Engine::FuncFound_processRunSysFunction(TaskFunctionFound& tas
 		default: break;
 		}
 		break;
+	case SystemFunction::_union:
+		process_sys_union(task);
+		break;
 	case SystemFunction::_type:
 		process_sys_type(task);
+		break;
+	case SystemFunction::_are_same_type:
+		process_sys_are_same_type(task);
 		break;
 	case SystemFunction::_are_bool:
 		process_sys_are_bool(task);
@@ -2531,32 +2592,30 @@ EngineResult::Value	Engine::process_sys_member(TaskFunctionFound& task) {
 #endif
 	List<Object*>::Iter paramIter = task.createParamsIterator();
 	if ( !paramIter.has() || task.getParamCount() != 2 ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionWrongParamCount);
+		print(LogLevel::error, EngineMessage::MemberWrongParamCount);
 		return EngineResult::Error;
 	}
 	// First parameter is the parent function of the member sought
 	if ( ! isObjectFunction(**paramIter) ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::MemberParam1NotFunction);
 		return EngineResult::Error;
 	}
 	FunctionContainer* fc = (FunctionContainer*)(*paramIter);
 	Function* parentFunc;
 	if ( ! fc->getFunction(parentFunc) ) {
-		// Should be EngineMessage::MemberFunctionDeadFuncParam
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberParam);
 		return EngineResult::Error;
 	}
 	++paramIter;
 	// Second parameter is the name of the member
 	if ( !isObjectString(**paramIter) ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::MemberParam2NotString);
 		return EngineResult::Error;
 	}
 	ObjectString* objStr = (ObjectString*)(*paramIter);
 	String& rawStr = objStr->getString();
 	if ( ! isValidName( rawStr ) ) {
-		 // EngineMessage::Should be MemberFunctionBadNameParam
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::MemberFunctionInvalidNameParam);
 		return EngineResult::Error;
 	}
 	Variable* var;
@@ -2571,20 +2630,19 @@ EngineResult::Value Engine::process_sys_member_count(TaskFunctionFound& task) {
 #endif
 	List<Object*>::Iter paramIter = task.createParamsIterator();
 	if ( task.getParamCount() == 0 ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionWrongParamCount);
+		print(LogLevel::warning, EngineMessage::MemberCountWrongParamCount);
 		lastObject.setWithoutRef(new ObjectNumber(String("0")));
 		return EngineResult::Error;
 	}
 	// First parameter is the parent function of the members
 	if ( ! isObjectFunction(**paramIter) ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::MemberCountParam1NotFunction);
 		return EngineResult::Error;
 	}
 	Function* parentFunc;
 	FunctionContainer* fc = (FunctionContainer*)(*paramIter);
 	if ( ! fc->getFunction(parentFunc) ) {
-		// Should be EngineMessage::MemberFunctionDeadFuncParam
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberCountParam);
 		return EngineResult::Error;
 	}
 	unsigned int size = parentFunc->getPersistentScope().occupancy();
@@ -2600,27 +2658,26 @@ EngineResult::Value Engine::process_sys_is_member(TaskFunctionFound& task) {
 #endif
 	List<Object*>::Iter paramIter = task.createParamsIterator();
 	if ( task.getParamCount() != 2 ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionWrongParamCount);
+		print(LogLevel::error, EngineMessage::IsMemberWrongParamCount);
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return EngineResult::Error;
 	}
 	// First parameter is the parent function of the members
 	if ( ! isObjectFunction(**paramIter) ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::IsMemberParam1NotFunction);
 		return EngineResult::Error;
 	}
 	Function* parentFunc;
 	FunctionContainer* fc = (FunctionContainer*)(*paramIter);
 	if ( ! fc->getFunction(parentFunc) ) {
-		// Should be EngineMessage::MemberFunctionDeadFuncParam
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::DestroyedFuncAsIsMemberParam);
 		return EngineResult::Error;
 	}
 	// Second parameter should be a string
 	++paramIter;
 	bool result = false;
 	if ( ! isObjectString(**paramIter) ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::IsMemberParam2NotString);
 		return EngineResult::Error;
 	}
 	result = parentFunc->getPersistentScope().variableExists(
@@ -2631,39 +2688,72 @@ EngineResult::Value Engine::process_sys_is_member(TaskFunctionFound& task) {
 }
 
 EngineResult::Value Engine::process_sys_set_member(TaskFunctionFound& task) {
-	#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_set_member");
 #endif
 	List<Object*>::Iter paramIter = task.createParamsIterator();
 	if ( task.getParamCount() != 3 ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionWrongParamCount);
+		print(LogLevel::error, EngineMessage::SetMemberWrongParamCount);
 		lastObject.setWithoutRef(new FunctionContainer());
 		return EngineResult::Error;
 	}
 	// First parameter should be the parent function of the members
 	if ( ! isObjectFunction(**paramIter) ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::SetMemberParam1NotFunction);
 		return EngineResult::Error;
 	}
 	Function* parentFunc;
 	FunctionContainer* fc = (FunctionContainer*)(*paramIter);
 	if ( ! fc->getFunction(parentFunc) ) {
-		// Should be EngineMessage::MemberFunctionDeadFuncParam
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::DestroyedFuncAsSetMemberParam);
 		return EngineResult::Error;
 	}
 	// Second parameter should be a string
 	++paramIter;
 	if ( ! isObjectString(**paramIter) ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::SetMemberParam2NotString);
 		return EngineResult::Error;
 	}
 	String& memberName = ((ObjectString*)*paramIter)->getString();
+	if ( !isValidName(memberName) ) {
+		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		return EngineResult::Error;
+	}
 	// Third parameter can be anything
 	++paramIter;
 	parentFunc->getPersistentScope().setVariableFrom( memberName, *paramIter, false );
 	lastObject.setWithoutRef(new FunctionContainer());
 	return EngineResult::Ok;
+}
+
+void Engine::process_sys_union(TaskFunctionFound& task) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_union");
+#endif
+	List<Object*>::Iter paramIter = task.createParamsIterator();
+	if ( !paramIter.has() ) {
+		lastObject.setWithoutRef(new FunctionContainer());
+		return;
+	}
+	FunctionContainer* finalFC = new FunctionContainer();
+	Function* finalFunc;
+	finalFC->getFunction(finalFunc); // Guaranteed
+	FunctionContainer* usableFC;
+	Function* usableFunc;
+	do {
+		if ( isObjectFunction(**paramIter) ) {
+			usableFC = (FunctionContainer*)(*paramIter);
+			if ( usableFC->getFunction(usableFunc) ) {
+				finalFunc->getPersistentScope().copyMembersFrom( usableFunc->getPersistentScope() );
+			} else {
+				//print(LogLevel::warning, "Destroyed function passed to \"union\" function.");
+				print(LogLevel::warning, EngineMessage::DestroyedFuncAsUnionParam);
+			}
+		} else {
+			print(LogLevel::warning, EngineMessage::NonFunctionAsUnionParam);
+		}
+	} while( ++paramIter );
+	lastObject.set(finalFC);
 }
 
 void Engine::process_sys_type(TaskFunctionFound& task) {
@@ -2677,6 +2767,28 @@ void Engine::process_sys_type(TaskFunctionFound& task) {
 	}
 	// Get only the first parameter
 	lastObject.setWithoutRef(new ObjectString( (*paramIter)->typeName() ));
+}
+
+void Engine::process_sys_are_same_type(TaskFunctionFound& task) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_same_type");
+#endif
+	List<Object*>::Iter paramIter = task.createParamsIterator();
+	if ( !paramIter.has() ) {
+		lastObject.setWithoutRef(new FunctionContainer());
+		return;
+	}
+	// First parameter, to which all other parameters are compared
+	String first( (*paramIter)->typeName() );
+	bool same = true;
+	do {
+		if ( ! first.equals( (*paramIter)->typeName() ) ) {
+			same = false;
+			break;
+		}
+	} while( ++paramIter );
+	// Get only the first parameter
+	lastObject.setWithoutRef(new ObjectBool(same));
 }
 
 void Engine::process_sys_are_bool(TaskFunctionFound& task) {
