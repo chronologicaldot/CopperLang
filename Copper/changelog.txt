@@ -1,4 +1,29 @@
 ====================
+2017/2/2-3
+v 0.14
+
+- Fixed bug in if statements that prevented exit from being called when a global if-statement was not followed by an else-clause.
+-- Added check in performObjProcessAndCycle() to look for exit token.
+-- Fixed Engine::ifStatement_seekElse() to return TaskResult::_pop_loop so the next token would be processed.
+- Created static const char* arrays OBJECTSTRING_TYPENAME and NUMBER_TYPENAME and set them as the return strings for ObjectString and Number respectively.
+- Added const TokenType& to params of Logger::printFunctionError() and const Token& to params of Engine::printFunctionError() and used them in Engine::FuncFound_processRunVariable() and Engine::runFunction().
+- Implemented support for passing booleans, numbers, and strings as raw tokens to persistent scope parameters during function construction.
+- Capped stack size to 2000 in Engine::process() and created engine message for it.
+- Added engine debug message to Engine::handleCommentsAndStrings().
+- Renamed Engine::handleCommentsAndStrings() to handleCommentsStringsAndSpecials().
+- Added engine debug message to Engine::processTasksOnObjects().
+- Fixed identical bugs in Engine::FuncFound_processRunVariable() and Engine::runFunction() that did not reference the function body while running (causing overwritten bodies to segfault).
+- Fixed identical bugs in Engine::FuncFound_processRun() that only removed one task, even if it was not its own. There are now loops to remove all higher tasks and its own.
+-- Added bool TaskContainer::areSameTask(Task*).
+
+InStreamLogger.h
+- Updated InStreamLogger::printFunctionError().
+
+EngMsgToStr.h
+- Updated error messages to include stack overflow.
+
+
+====================
 2017/2/1
 v 0.13
 

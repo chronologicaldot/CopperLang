@@ -14,6 +14,7 @@
 //#define COPPER_USE_DEBUG_NAMES
 //#define COPPER_DEBUG_LOOP_STRUCTURE // Limits loops to 100 process() cycles
 
+//#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
 //#include <cstdio>
 
 
@@ -46,7 +47,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_VIRTUAL_MACHINE_VERSION 0.13
+#define COPPER_VIRTUAL_MACHINE_VERSION 0.14
 
 // ******* Language version *******
 
@@ -164,6 +165,10 @@ struct EngineMessage {
 
 	// C++ ERROR
 	ZeroSizeToken,
+
+	// ERROR
+	// Stack has reached its maximum amount.
+	StackOverflow,
 
 	// WARNING
 	/* Function does not exist when trying to access it via FunctionContainer.
@@ -429,24 +434,6 @@ struct EngineMessage {
 
 //--------------
 
-struct LogLevel {
-	enum Value {
-	info,
-	warning,
-	error,
-	debug
-	};
-};
-
-// Interface for a logger
-struct Logger {
-	virtual void print(const LogLevel::Value& logLevel, const char* msg)=0;
-	virtual void print(const LogLevel::Value& logLevel, const EngineMessage::Value& msg)=0;
-	virtual void printFunctionError(unsigned int functionId, unsigned int tokenIndex)=0;
-};
-
-//--------------
-
 struct ObjectType {
 	enum Value {
 	Function, // Also handles pointers
@@ -569,14 +556,8 @@ enum TokenType {
 	TT_boolean_false,
 
 	/* Number
-	Contains only numbers 0 through 9 as letters but with no indicator as to size.
-	The default used is DT_i32. */
+	Contains only numbers 0 through 9 as letters. */
 	TT_number,
-
-	/* Number with decimal
-	Contains only numbers 0 through 9 and a decimal but with no indicator as to size.
-	The default used is DT_d32 */
-	//TT_deci_number,
 
 	/* String (bit sequence)
 	Given between two quotation marks, this is a bit sequence that can be treated as a string. */
@@ -645,6 +626,26 @@ struct Token {
 
 	Token( TokenType pType, const String& pName ) : name(pName), type(pType) {}
 };
+
+//--------------
+
+struct LogLevel {
+	enum Value {
+	info,
+	warning,
+	error,
+	debug
+	};
+};
+
+// Interface for a logger
+struct Logger {
+	virtual void print(const LogLevel::Value& logLevel, const char* msg)=0;
+	virtual void print(const LogLevel::Value& logLevel, const EngineMessage::Value& msg)=0;
+	virtual void printFunctionError(unsigned int functionId, unsigned int tokenIndex, const TokenType& tokenType)=0;
+};
+
+//----------
 
 // Pre-declaration
 class Ref;
@@ -1192,6 +1193,9 @@ public:
 	}
 };
 
+
+static const char* OBJECTSTRING_TYPENAME = "string";
+
 class ObjectString : public Data {
 	String value;
 public:
@@ -1205,7 +1209,7 @@ public:
 	}
 
 	virtual const char* typeName() const {
-		return "string";
+		return OBJECTSTRING_TYPENAME;
 	}
 
 	String& getString() {
@@ -1234,13 +1238,15 @@ public:
 	Interface for all numbers.
 	This ensures all numbers will have the same functionality belonging to numbers.
 */
+static const char* NUMBER_TYPENAME = "number";
+
 struct Number : public Data {
 	virtual ~Number() {}
 
 	virtual unsigned long getAsUnsignedLong() const = 0;
 
 	virtual const char* typeName() const {
-		return "number";
+		return NUMBER_TYPENAME;
 	}
 };
 
@@ -1698,6 +1704,10 @@ public:
 
 	// returning an address prevents deleting the pointer
 	Task& getTask() { return (Task&)*task; }
+
+	bool areSameTask(Task* pOther) {
+		return task == pOther;
+	}
 };
 
 enum TaskFunctionConstructState {
@@ -2109,11 +2119,11 @@ public:
 protected:
 	void clearStacks();
 	void signalEndofProcessing();
-	void printFunctionError( unsigned int id, unsigned int tokenIdx ) const;
+	void printFunctionError( unsigned int id, unsigned int tokenIdx, const Token& token ) const;
 	TaskResult::Value processTasksOnObjects();
 	TaskResult::Value performObjProcessAndCycle(const Token& lastToken);
 	Result::Value tokenize( CharList& tokenValue, List<Token>& tokens );
-	Result::Value handleCommentsAndStrings(
+	Result::Value handleCommentsStringsAndSpecials(
 						const TokenType& tokenType,
 						CharList& tokenValue,
 						List<Token>& tokens,

@@ -763,13 +763,13 @@ void Engine::print(const LogLevel::Value& logLevel, const EngineMessage::Value& 
 #endif
 }
 
-void Engine::printFunctionError( unsigned int id, unsigned int tokenIdx ) const {
+void Engine::printFunctionError( unsigned int id, unsigned int tokenIdx, const Token& token ) const {
 	if ( notNull(logger) ) {
-		logger->printFunctionError(id, tokenIdx);
+		logger->printFunctionError(id, tokenIdx, token.type);
 	}
 #ifdef USE_CSTDIO
 	else {
-		std::fprintf(stderr, "Stack trace: fn( %u ) token( %u )", id, tokenIdx);
+		std::fprintf(stderr, "Stack trace: fn( %u ) token( %u )::id(%u)", id, tokenIdx, (unsigned int)token.type);
 	}
 #endif
 }
@@ -874,13 +874,19 @@ Result::Value Engine::tokenize( CharList& tokenValue, List<Token>& tokens ) {
 }
 
 Result::Value
-	Engine::handleCommentsAndStrings(
+	Engine::handleCommentsStringsAndSpecials(
 			const TokenType& tokenType,
 			CharList& tokenValue,
 			List<Token>& tokens,
 			ByteStream& stream )
 {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::handleCommentsStringsAndSpecials");
+#endif
 	CharList collectedValue;
+
+	const String tokenName(tokenValue);
+
 	switch( tokenType ) {
 	// Handle comments
 	case TT_comment:
@@ -966,8 +972,11 @@ EngineResult::Value Engine::run( ByteStream& stream ) {
 				}
 				tokenValue.clear();
 			}
-			// Comments and string are special cases that need to be handled immediately
-			switch( handleCommentsAndStrings(tokenType, tokenValue, tokens, stream) ) {
+//#if COPPER_DEBUG_ENGINE_MESSAGES
+			tokenValue.push_back(c);
+//#endif
+			// Comments, strings, and special chars are special cases that need to be handled immediately
+			switch( handleCommentsStringsAndSpecials(tokenType, tokenValue, tokens, stream) ) {
 			case Result::Error:
 				return EngineResult::Error;
 			default: break;
@@ -1010,10 +1019,18 @@ EngineResult::Value Engine::process( const Token& pToken )
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process");
 #endif
-	// Legacy debug
-	//std::printf("[DEBUG VAR: pToken.name = %s\n", pToken.name.c_str());
-	//std::printf("[DEBUG VAR: pToken.type = %u\n", (unsigned)(pToken.type));
-	//std::printf("[DEBUG taskStack SIZE = %lu\n", taskStack.size());
+#ifdef COPPER_PRINT_ENGINE_PROCESS_TOKENS
+	std::printf("[DEBUG VAR: pToken.name = %s\n", pToken.name.c_str());
+	std::printf("[DEBUG VAR: pToken.type = %u\n", (unsigned)(pToken.type));
+	std::printf("[DEBUG taskStack SIZE = %lu\n", taskStack.size());
+	if ( taskStack.size() > 0 )
+		std::printf("[DEBUG task id(%u)\n", (unsigned)(taskStack.getLast().getTask().name) );
+#endif
+	if ( taskStack.size() == 2000 ) {
+		clearStacks();
+		print(LogLevel::error, EngineMessage::StackOverflow);
+		return EngineResult::Error;
+	}
 
 	// Immediate stoppage of processing.
 	if ( pToken.type == TT_end_main || systemExitTrigger ) {
@@ -1099,6 +1116,9 @@ EngineResult::Value Engine::process( const Token& pToken )
 }
 
 TaskResult::Value Engine::processTasksOnObjects() {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::processTasksOnObjects");
+#endif
 	while ( taskStack.size() > 0 ) {
 		switch( processTaskOnLastObject(taskStack.getLast().getTask()) ) {
 		case TaskResult::_none:
@@ -1130,6 +1150,12 @@ TaskResult::Value Engine::performObjProcessAndCycle(const Token& lastToken) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::performObjProcessAndCycle");
 #endif
+	// Exceptional case: "exit" called.
+	if ( lastToken.type == TT_exit ) {
+		systemExitTrigger = true;
+		return TaskResult::_done;
+	}
+
 	switch( processTasksOnObjects() ) {
 	case TaskResult::_none:
 		switch( process(lastToken) ) {
@@ -1716,6 +1742,10 @@ TaskResult::Value Engine::processFunctionConstruct(TaskFunctionConstruct& task, 
 		case TT_function_declare:
 		case TT_body_open:
 		case TT_name:
+		case TT_boolean_true:
+		case TT_boolean_false:
+		case TT_number:
+		case TT_string:
 			return TaskResult::_none;
 		default:
 			//print(LogLevel::error, "ERROR: Bad token found when obtaining parameter value.");
@@ -2136,12 +2166,28 @@ TaskResult::Value Engine::FuncFound_processRun(TaskFunctionFound& task) {
 	switch(task.type) {
 	case TASK_FFTYPE_variable:
 		result = FuncFound_processRunVariable(task);
-		taskStack.pop();
+		// Must remove all active tasks inside this one.
+		while ( taskStack.size() > 0 ) {
+			if ( taskStack.getLast().areSameTask(&task) ) {
+				taskStack.pop();
+				break;
+			} else {
+				taskStack.pop();
+			}
+		}
 		return result;
 
 	case TASK_FFTYPE_cside:
 		result = FuncFound_processRunSysFunction(task);
-		taskStack.pop();
+		// Must remove all active tasks inside this one.
+		while ( taskStack.size() > 0 ) {
+			if ( taskStack.getLast().areSameTask(&task) ) {
+				taskStack.pop();
+				break;
+			} else {
+				taskStack.pop();
+			}
+		}
 		return result;
 
 	case TASK_FFTYPE_ext_cside:
@@ -2149,7 +2195,15 @@ TaskResult::Value Engine::FuncFound_processRun(TaskFunctionFound& task) {
 			if ( ! task.extFuncPtr->call(task.getParamsList(), lastObject) ) {
 				lastObject.setWithoutRef(new FunctionContainer());
 			}
-			taskStack.pop();
+			// Must remove all active tasks inside this one.
+			while ( taskStack.size() > 0 ) {
+				if ( taskStack.getLast().areSameTask(&task) ) {
+					taskStack.pop();
+					break;
+				} else {
+					taskStack.pop();
+				}
+			}
 			return TaskResult::_skip;
 		} else {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
@@ -2208,6 +2262,8 @@ TaskResult::Value Engine::FuncFound_processRunVariable(TaskFunctionFound& task) 
 		return TaskResult::_error;
 	}
 	// Run body
+	RefPtr<Body> bodyGuard;
+	bodyGuard.set(func->body.raw());
 	List<Token>::ConstIter bodyIter = func->body.raw()->getIterator();
 	unsigned int tokenIdx = 1; // for user-debugging
 	if ( bodyIter.has() ) {
@@ -2216,7 +2272,7 @@ TaskResult::Value Engine::FuncFound_processRunVariable(TaskFunctionFound& task) 
 			case EngineResult::Error:
 				// Task stack and Stack are now invalid, so use previously saved info ONLY
 				if ( stackTracePrintingEnabled )
-					printFunctionError( funcID, tokenIdx );
+					printFunctionError( funcID, tokenIdx, *bodyIter );
 				return TaskResult::_error;
 			// Only called via Engine::runFunction()
 			case EngineResult::Done:
@@ -2286,6 +2342,8 @@ EngineResult::Value Engine::runFunction( FunctionContainer* pFunction, const Lis
 		return EngineResult::Error;
 	}
 	// Run body
+	RefPtr<Body> bodyGuard;
+	bodyGuard.set(func->body.raw());
 	List<Token>::ConstIter bodyIter = func->body.raw()->getIterator();
 	unsigned int tokenIdx = 1; // for user-debugging
 	if ( bodyIter.has() ) {
@@ -2294,7 +2352,7 @@ EngineResult::Value Engine::runFunction( FunctionContainer* pFunction, const Lis
 			case EngineResult::Error:
 				// Task stack and Stack are now invalid, so use previously saved info ONLY
 				if ( stackTracePrintingEnabled )
-					printFunctionError( 0, tokenIdx );
+					printFunctionError( 0, tokenIdx, *bodyIter );
 				return EngineResult::Error;
 			// Only called via Engine::runFunction()
 			case EngineResult::Done:
@@ -3135,8 +3193,17 @@ TaskResult::Value Engine::ifStatement_seekElse(TaskIfStructure& task, const Toke
 		task.state = TASK_IF_seek_body;
 		task.condition = ! task.condition;
 	} else {
-		taskStack.pop();
-		performObjProcessAndCycle(lastToken);
+		//taskStack.pop();
+		//return performObjProcessAndCycle(lastToken);
+		/*
+		switch( process(lastToken) ) {
+		case EngineResult::Error:
+			return TaskResult::_error;
+		case EngineResult::Done:
+			return TaskResult::_done;
+		default: break;
+		}*/
+		return TaskResult::_pop_loop;
 	}
 	return TaskResult::_cycle;
 }

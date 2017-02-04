@@ -28,6 +28,11 @@ const char* getStringFromEngineMessage(const EngineMessage::Value& msg, EngineEr
 		errLevel = EngineErrorLevel::error;
 		return "Zero size token encountered.";
 
+	// ERROR
+	case EngineMessage::StackOverflow:
+		errLevel = EngineErrorLevel::error;
+		return "Stack overflow.";
+
 	// WARNING
 	/* Function does not exist when trying to access it via FunctionContainer.
 	This can occur when trying to access via a pointer. */

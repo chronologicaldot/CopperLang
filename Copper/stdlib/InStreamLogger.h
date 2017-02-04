@@ -171,8 +171,8 @@ public:
 		}
 	}
 
-	virtual void printFunctionError(unsigned int functionId, unsigned int tokenIndex) {
-		fprintf(outFile, "STACK TRACE: fn( %u ) token( %u )\n", functionId, tokenIndex);
+	virtual void printFunctionError(unsigned int functionId, unsigned int tokenIndex, const Cu::TokenType& tokenType) {
+		fprintf(outFile, "STACK TRACE: fn( %u ) token( %u ):id(%u)\n", functionId, tokenIndex, (unsigned int)tokenType);
 	}
 
 };
