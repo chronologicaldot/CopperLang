@@ -1,4 +1,26 @@
 ====================
+2017/2/6-8
+v 0.15
+
+- Removed numeric conversion functions from CharList class:
+-- explicit CharList( const int pValue )
+-- explicit CharList( const unsigned long pValue )
+-- explicit CharList( const float pValue )
+-- explicit CharList( const double pValue )
+- Fixed bug in Engine::FuncFound_processFindMember() that did not handle different types of tasks.
+-- Added error messages for opening system and opening external function scopes to engine messages enum.
+- Added debug heading message to Variable::getCopy().
+- Fixed bug in function running that prevented processes within an ending function from properly finishing.
+-- Added TT_function_end_run for indicating to tasks the end of an enclosing function.
+-- Changed Engine::interpret() recognize TT_function_end_run (unsure if this does anything).
+-- Added constructor to class Token for nameless tokens.
+-- Changed Engine::FuncFound_processRunVariable() and Engine::runFunction() to loop process with end-of-function-run tokens until the task stack returned to its pre-run size.
+
+EngMsgToStr.h
+- Updated error messages to include scope-opening errors.
+
+
+====================
 2017/2/2-3
 v 0.14
 

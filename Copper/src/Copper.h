@@ -15,7 +15,7 @@
 //#define COPPER_DEBUG_LOOP_STRUCTURE // Limits loops to 100 process() cycles
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-//#include <cstdio>
+#include <cstdio>
 
 
 // ******* Null *******
@@ -47,7 +47,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_VIRTUAL_MACHINE_VERSION 0.14
+#define COPPER_VIRTUAL_MACHINE_VERSION 0.15
 
 // ******* Language version *******
 
@@ -259,6 +259,14 @@ struct EngineMessage {
 	// ERROR
 	// Attempting to assign a pointer a non-named item.
 	PtrAssignedNonName,
+
+	// ERROR
+	// Attempting to open the scope of a system function.
+	OpeningSystemFuncScope,
+
+	// ERROR
+	// Attempting to open the scope of an extension function. Currently, this is unsupported.
+	OpeningExtensionFuncScope,
 
 	// ERROR
 	// Trying to create more bodies within a function than feasible.
@@ -533,6 +541,10 @@ enum TokenType {
 	Parameter-less call of a function. */
 	TT_immediate_run,
 
+	/* End function run
+	This is passed to all tasks that are still active when a function ends. */
+	TT_function_end_run,
+
 	/* Name
 	Obeys name character limit (255 max). Begins with a letter and contains no special characters.
 	It may have unicode characters, but not reserved or special characters. */
@@ -625,6 +637,7 @@ struct Token {
 	const TokenType type;
 
 	Token( TokenType pType, const String& pName ) : name(pName), type(pType) {}
+	Token( TokenType pType ) : name(), type(pType) {}
 };
 
 //--------------
@@ -1129,6 +1142,9 @@ public:
 	}
 
 	Variable* getCopy() {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+		std::printf("[DEBUG: Variable::getCopy [%p]\n", (void*)this);
+#endif
 		Variable* var = new Variable();
 		if ( isPointer() ) {
 			box->ref();

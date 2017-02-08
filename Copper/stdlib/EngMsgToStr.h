@@ -162,6 +162,18 @@ const char* getStringFromEngineMessage(const EngineMessage::Value& msg, EngineEr
 		return "Invalid token used for parameter value of a pointer. Variable expected.";
 
 	// ERROR
+	// Attempting to open the scope of a system function.
+	case EngineMessage::OpeningSystemFuncScope:
+		errLevel = EngineErrorLevel::error;
+		return "Invalid opening of system function scope.";
+
+	// ERROR
+	// Attempting to open the scope of an extension function. Currently, this is unsupported.
+	case EngineMessage::OpeningExtensionFuncScope:
+		errLevel = EngineErrorLevel::error;
+		return "Invalid opening of extension function scope.";
+
+	// ERROR
 	// Trying to create more bodies within a function than feasible.
 	case EngineMessage::ExceededBodyCountLimit:
 		errLevel = EngineErrorLevel::error;

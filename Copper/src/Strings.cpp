@@ -69,9 +69,10 @@ CharList::CharList( const String& pString )
 		push_back( pString[i] );
 	}
 }
-
+/*
 CharList::CharList( const int pValue )
 {
+	// FIXME: This may be slow.
 	int v = pValue;
 	bool flip = v < 0;
 	if ( flip ) v = -v;
@@ -91,6 +92,7 @@ CharList::CharList( const int pValue )
 
 CharList::CharList( const unsigned long pValue )
 {
+	// FIXME: This may be slow.
 	unsigned long v = pValue;
 	unsigned long part;
 	while( v > 0 ) {
@@ -105,6 +107,12 @@ CharList::CharList( const unsigned long pValue )
 
 CharList::CharList( const float pValue )
 {
+	// FIXME: This fails to account for large float sizes whose inaccurate precision in division
+	// can result in incorrect values.
+	// Furthermore, float values can be huge, causing this function to take a very long time to complete.
+	// The accurate alternatives are C++11's stod(), string's to_string(float) (semi-accurate),
+	// and std::ostringstream ostr; ostr << number;
+	// TODO: Remove dependencies on this function.
 	float v = pValue;
 	bool flip = false;
 	if ( v < 0 ) {
@@ -140,6 +148,12 @@ CharList::CharList( const float pValue )
 
 CharList::CharList( const double pValue )
 {
+	// FIXME: This fails to account for large double sizes whose inaccurate precision in division
+	// can result in incorrect values.
+	// Furthermore, double values can be huge, causing this function to take a very long time to complete.
+	// The accurate alternatives are C++11's stod(), string's to_string(double) (semi-accurate),
+	// and std::ostringstream ostr; ostr << number;
+	// TODO: Remove dependencies on this function.
 	double v = pValue;
 	bool flip = false;
 	if ( v < 0 ) {
@@ -172,7 +186,7 @@ CharList::CharList( const double pValue )
 	if ( flip )
 		push_front('-');
 }
-
+*/
 CharList::~CharList()
 {
 	clear();

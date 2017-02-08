@@ -1236,6 +1236,10 @@ TaskResult::Value Engine::interpret( const Token& pToken ) {
 		constructFunctionFromFN();
 		return TaskResult::_cycle;
 
+		// Only encountered by tasks within a function whose executing is ending
+	case TT_function_end_run:
+		return TaskResult::_cycle;
+
 	//---------------
 
 	case TT_if:
@@ -2112,20 +2116,40 @@ TaskResult::Value Engine::FuncFound_processFindMember(TaskFunctionFound& task, c
 	Variable* var;
 	Variable* member;
 	Function* f;
-	if ( task.varPtr.obtain(var) ) {
-		f = var->getFunction(logger);
-		f->getPersistentScope().getVariable(lastToken.name, member);
-		// Rather than replacing the TaskFunctionFound object, reuse it
-		task.state = TASK_FF_start;
-		task.superPtr.set(var);
-		task.varPtr.set(member);
-		return TaskResult::_cycle;
-	} else {
-		//print(LogLevel::error, "ERROR: Something has destroyed the current task variable.");
-		print(LogLevel::error, EngineMessage::TaskVarIsNull);
-		lastObject.setWithoutRef(new FunctionContainer());
+
+	// Oops: Needs to check for the type. CSide functions can't open a scope.
+	switch(task.type)
+	{
+	case TASK_FFTYPE_variable:
+		if ( task.varPtr.obtain(var) ) {
+			f = var->getFunction(logger);
+			f->getPersistentScope().getVariable(lastToken.name, member);
+			// Rather than replacing the TaskFunctionFound object, reuse it
+			task.state = TASK_FF_start;
+			task.superPtr.set(var);
+			task.varPtr.set(member);
+			return TaskResult::_cycle;
+		} else {
+			//print(LogLevel::error, "ERROR: Something has destroyed the current task variable.");
+			print(LogLevel::error, EngineMessage::TaskVarIsNull);
+			lastObject.setWithoutRef(new FunctionContainer());
+			return TaskResult::_error;
+		}
+	case TASK_FFTYPE_cside:
+		print(LogLevel::error, EngineMessage::OpeningSystemFuncScope);
 		return TaskResult::_error;
+
+	case TASK_FFTYPE_ext_cside:
+		// What could happen here is that the foreign function could have its own scope.
+		// This could be obtained via bool getScope(Scope*)
+		// This subscope could contain other functions.
+		// At the moment, however, there isn't much point to this.
+		print(LogLevel::error, EngineMessage::OpeningExtensionFuncScope);
+		return TaskResult::_error;
+
+	default: break;
 	}
+	return TaskResult::_error;
 }
 
 TaskResult::Value Engine::FuncFound_processCollectParams(TaskFunctionFound& task, const Token& lastToken) {
@@ -2166,28 +2190,12 @@ TaskResult::Value Engine::FuncFound_processRun(TaskFunctionFound& task) {
 	switch(task.type) {
 	case TASK_FFTYPE_variable:
 		result = FuncFound_processRunVariable(task);
-		// Must remove all active tasks inside this one.
-		while ( taskStack.size() > 0 ) {
-			if ( taskStack.getLast().areSameTask(&task) ) {
-				taskStack.pop();
-				break;
-			} else {
-				taskStack.pop();
-			}
-		}
+		taskStack.pop();
 		return result;
 
 	case TASK_FFTYPE_cside:
 		result = FuncFound_processRunSysFunction(task);
-		// Must remove all active tasks inside this one.
-		while ( taskStack.size() > 0 ) {
-			if ( taskStack.getLast().areSameTask(&task) ) {
-				taskStack.pop();
-				break;
-			} else {
-				taskStack.pop();
-			}
-		}
+		taskStack.pop();
 		return result;
 
 	case TASK_FFTYPE_ext_cside:
@@ -2195,15 +2203,7 @@ TaskResult::Value Engine::FuncFound_processRun(TaskFunctionFound& task) {
 			if ( ! task.extFuncPtr->call(task.getParamsList(), lastObject) ) {
 				lastObject.setWithoutRef(new FunctionContainer());
 			}
-			// Must remove all active tasks inside this one.
-			while ( taskStack.size() > 0 ) {
-				if ( taskStack.getLast().areSameTask(&task) ) {
-					taskStack.pop();
-					break;
-				} else {
-					taskStack.pop();
-				}
-			}
+			taskStack.pop();
 			return TaskResult::_skip;
 		} else {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
@@ -2287,6 +2287,23 @@ TaskResult::Value Engine::FuncFound_processRunVariable(TaskFunctionFound& task) 
 			tokenIdx++; // for user-debugging
 		} while ( ++bodyIter );
 	}
+	// This task is still on the task stack, and a number of tasks may not have finished.
+	// To handle these, processing is continued by passing a special token (TT_function_end_run)
+	// so that tasks can properly clean themselves up.
+	const Token endRunToken(TT_function_end_run);
+	while ( ! taskStack.getLast().areSameTask(&task) ) {
+		switch( process(endRunToken) ) {
+		case EngineResult::Error:
+			// Task stack and Stack are now invalid, so use previously saved info ONLY
+			if ( stackTracePrintingEnabled )
+				printFunctionError( funcID, tokenIdx, endRunToken );
+			return TaskResult::_error;
+		case EngineResult::Done:
+			return TaskResult::_done;
+		default: break;
+		}
+	}
+
 	stack.pop();
 	return TaskResult::_skip;
 }
@@ -2341,6 +2358,9 @@ EngineResult::Value Engine::runFunction( FunctionContainer* pFunction, const Lis
 #endif
 		return EngineResult::Error;
 	}
+	// For enabling the proper removal of tasks created within this function.
+	uint taskStackStartSize = taskStack.size();
+
 	// Run body
 	RefPtr<Body> bodyGuard;
 	bodyGuard.set(func->body.raw());
@@ -2367,6 +2387,24 @@ EngineResult::Value Engine::runFunction( FunctionContainer* pFunction, const Lis
 			tokenIdx++; // for user-debugging
 		} while ( ++bodyIter );
 	}
+	// This task is not on the task stack, but it's possible that several of its sub-tasks
+	// are and have not been completed, such as variable assignment: { this.a = a }
+	// To handle these, processing is continued by passing a special token (TT_function_end_run)
+	// so that tasks can properly clean themselves up.
+	const Token endRunToken(TT_function_end_run);
+	while ( taskStack.size() != taskStackStartSize ) {
+		switch( process(endRunToken) ) {
+		case EngineResult::Error:
+			// Task stack and Stack are now invalid, so use previously saved info ONLY
+			if ( stackTracePrintingEnabled )
+				printFunctionError( 0, tokenIdx, endRunToken );
+			return EngineResult::Error;
+		case EngineResult::Done:
+			return EngineResult::Done;
+		default: break;
+		}
+	}
+
 	stack.pop();
 	return EngineResult::Ok;
 }
