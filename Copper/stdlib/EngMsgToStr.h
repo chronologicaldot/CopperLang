@@ -70,6 +70,12 @@ const char* getStringFromEngineMessage(const EngineMessage::Value& msg, EngineEr
 		return "Unknown token encountered.";
 
 	// ERROR
+	// A token that starts with a numeric letter has been found to be not a number.
+	case EngineMessage::MalformedNumber:
+		errLevel = EngineErrorLevel::error;
+		return "Token starting with a numeric character is not a number.";
+
+	// ERROR
 	// The encountered token began like a name but wasn't valid.
 	case EngineMessage::InvalidName:
 		errLevel = EngineErrorLevel::error;

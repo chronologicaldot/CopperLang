@@ -359,12 +359,16 @@ String& String::operator= ( const String& pString )
 	len = 0;
 	delete[] str;
 	str = new char[pString.len+1];
+	char* s = str;
+	char* s2 = pString.str;
 	while ( len < pString.len )
 	{
-		str[len] = pString.str[len];
+		*s = *s2; //str[len] = pString.str[len];
 		len++;
+		++s;
+		++s2;
 	}
-	str[len] = '\0'; // only for returning as c-strings
+	*s = '\0'; //str[len] = '\0'; // only for returning as c-strings
 	return *this;
 }
 
@@ -376,11 +380,15 @@ String& String::operator= ( const char* pString )
 		len++;
 	str = new char[len+1];
 	uint i = 0;
+	char* s = str;
+	const char* s2 = pString;
 	for ( ; i < len; ++i )
 	{
-		str[i] = pString[i];
+		*s = *s2; //str[i] = pString[i];
+		++s;
+		++s2;
 	}
-	str[len] = '\0'; // only for returning as c-strings
+	*s = '\0'; //str[len] = '\0'; // only for returning as c-strings
 	return *this;
 }
 
@@ -393,13 +401,17 @@ String& String::operator= ( const CharList& pList )
 		str[0] = '\0';
 		return *this;
 	}
-	str = new char[pList.size() + 1];
+	//str = new char[pList.size() + 1];
+	len = pList.size();
+	str = new char[len + 1];
 	CharList::ConstIter i = pList.constStart();
+	char* s = str;
 	do {
-		str[len] = *i;
-		len++;
+		*s = *i; // str[len] = *i;
+		//len++; // Now is set before loop
+		++s;
 	} while ( ++i );
-	str[len] = '\0'; // only for returning as c-strings
+	*s = '\0'; //str[len] = '\0'; // only for returning as c-strings
 	return *this;
 }
 
@@ -448,11 +460,15 @@ bool String::equals( const String& pOther ) const
 	if ( len == 0 ) return true; // Both are zero and thus equal
 
 	uint i=0;
+	char* s = str;
+	char* s2 = pOther.str;
 	while( i < len )
 	{
-		if ( str[i] != pOther[i] )
+		if ( *s != *s2 )
 			return false;
 		++i;
+		++s;
+		++s2;
 	}
 	return true;
 }
@@ -466,8 +482,9 @@ bool String::equals( const CharList& pList ) const
 	} // else len > 1
 	CharList::ConstIter ci = pList.constStart();
 	uint si = 0;
-	for( ; si < len; ++si ) {
-		if ( str[si] != *ci )
+	char* s = str;
+	for( ; si < len; ++si, ++s ) {
+		if ( *s != *ci )
 			return false;
 		if ( !++ci && si+1 != len ) // reached end of CharList before String end
 			return false;
@@ -491,11 +508,15 @@ bool String::equalsIgnoreCase( const String& pOther ) const
 	if ( len == 0 ) return true; // Both are zero and thus equal
 
 	uint i = 0;
+	char* s = str;
+	char* s2 = pOther.str;
 	while( i < len )
 	{
-		if ( tolower(str[i]) != tolower(pOther[i]) )
+		if ( tolower(*s) != tolower(*s2) )
 			return false;
 		++i;
+		++s;
+		++s2;
 	}
 	return true;
 }
@@ -633,20 +654,34 @@ void String::purgeNonPrintableASCII()
 	// Using a list because we want the array to be the exact size of its occupancy
 	CharList cleaned;
 	uint i = 0;
-	for ( ; i < len; ++i) {
-		if ( str[i] >= 32 )
-			cleaned.push_back(str[i]);
+	char* s = str;
+	for ( ; i < len; ++i, ++s ) {
+		if ( *s >= 32 )
+			cleaned.push_back(*s);
 	}
 	*this = String(cleaned);
 }
 
 bool String::contains( char c ) const {
 	uint i = 0;
-	for ( ; i < len; ++i ) {
-		if ( str[i] == c )
+	char* s = str;
+	for ( ; i < len; ++i, ++s ) {
+		if ( *s == c )
 			return true;
 	}
 	return false;
+}
+
+bool String::isLiteralNumber() const {
+	uint i = 0;
+	char* s = str;
+	for ( ; i < len; ++i, ++s ) {
+		if ( *s >= '0' || *s <= '9' )
+			continue;
+		else
+			return false;
+	}
+	return true;
 }
 
 }

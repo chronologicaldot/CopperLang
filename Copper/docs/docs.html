@@ -99,7 +99,7 @@ orange { color:#ed9; }
 <a href="#intro"><li>Introduction</li></a>
 <a href="#basics"><li>Basics</li></a>
 <a href="#sysmsg"><li>System Messages</li></a>
-<a href="#cmdstruct"><li>Command Structures</li></a>
+<a href="#cntlstruct"><li>Command Structures</li></a>
 <a href="#builtin-funcs"><li>Built-in Functions</li></a>
 </ol>
 
@@ -113,7 +113,7 @@ The virtual machine is designed to be a stand-alone engine for easily embedding 
 
 <h2 id="basics">Basics</h2>
 <p>
-There is no Standard In (stdin) or "main" function. Rather, the Copper Lang engine requires that it be constantly fed a stream of characters or tokens. The program can be "ended" by running "exit" token, which clears the stack, or passing the engine the "end_main" token, which also clears the stack.
+There is no Standard In (stdin) or "main" function. Rather, the Copper Lang engine requires that it be constantly fed a stream of characters or tokens. The program can be "ended" by running the "exit" token, which clears the stack, or passing the engine the "end_main" token, which also clears the stack.
 </p>
 <p>
 Copper Lang is all about functions. User-created functions are essentially objects with two components: a persistent scope and a body of execution. By default, functions have an empty body and can be executed immediately. Bodies are constant, so they are often shared between functions in memory. Persistent scopes, however, are unique to each function. As their name implies, persistent scopes last as long as the function.
@@ -194,7 +194,7 @@ a:
 <h2 id="sysmsg">System Messages</h2>
 <h3>Errors and Warnings</h3>
 <p>
-Not all mistakes result in calamity, but they may be unintended and result in unwanted activity. Therefore, warnings are errors are treated very differently. Finally, there are always miscellaneous messages that the engine may want to pass, though they don't indicate problems. These are given as info messages.
+Not all mistakes result in calamity, but they may be unintended and result in unwanted activity. Therefore, warnings and errors are treated very differently. Finally, there are always miscellaneous messages that the engine may want to pass, though they don't indicate problems. These are given as info messages.
 </p>
 <p>
 All messages are, by default, sent to an instance of the Logger class, which can be set via the engine interface.
@@ -226,7 +226,7 @@ NOTE: Some built-in functions result in errors that, while non-fatal, would give
 For debugging purposes, the engine will send out messages to help find points of failure. These messages must be activated by preprocessor flags.
 </p>
 
-<h2 id="cmdstruct">Built-in Command Structures</h2>
+<h2 id="cntlstruct">Built-in Control Structures</h2>
 <h3>If-Statements</h3>
 <p>
 A block of code can be run under a condition using an if-statement, which is begun using the keyword "if". The keyword "if" is followed by a conditional. The conditional is enclosed in parentheses, which are then followed by a block of code to be executed if that conditional results in a boolean value of "true". Optionally following this block can be an "elif" or an "else". The "elif" keyword must be followed by a conditional in parentheses. Following this conditional is a block of code that is executed if the conditional is true and the conditional after the "if" keyword is false. Optionally, there may be an "else" keyword, which is followed by a block of code. If the previously listed conditionals fail, the block of code following the "else" is run.
@@ -465,77 +465,6 @@ It is equivalent to:
 <pre><code>not(any(x))</code></pre>
 </p>
 </div>
-
-<!--
-
-<h3>Numerical Functions</h3>
-<h4>+()</h4>
-<p>
-Accepts any number of objects. It attempts to add all of the objects and return the sum. Any objects that are not numbers are ignored. In case only one number is given, it is directly returned. If no valid numbers are given, the return is zero.
-</p>
-<h4>-()</h4>
-<p>
-Accepts any number of objects. It treats the first number found to be the minuend and all remaining numbers to be subtrahends. It returns the difference. Any objects that are not numbers are ignored. In case only one number is given, it is directly returned. If no valid numbers are given, the return is zero.
-</p>
-<h4>*()</h4>
-<p>
-Accepts any number of objects. It attempts to multiply all of the objects and return the product. Any objects that are not numbers are ignored. In case only one number is given, it is directly returned. If no valid numbers are given, the return is zero.
-</p>
-<h4>/()</h4>
-<p>
-Accepts any number of objects. It treats the first number found to be the dividend and all remaining numbers to be divisors. It returns the quotient. Any objects that are not numbers are ignored. In case only one number is given, it is directly returned. If no valid numbers are given, the return is 1.
-</p>
-<h4>%()</h4>
-<p>
-Accepts any number of objects. It returns the modulus result of the first mod the second and proceeds to perform modulus on each of the results using each remaining number. Any objects that are not numbers are ignored. In case only one number is given, it is directly returned. If no valid numbers are given, the return is zero.
-</p>
-<code>
-%(98 23 4)
-</code>
-<p>
-is the same as
-</p>
-<code>
-%(%(98 23) 4)
-</code>
-
-May recwyr language extension.
-<h4>pow</h4>
-<p>
-Accepts any number of objects. It treats the first number found to be base and all subsequent numbers to be exponents. It returns the result. Any objects that are not numbers are ignored. If no number is found, the result is 1.
-</p>
-<p>
-BEWARE: Misuse of this function can result in huge numbers and greatly slow down performance.
-</p>
-
-<h4>sin()</h4>
-<p>
-On error, returns 0 since sin(0) = 0
-</p>
-<h4>cos()</h4>
-<p>
-On error, returns 1 since cos(0) = 1
-</p>
-<h4>tan()</h4>
-<p>
-On error, returns 0, since tan(0) = 0
-</p>
-
-<h3>String Functions</h3>
-<h4>utf8()</h4>
-<p>
-Accepts a string and and index. It treats the string as full of UTF-8 characters and returns a UTF-8 character. If a character is invalid, it skips it skips the codepoint and all associated bytes associated with the code point up to that point and prints a warning. It is guaranteed to return a string.
-</p>
-<p>
-
-</p>
-<p>
-
-</p>
-<p>
-
-</p>
--->
 
 </div>
 </body>

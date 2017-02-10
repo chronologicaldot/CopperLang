@@ -15,7 +15,7 @@
 //#define COPPER_DEBUG_LOOP_STRUCTURE // Limits loops to 100 process() cycles
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-#include <cstdio>
+//#include <cstdio>
 
 
 // ******* Null *******
@@ -47,11 +47,11 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_VIRTUAL_MACHINE_VERSION 0.15
+#define COPPER_VIRTUAL_MACHINE_VERSION 0.16
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 1.2
+#define COPPER_LANG_VERSION 1.3
 
 // ******* Language modifications *******
 
@@ -72,6 +72,14 @@
 // Example: [code]
 // Variable var; var.setFunc( callbackFunctionContainer );
 //#define COPPER_ENABLE_CALLBACK_THIS_POINTER
+
+// Uncomment to allow names to contain the following special characters:
+// + - * / % ! ?
+//#define COPPER_ENABLE_EXTENDED_NAME_SET
+
+// Uncomment to enable names to contain numbers.
+// This can be overridden by a name filter function given to the engine.
+#define COPPER_ENABLE_NUMERIC_NAMES
 
 // ******* Error templates *******
 
@@ -195,6 +203,10 @@ struct EngineMessage {
 	// ERROR
 	// A token with an unpermitted arrangement of characters was encountered.
 	UnknownToken,
+
+	// ERROR
+	// A token that starts with a numeric letter has been found to be not a number.
+	MalformedNumber,
 
 	// ERROR
 	InvalidName,
@@ -2074,6 +2086,7 @@ class Engine {
 	bool ownershipChangingEnabled;
 	bool stackTracePrintingEnabled;
 	RefPtr<NumberObjectFactory> numberObjectFactoryPtr;
+	bool (* nameFilter)(const String& pName);
 
 public:
 	Engine(); // remember to initialize the logger
@@ -2098,6 +2111,13 @@ public:
 	// Note: You will need to call "deref" (on the factory) separately anyways.
 	void setNumberObjectFactory( NumberObjectFactory* pFactory ) {
 		numberObjectFactoryPtr.set(pFactory);
+	}
+
+	/* Set the filter used for checking the validity of names.
+	The filter should return true if the name is valid.
+	Such a filter can be used to check for different Unicode formats. */
+	void setNameFilter( bool(*filter)(const String&) ) {
+		nameFilter = filter;
 	}
 
 	/* Add an external/foreign function to the virtual machine, accessible from within Copper.

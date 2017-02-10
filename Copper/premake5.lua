@@ -51,12 +51,10 @@ project "Copper"
 
 	filter { "configurations:DebugAll" }
 		includedirs { "debug" }
-		-- Um... I need to just append files somehow
 		files { "debug/driver.cpp" }
 		excludes { "console.cpp" }
 
 	filter { "configurations:DebugFe" }
 		includedirs { "debug" }
-		-- Um... I need to just append files somehow
 		files { "debug/driver.cpp" }
 		excludes { "console.cpp" }

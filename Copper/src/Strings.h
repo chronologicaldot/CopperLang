@@ -66,6 +66,7 @@ public:
 	double toDouble() const;		// DO NOT USE!
 	void purgeNonPrintableASCII();
 	bool contains( char c ) const;
+	bool isLiteralNumber() const;
 
 	// Needs an equalsSubString( const String&, start, end )
 	// Needs a getSubString( start, end, String& )

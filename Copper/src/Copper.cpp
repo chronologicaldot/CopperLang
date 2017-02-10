@@ -681,6 +681,7 @@ Engine::Engine()
 	, ownershipChangingEnabled(false)
 	, stackTracePrintingEnabled(false)
 	, numberObjectFactoryPtr()
+	, nameFilter(REAL_NULL)
 {
 	// Stack scope should be initialized to the slow (linked list) version for the 1st frame.
 	stack.getBottom().replaceScope(false);
@@ -826,19 +827,12 @@ TokenType Engine::resolveTokenType( const String& pName ) {
 		return TT_boolean_false;
 
 	if ( pName[0] >= '0' && pName[0] <= '9' ) {
-		// Put in a new function if this gets too complicated
-
-		// Note: Since decimal places are read as the scope-opener, it can't be used
-		// at the beginning of a number.
-
-		// Indentify the kind of number this is.
-		// if ( pName[-1] == 'b' ) // Binary
-		// if ( pName.containsIgnoreCase("abcdef") || pName[-1] == 'h' ) // Hex (bad. hex vals could be pure #s)
-		// if ( pName.contains('.', 1) ) // Decimal number
-		// else Integer
-
-		// Default return
-		return TT_number; // Should really be a data type, not a token type
+		if ( pName.isLiteralNumber() ) {
+			return TT_number;
+		} else {
+			print(LogLevel::error, EngineMessage::MalformedNumber);
+			return TT_malformed;
+		}
 	}
 
 	// Excluding lower system characters, other characters are valid (Unicode acceptable)
@@ -1379,22 +1373,28 @@ bool Engine::isValidNameCharacter( const char c ) const {
 	switch(c) {
 	case '_':
 		return true;
-	//case '+':
-	//	return true;
-	//case '-':
-	//	return true;
-	//case '*':
-	//	return true;
-	//case '/':
-	//	return true;
-	//case '%':
-	//	return true;
-	//case '!':
-	//	return true;
-	//case '?':
-	//	return true;
+#ifdef COPPER_ENABLE_EXTENDED_NAME_SET
+	case '+':
+		return true;
+	case '-':
+		return true;
+	case '*':
+		return true;
+	case '/':
+		return true;
+	case '%':
+		return true;
+	case '!':
+		return true;
+	case '?':
+		return true;
+#endif
 	default:
-		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+#ifdef COPPER_ENABLE_NUMERIC_NAMES
+				|| (c >= '0' && c <= '9')
+#endif
+				;
 	}
 	//return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
@@ -1402,12 +1402,14 @@ bool Engine::isValidNameCharacter( const char c ) const {
 bool Engine::isValidName( const String& pName ) const {
 	//if ( pName.size() > 256 )
 	//	return false;
-
+		// For checking Unicode if desired
+	if ( nameFilter ) {
+		return nameFilter(pName);
+	}
 	unsigned int i=0;
 	for (; i < pName.size(); ++i ) {
 		if ( isValidNameCharacter(pName[i]) )
 			continue;
-		// TODO: Should check for valid Unicode, but that means bringing in a lib or making a custom one.
 		// TODO: I need to block invisible and undefined/nonprintable characters.
 		return false; // Otherwise, invalid character
 	}
@@ -1499,17 +1501,6 @@ void Engine::constructString(const String& value) {
 #endif
 	// Should actually check for unicode-only text.
 	// But this can also be done by purging the string.
-/*
-	ObjectString* objStr;
-	switch( ObjectString::createUTF8String(value, objStr) ) {
-	case Result::Ok:
-		lastObjectsetWithoutRef(objStr);
-		return Result::Ok;
-	case Result::Error:
-		print(LogLevel::Error, EngineMessage::InvalidUTF8String
-		return Result::Error;
-	}
-*/
 #ifdef COPPER_PURGE_NON_PRINTABLE_ASCII_INPUT_STRINGS
 	ObjectString* objStr = new ObjectString(value);
 	objStr->purgeNonPrintableASCII();
@@ -1517,15 +1508,6 @@ void Engine::constructString(const String& value) {
 #else
 	lastObject.setWithoutRef( new ObjectString(value) );
 #endif
-/*
-#ifdef COPPER_PURGE_NON_UTF8_INPUT_STRINGS
-	ObjectString* objStr = new ObjectString(value);
-	objStr->purgeNonUTF8();
-	lastObject.setWithoutRef( objStr );
-#else
-	lastObject.setWithoutRef( new ObjectString(value) );
-#endif
-*/
 }
 
 void Engine::constructNumber(const String& value) {
