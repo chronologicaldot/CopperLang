@@ -1,4 +1,25 @@
 ====================
+2017/2/12
+v 1-0.16
+
+Now on branch "fn".
+
+This is the old syntax preservation branch using the keyword "fn" for creating functions. There are five ways to create functions in this branch, outlined in docs/docs.html.
+Extensions in this branch use the old naming conventions, including the exclusion of numbers and special symbols in names.
+
+- Defined COPPER_VIRTUAL_MACHINE_BRANCH as 1.
+
+
+====================
+2017/2/10
+v 0.16
+
+- Minor adjustments to #defines in Copper.h, making undefining easier from outside the Copper.h file.
+
+- Now tracking extensions in outer folder CopperLang/ext.
+- Now tracking README.md.
+
+====================
 2017/2/9
 v 0.16
 

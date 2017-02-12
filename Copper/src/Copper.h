@@ -1,7 +1,7 @@
-// Copyright 2016 Nicolaus Anderson
+// Copyright 2016-2017 Nicolaus Anderson
 
-#ifndef COPPER_LANG_2016
-#define COPPER_LANG_2016
+#ifndef COPPER_LANG_H
+#define COPPER_LANG_H
 
 // ******* Debug *******
 
@@ -48,6 +48,7 @@
 // ******* Virtual machine version *******
 
 #define COPPER_VIRTUAL_MACHINE_VERSION 0.16
+#define COPPER_VIRTUAL_MACHINE_BRANCH 1
 
 // ******* Language version *******
 
@@ -61,10 +62,6 @@
 
 // Uncomment to prevent the creation of non-ASCII strings
 //#define COPPER_PURGE_NON_PRINTABLE_ASCII_INPUT_STRINGS
-
-// Uncomment to allow defaulting strings to be purged of non-UTF-8 characters
-// CURRENTLY NOT IMPLEMENTED!!
-//#define COPPER_PURGE_NON_UTF8_INPUT_STRINGS
 
 // Uncomment to allow callback functions to have their own persistent scope.
 // Enabling this feature means you must save each callback FunctionContainer to a variable
@@ -80,6 +77,10 @@
 // Uncomment to enable names to contain numbers.
 // This can be overridden by a name filter function given to the engine.
 #define COPPER_ENABLE_NUMERIC_NAMES
+
+#ifdef UNDEF_COPPER_ENABLE_NUMERIC_NAMES
+#undef COPPER_ENABLE_NUMERIC_NAMES
+#endif
 
 // ******* Error templates *******
 
