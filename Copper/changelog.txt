@@ -1,13 +1,30 @@
 ====================
 2017/2/12
-v 1-0.16
+v 2-0.17
 
-Now on branch "fn".
+Now on branch "master".
 
-This is the old syntax preservation branch using the keyword "fn" for creating functions. There are five ways to create functions in this branch, outlined in docs/docs.html.
-Extensions in this branch use the old naming conventions, including the exclusion of numbers and special symbols in names.
+This is the new master branch with syntax changes. The key change is the creation of functions using square brackets instead of "fn". Details will be outlined in docs/docs.html.
+Extensions in this branch may use new naming conventions, including the inclusion of numbers and special symbols in names.
 
-- Defined COPPER_VIRTUAL_MACHINE_BRANCH as 1.
+- Defined COPPER_VIRTUAL_MACHINE_BRANCH as 2.
+- Removed #define COPPER_SHORT_CIRCUIT_FN for enabling short-circuit of function creating using "fn".
+- Made #define COPPER_ENABLE_EXTENDED_NAME_SET on by default and added undef macro for disabling it.
+- Changed COPPER_LANG_VERSION to 2.
+- Changed function creation.
+-- Added TT_objectbody_open and TT_objectbody_close.
+-- Removed TASK_FCS_from_fn.
+-- Changed Engine::constructFunctionFromFN() to Engine::constructFunctionFromObjBody().
+-- Changed Engine::interpret() case TT_function_declare to use TT_objectbody_open.
+-- Changed Engine::isSpecialCharacter() to look for square brackets and label them TT_objectbody_open,close.
+-- Changed Engine::FuncBuild_processAtParamCollect() to use TT_objectbody_close.
+-- Removed Engine::FuncBuild_processFromFn().
+-- Changed Engine::processFunctionConstruct() to not use TASK_FCS_from_fn.
+-- Removed static const char* CONSTANT_FUNCTION_DECLARE.
+-- Removed check for CONSTANT_FUNCTION_DECLARE in Engine::resolveTokenType().
+-- Changed Engine::FuncFound_processAssignment() to use TT_objectbody_open in place of TT_function_declare.
+-- Removed TT_function_declare.
+-- Changed Engine::processFunctionConstruct() to check for TT_objectbody_open in place of TT_function_declare in case TASK_FCS_param_value.
 
 
 ====================
@@ -18,6 +35,7 @@ v 0.16
 
 - Now tracking extensions in outer folder CopperLang/ext.
 - Now tracking README.md.
+
 
 ====================
 2017/2/9

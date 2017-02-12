@@ -7,7 +7,6 @@ namespace Cu {
 // ******* Constants *******
 static const char* CONSTANT_END_MAIN = "end_main";
 static const char* CONSTANT_EXIT = "exit";
-static const char* CONSTANT_FUNCTION_DECLARE = "fn"; // "fn" is boring. CopperLang should have lots of fun.
 static const char* CONSTANT_FUNCTION_SELF = "this"; // maybe change to "me"
 static const char* CONSTANT_FUNCTION_SUPER = "super";
 static const char* CONSTANT_FUNCTION_RETURN = "ret"; // "return" is too long.
@@ -807,8 +806,6 @@ TokenType Engine::resolveTokenType( const String& pName ) {
 		return TT_end_main;
 	if ( pName.equals(CONSTANT_EXIT) )
 		return TT_exit;
-	if ( pName.equals(CONSTANT_FUNCTION_DECLARE) )
-		return TT_function_declare;
 	if ( pName.equals(CONSTANT_TOKEN_IF) )
 		return TT_if;
 	if ( pName.equals(CONSTANT_TOKEN_ELIF) )
@@ -1226,8 +1223,8 @@ TaskResult::Value Engine::interpret( const Token& pToken ) {
 		return TaskResult::_error;
 
 	//---------------
-	case TT_function_declare:
-		constructFunctionFromFN();
+	case TT_objectbody_open:
+		constructFunctionFromObjBody();
 		return TaskResult::_cycle;
 
 		// Only encountered by tasks within a function whose executing is ending
@@ -1315,18 +1312,6 @@ bool Engine::isWhitespace( const char c ) const {
 }
 
 bool Engine::isSpecialCharacter( const char c, TokenType& pTokenType ) {
-	//unsigned int i=0;
-	// The only special characters I really need are:
-	// ,=.~(){}";
-	// ... the slash being for comments.
-	// The others can be inferred. If I wanted, maybe I could have a function named "a+b"
-	//static const char* specialChars = ",=.~(){}\";"; // Should be \0 terminated.
-	//for (; specialChars[i] != '\0'; ++i) {
-	//	if ( specialChars[i] == c )
-	//		return true;
-	//}
-	//return false;
-
 	switch( c ) {
 	case ',': pTokenType = TT_end_segment;				return true;
 	case '=': pTokenType = TT_assignment;				return true;
@@ -1336,6 +1321,8 @@ bool Engine::isSpecialCharacter( const char c, TokenType& pTokenType ) {
 	case ')': pTokenType = TT_parambody_close;			return true;
 	case '{': pTokenType = TT_body_open;				return true;
 	case '}': pTokenType = TT_body_close;				return true;
+	case '[': pTokenType = TT_objectbody_open;			return true;
+	case ']': pTokenType = TT_objectbody_close;			return true;
 	case ':': pTokenType = TT_immediate_run;			return true;
 	case CONSTANT_COMMENT_TOKEN: 
 				pTokenType = TT_comment;				return true;
@@ -1481,11 +1468,11 @@ void Engine::processBodyOpen() {
 	taskStack.push_back( TaskContainer(new TaskFunctionConstruct(TASK_FCS_from_bodystart)) );
 }
 
-void Engine::constructFunctionFromFN() {
+void Engine::constructFunctionFromObjBody() {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::constructFunctionFromFN");
+	print(LogLevel::debug, "[DEBUG: Engine::constructFunctionFromObjBody");
 #endif
-	taskStack.push_back( TaskContainer(new TaskFunctionConstruct(TASK_FCS_from_fn)) );
+	taskStack.push_back( TaskContainer(new TaskFunctionConstruct(TASK_FCS_param_collect)) );
 }
 
 void Engine::constructBoolean(bool value) {
@@ -1714,9 +1701,6 @@ TaskResult::Value Engine::processFunctionConstruct(TaskFunctionConstruct& task, 
 	print(LogLevel::debug, "[DEBUG: Engine::processFunctionConstruct");
 #endif
 	switch(task.state ) {
-	case TASK_FCS_from_fn:
-		return FuncBuild_processFromFn(task, lastToken);
-
 	case TASK_FCS_param_collect:
 		return FuncBuild_processAtParamCollect(task, lastToken);
 
@@ -1725,7 +1709,7 @@ TaskResult::Value Engine::processFunctionConstruct(TaskFunctionConstruct& task, 
 		// for assignment, the next token type must be one of the following:
 		// a name, function start, body start
 		switch( lastToken.type ) {
-		case TT_function_declare:
+		case TT_objectbody_open:
 		case TT_body_open:
 		case TT_name:
 		case TT_boolean_true:
@@ -1779,36 +1763,6 @@ TaskResult::Value Engine::processObjForFunctionConstruct(TaskFunctionConstruct& 
 	}
 }
 
-TaskResult::Value Engine::FuncBuild_processFromFn(TaskFunctionConstruct& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncBuild_processFromFn");
-#endif
-	// From the beginning of the function declaration
-	// "fn" has been found already, initiating this task.
-	switch( lastToken.type ) {
-	case TT_parambody_open:
-		task.state = TASK_FCS_param_collect;
-		return TaskResult::_cycle;
-	case TT_body_open:
-		// Parameter-less body
-		task.openBodies = 1;
-		task.state = TASK_FCS_from_bodystart;
-		return TaskResult::_cycle;
-	default:
-#ifdef COPPER_SHORT_CIRCUIT_FN
-		// Short circuit (unconventional)
-		// Must pop this task before proceeding
-		taskStack.pop();
-		lastObject.setWithoutRef(new FunctionContainer());
-		return performObjProcessAndCycle(lastToken);
-#else
-		//print(LogLevel::error, "ERROR: Bad token after function start.");
-		print(LogLevel::error, EngineMessage::InvalidTokenAtFunctionStart);
-		return TaskResult::_error;
-#endif
-	}
-}
-
 TaskResult::Value Engine::FuncBuild_processAtParamCollect(TaskFunctionConstruct& task, const Token& lastToken) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::FuncBuild_processAtParamCollect");
@@ -1849,7 +1803,7 @@ TaskResult::Value Engine::FuncBuild_processAtParamCollect(TaskFunctionConstruct&
 		//print(LogLevel::error, "ERROR: Found alternate processing body among newly constructed function parameter names.");
 		print(LogLevel::error, EngineMessage::OrphanParamBodyOpener); // It may be best to give this its own unique error message.
 		return TaskResult::_error;
-	case TT_parambody_close: // ')'
+	case TT_objectbody_close: // ')'
 		// Is this right?
 		if ( task.hasOpenParam ) {
 			task.function->params.push_back( task.paramName );
@@ -2056,7 +2010,7 @@ TaskResult::Value Engine::FuncFound_processAssignment(const Token& lastToken) {
 #endif
 	switch( lastToken.type ) {
 	case TT_body_open:
-	case TT_function_declare:
+	case TT_objectbody_open:
 	case TT_name:
 	case TT_boolean_true:
 	case TT_boolean_false:

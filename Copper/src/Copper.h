@@ -47,18 +47,14 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_VIRTUAL_MACHINE_VERSION 0.16
-#define COPPER_VIRTUAL_MACHINE_BRANCH 1
+#define COPPER_VIRTUAL_MACHINE_VERSION 0.17
+#define COPPER_VIRTUAL_MACHINE_BRANCH 2
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 1.3
+#define COPPER_LANG_VERSION 2.0
 
 // ******* Language modifications *******
-
-// Uncomment to allow creating functions via short-circuiting at "fn", as in:
-// a = fn
-#define COPPER_SHORT_CIRCUIT_FN
 
 // Uncomment to prevent the creation of non-ASCII strings
 //#define COPPER_PURGE_NON_PRINTABLE_ASCII_INPUT_STRINGS
@@ -72,7 +68,11 @@
 
 // Uncomment to allow names to contain the following special characters:
 // + - * / % ! ?
-//#define COPPER_ENABLE_EXTENDED_NAME_SET
+#define COPPER_ENABLE_EXTENDED_NAME_SET
+
+#ifdef UNDEF_COPPER_ENABLE_EXTENDED_NAME_SET
+#undef COPPER_ENABLE_EXTENDED_NAME_SET
+#endif
 
 // Uncomment to enable names to contain numbers.
 // This can be overridden by a name filter function given to the engine.
@@ -528,27 +528,26 @@ enum TokenType {
 	TT_member_link,
 
 	/* Param body open and close
-	On their own, these merely allow processing to proceed.
-	Treating them like tuples causes unexpected behaviour for single-item tuples, as well as
-	creates ambiguous-looking code.
-	The closing token doubles as an end-statement token.
-	Following functio headers, they are used merely as bookends for accumulating parameters, esp.
-	since function headers have special syntax (for initializers). */
+	These are used for collecting parameters for a function call.
+	These are defined to be parentheses (). */
 	TT_parambody_open,
 	TT_parambody_close,
 
 	/* Function body open and close
 	Used exclusively for creating function bodies. There are four valid ways to create a function:
-	a = 5 // Constant-return function, created from a chunk of data
-	a = {} // Basic, parameter-less function, created from body brackets
-	a = fn {} // Basic, parameter-less function, created from "fn" keyword
-	a = fn() {} // Basic, parameter-less function, created from "fn" keyword */
+	a = 5		// Constant-return function, created from a chunk of data.
+	a = {}		// Basic, parameter-less function, created from body brackets.
+	a = [] {}	// Basic, parameter-less function, created from "[]".
+	a = []		// Basic, parameter-less function, created from "[]". */
 	TT_body_open,
 	TT_body_close,
 
-	/* Function declaration
-	Keyword "fn", this begins a function declaration. */
-	TT_function_declare,
+	/* Object-body open and close
+	Used for associating values with persistent scope variables in a function construction
+	and/or for listing the names of parameters passed to the function.
+	These are defined to be square brackets []. */
+	TT_objectbody_open,
+	TT_objectbody_close,
 
 	/* Immediately run the function
 	Parameter-less call of a function. */
@@ -1740,7 +1739,6 @@ public:
 };
 
 enum TaskFunctionConstructState {
-	TASK_FCS_from_fn,
 	TASK_FCS_param_collect,		// Collecting parameter names
 	TASK_FCS_param_value,		// Collecting parameter value (for an instantiated parameter)
 	TASK_FCS_param_ptr_value,	// Collecting parameter pointer value (for an instantiated parameter)
@@ -2179,7 +2177,7 @@ protected:
 
 	// For the individual token types
 	void processBodyOpen();
-	void constructFunctionFromFN();
+	void constructFunctionFromObjBody();
 	void processFunctionReturn();
 	void constructBoolean(bool value);
 	void constructString(const String& value);
@@ -2210,7 +2208,6 @@ private:
 		dropping references (reference counting).
 	*/
 
-	TaskResult::Value	FuncBuild_processFromFn(TaskFunctionConstruct& task, const Token& lastToken);
 	TaskResult::Value	FuncBuild_processAtParamCollect(TaskFunctionConstruct& task, const Token& lastToken);
 	TaskResult::Value	FuncBuild_processCollectPointerValue(const Token& lastToken);
 	TaskResult::Value	FuncBuild_processEndParamCollect(TaskFunctionConstruct& task, const Token& lastToken);
