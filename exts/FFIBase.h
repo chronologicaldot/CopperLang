@@ -8,6 +8,11 @@ namespace FFI {
 
 void printWarning(Logger* logger, const char* msg);
 
+typedef const util::List<Object*>				constParamsList;
+typedef util::List<Object*>::ConstIter			constParamsIter;
+typedef RefPtr<Object>							CallResult;
+
+
 // Base foreign function class with build-in printing function
 class Base : public ForeignFunc {
 protected:
@@ -47,7 +52,7 @@ public:
 };
 
 // Function-wrapper class
-// Useful for functions that perform generic, failsafe operations.
+// Useful for functions that perform generic, fail-safe operations.
 class Wrapper : public ForeignFunc {
 	bool (*calling)(const util::List<Object*>&, RefPtr<Object>&);
 
@@ -60,6 +65,7 @@ public:
 		return calling(params, result);
 	}
 };
+
 
 // Convenience method for adding functions to the engine
 void simpleFunctionAdd(
@@ -75,7 +81,6 @@ void simpleFunctionAdd(
 			bool (*callable)(const util::List<Object*>&, RefPtr<Object>&, Logger*),
 			Logger* logger
 		);
-
 }}
 
 #endif

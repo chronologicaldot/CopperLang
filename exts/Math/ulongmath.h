@@ -39,6 +39,8 @@ ulong multiply(ulong, ulong, Logger*);
 ulong divide(ulong, ulong, Logger*);
 ulong power(ulong, ulong, Logger*);
 ulong mod(ulong, ulong, Logger*);
+ulong pick_max(ulong, ulong, Logger*);
+ulong pick_min(ulong, ulong, Logger*);
 
 class ULong : public BasicPrimitive {
 	ulong value;
@@ -125,7 +127,7 @@ struct SingleOperation : public Base {
 
 	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
 };
-
+/*
 struct SingleParamOperation : public Base {
 	ulong (*operation)(ulong, Logger*);
 
@@ -135,7 +137,7 @@ struct SingleParamOperation : public Base {
 	{}
 
 	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
-};
+};*/
 
 // ULong Average
 struct Avg : public Base {
@@ -145,6 +147,8 @@ struct Avg : public Base {
 
 	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
 };
+
+bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logger );
 
 }}}
 #endif

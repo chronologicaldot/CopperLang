@@ -1,6 +1,7 @@
 // Copyright 2016 Nicolaus Anderson
 #include "floatmath.h"
 #include <math.h>
+#include <cmath>
 #include <climits>
 #include <sstream>
 
@@ -91,16 +92,17 @@ float mod(float p, float q, Logger* logger) {
 	}
 }
 */
-float sine(float p, Logger* logger) {
-	return sinf(p);
+
+float pick_max(float p, float q, Logger*) {
+	return (p > q ? p : q);
 }
 
-float cosine(float p, Logger* logger) {
-	return cosf(p);
+float pick_min(float p, float q, Logger*) {
+	return (p < q ? p : q);
 }
 
-float tangent(float p, Logger* logger) {
-	return tanf(p);
+float abs_(float d) {
+	return ( d < 0 ? -d : d);
 }
 
 void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
@@ -119,9 +121,12 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	//SingleOperation*	floatMod = new SingleOperation(&logger, mod);
 	SingleOperation*	floatPow = new SingleOperation(&logger, power);
 	Avg*				floatAvg = new Avg(&logger);
-	SingleParamOperation*	floatSin = new SingleParamOperation(&logger, sine);
-	SingleParamOperation*	floatCos = new SingleParamOperation(&logger, cosine);
-	SingleParamOperation*	floatTan = new SingleParamOperation(&logger, tangent);
+	SingleParamOperation*	floatSin = new SingleParamOperation(&logger, sinf);
+	SingleParamOperation*	floatCos = new SingleParamOperation(&logger, cosf);
+	SingleParamOperation*	floatTan = new SingleParamOperation(&logger, tanf);
+	SingleParamOperation*	floatFloor = new SingleParamOperation(&logger, floorf);
+	SingleParamOperation*	floatCeiling = new SingleParamOperation(&logger, ceilf);
+	SingleParamOperation*	floatAbs = new SingleParamOperation(&logger, abs_);
 
 	Unimplemented* floatUnimplemented = new Unimplemented(&logger);
 
@@ -134,32 +139,38 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 		engine.addForeignFunction(util::String("lte"),		floatLessThanOrEq);
 		engine.addForeignFunction(util::String("gt"),		floatGreaterThan);
 		engine.addForeignFunction(util::String("lt"),		floatLessThan);
-		engine.addForeignFunction(util::String("sum"),		floatSum);
-		engine.addForeignFunction(util::String("rdc"),		floatRdc);
-		engine.addForeignFunction(util::String("mul"),		floatMul);
-		engine.addForeignFunction(util::String("div"),		floatDiv);
+		engine.addForeignFunction(util::String("+"),		floatSum);
+		engine.addForeignFunction(util::String("-"),		floatRdc);
+		engine.addForeignFunction(util::String("*"),		floatMul);
+		engine.addForeignFunction(util::String("/"),		floatDiv);
 		engine.addForeignFunction(util::String("mod"),		floatUnimplemented);
 		engine.addForeignFunction(util::String("pow"),		floatPow);
 		engine.addForeignFunction(util::String("avg"),		floatAvg);
 		engine.addForeignFunction(util::String("sin"),		floatSin);
 		engine.addForeignFunction(util::String("cos"),		floatCos);
 		engine.addForeignFunction(util::String("tan"),		floatTan);
+		engine.addForeignFunction(util::String("floor"),	floatFloor);
+		engine.addForeignFunction(util::String("ceiling"),	floatCeiling);
+		engine.addForeignFunction(util::String("abs"),		floatAbs);
 	} else {
 		engine.addForeignFunction(util::String("float_equal"),	floatEqual);
 		engine.addForeignFunction(util::String("float_gte"),	floatGreaterThanOrEq);
 		engine.addForeignFunction(util::String("float_lte"),	floatLessThanOrEq);
 		engine.addForeignFunction(util::String("float_gt"),		floatGreaterThan);
 		engine.addForeignFunction(util::String("float_lt"),		floatLessThan);
-		engine.addForeignFunction(util::String("float_sum"),	floatSum);
-		engine.addForeignFunction(util::String("float_rdc"),	floatRdc);
-		engine.addForeignFunction(util::String("float_mul"),	floatMul);
-		engine.addForeignFunction(util::String("float_div"),	floatDiv);
+		engine.addForeignFunction(util::String("float+"),		floatSum);
+		engine.addForeignFunction(util::String("float-"),		floatRdc);
+		engine.addForeignFunction(util::String("float*"),		floatMul);
+		engine.addForeignFunction(util::String("float/"),		floatDiv);
 		//engine.addForeignFunction(util::String("float_mod"),	floatMod); // Only for return auto conversion
 		engine.addForeignFunction(util::String("float_pow"),	floatPow);
 		engine.addForeignFunction(util::String("float_avg"),	floatAvg);
 		engine.addForeignFunction(util::String("float_sin"),	floatSin);
 		engine.addForeignFunction(util::String("float_cos"),	floatCos);
 		engine.addForeignFunction(util::String("float_tan"),	floatTan);
+		engine.addForeignFunction(util::String("float_floor"),	floatFloor);
+		engine.addForeignFunction(util::String("float_ceiling"),	floatCeiling);
+		engine.addForeignFunction(util::String("float_abs"),		floatAbs);
 	}
 
 	floatAreFloat->deref();
@@ -179,6 +190,9 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	floatSin->deref();
 	floatCos->deref();
 	floatTan->deref();
+	floatFloor->deref();
+	floatCeiling->deref();
+	floatAbs->deref();
 	floatUnimplemented->deref();
 }
 
@@ -338,7 +352,7 @@ bool SingleParamOperation::call( const List<Object*>& params, RefPtr<Object>& re
 			total = 0;
 			print(LogLevel::warning, "Float math function should have a single numeric parameter.");
 		} else {
-			total = operation(total, logger);
+			total = operation(total);
 		}
 	}
 	// Create a zeroed instance

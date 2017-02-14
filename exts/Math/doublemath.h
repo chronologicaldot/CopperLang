@@ -33,10 +33,9 @@ double multiply(double, double, Logger*);
 double divide(double, double, Logger*);
 double power(double, double, Logger*);
 double mod(double, double, Logger*);
-
-double sine(double, Logger*);
-double cosine(double, Logger*);
-double tangent(double, Logger*);
+double pick_max(double, double, Logger*);
+double pick_min(double, double, Logger*);
+double abs_(double);
 
 
 class Double : public BasicPrimitive {
@@ -126,9 +125,9 @@ struct SingleOperation : public Base {
 };
 
 struct SingleParamOperation : public Base {
-	double (*operation)(double, Logger*);
+	double (*operation)(double);
 
-	SingleParamOperation(Logger* pLogger, double (*pOperation)(double, Logger*) )
+	SingleParamOperation(Logger* pLogger, double (*pOperation)(double) )
 		: Base(pLogger)
 		, operation(pOperation)
 	{}

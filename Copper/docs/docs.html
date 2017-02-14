@@ -140,29 +140,28 @@ Consequently, there is no need for end-of-statement terminators, but the comma (
 To ensure safety, Copper Lang variables have stack-based lifetimes. A function is owned by the first variable that it is assigned to. Assignment occurs via the assignment operator (=). One variable can be copied to another using the assignment operator. Functions can be pointed to using a special pointer assignment operator: the tilde (~).
 </p>
 <p>
-Function creation is very liberal. Functions will default to returning a new empty function if no return function is called within the function body. Functions can be created in four possible ways: (1) beginning with "fn" and followed by a parameters collection section, which is then followed by the function body, (2) beginning with "fn" and followed by a parameter collection section, (3) beginning with "fn" followed by the function body, and (4) beginning with the function body.
+Function creation is very liberal. Functions will default to returning a new empty function if no return function is called within the function body. Functions can be created in three possible ways: (1) beginning with a parameters collection section, which is then followed by the function body, (2) beginning with a parameter collection section, (3) beginning with the function body.
 </p>
 <p>
-All four ways are demonstrated as follows:
+All three ways are demonstrated as follows:
 </p>
 <pre><code>
-a = <b>fn</b>()<red>{}</red>
-b = <b>fn</b>()
-c = <b>fn</b><red>{}</red>
-d = <red>{}</red>
+a = []<red>{}</red>
+b = []
+c = <red>{}</red>
 </code></pre>
 <p>
 In function creation, the parameter collection block has two types of collectables: (1) names that will act as names for the parameters passed into the function and (2) names that are assigned objects and saved in the persistent scope. In the latter case, a name must be followed by an assignment symbol (or pointer assignment symbol), which in turn is followed by an object.
 </p>
 <pre><code>
-a = <b>fn</b>(temp, persistent="Some data") <red>{}</red>
+a = [temp, persistent="Some data"] <red>{}</red>
 </code></pre>
 <p>
 Function return is done by calling the ret() function and passing it the object to return.
 </p>
 <pre><code>
 a = <red>{
-	<b>ret</b>(5)
+	<b>ret</b><orange>(5)</orange>
 }</red>
 </code></pre>
 <p>
@@ -172,7 +171,7 @@ Within a function body, persistent scope members must be accessed using the self
 a = <red>{
 	<b>this</b>.my_member = 5
 }</red>
-print( a.my_member() ) # Prints 5 #
+print<red>( a.my_member<orange>()</orange> )</red> # Prints 5 #
 </code></pre>
 <p>
 Parent variables can be accessed using the parent-reference pointer, "super". Technically, this pointer accesses the scope of the variable whose member variable function is currently being run.
@@ -181,7 +180,7 @@ Parent variables can be accessed using the parent-reference pointer, "super". Te
 a.b = <red>{
 	<b>super</b>.c = 5
 }</red>
-print(a.c()) # Prints 5 #
+print<red>(a.c<orange>()</orange>)</red> # Prints 5 #
 </code></pre>
 <p>
 A shorthand for calling functions without passing them any parameters is done by using the immediate-run token - a colon (:) - instead of parentheses.
@@ -235,12 +234,12 @@ A block of code can be run under a condition using an if-statement, which is beg
 All conditionals must result in a boolean value. An error is returned if this is not the case.
 </p>
 <pre><code>
-<b>if</b> ( a() ) <red>{
-	print("If true")
-}</red> <b>elif</b> ( b() ) <red>{
-	print("Elif true")
+<b>if</b> ( a<red>()</red> ) <red>{
+	print<orange>("If true")</orange>
+}</red> <b>elif</b> ( b<red>()</red> ) <red>{
+	print<orange>("Elif true")</orange>
 }</red> <b>else</b> <red>{
-	print("Nothing true")
+	print<orange>("Nothing true")</orange>
 }</red>
 </code></pre>
 
@@ -258,7 +257,7 @@ A loop cycle can be restarted by using the keyword "skip".
 </p>
 <pre><code>
 <b>loop</b> <red>{
-	<b>if</b> ( someCondition() ) <orange>{
+	<b>if</b> ( someCondition<orange>()</orange> ) <orange>{
 		<b>skip</b>
 	}</orange>
 	<b>stop</b>

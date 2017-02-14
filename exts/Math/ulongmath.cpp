@@ -123,6 +123,14 @@ ulong mod(ulong p, ulong q, Logger* logger) {
 	return p % q;
 }
 
+ulong pick_max(ulong p, ulong q, Logger*) {
+	return (p > q ? p : q);
+}
+
+ulong pick_min(ulong p, ulong q, Logger*) {
+	return (p < q ? p : q);
+}
+
 void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 
 	AreULong*			ulongAreULong	= new AreULong();
@@ -139,6 +147,8 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	SingleOperation*	ulongMod = new SingleOperation(&logger, mod);
 	SingleOperation*	ulongPow = new SingleOperation(&logger, power);
 	Avg*				ulongAvg = new Avg(&logger);
+	SingleOperation*	ulongMax = new SingleOperation(&logger, pick_max);
+	SingleOperation*	ulongMin = new SingleOperation(&logger, pick_min);
 
 	Unimplemented* ulongUnimplemented = new Unimplemented(&logger);
 
@@ -151,13 +161,16 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 		engine.addForeignFunction(util::String("lte"),	ulongLessThanOrEq);
 		engine.addForeignFunction(util::String("gt"),	ulongGreaterThan);
 		engine.addForeignFunction(util::String("lt"),	ulongLessThan);
-		engine.addForeignFunction(util::String("sum"),	ulongSum);
-		engine.addForeignFunction(util::String("rdc"),	ulongRdc);
-		engine.addForeignFunction(util::String("mul"),	ulongMul);
-		engine.addForeignFunction(util::String("div"),	ulongDiv);
-		engine.addForeignFunction(util::String("mod"),	ulongMod);
+		engine.addForeignFunction(util::String("+"),	ulongSum);
+		engine.addForeignFunction(util::String("-"),	ulongRdc);
+		engine.addForeignFunction(util::String("*"),	ulongMul);
+		engine.addForeignFunction(util::String("/"),	ulongDiv);
+		engine.addForeignFunction(util::String("%"),	ulongMod);
 		engine.addForeignFunction(util::String("pow"),	ulongPow);
 		engine.addForeignFunction(util::String("avg"),	ulongAvg);
+		engine.addForeignFunction(util::String("max"),	ulongMax);
+		engine.addForeignFunction(util::String("min"),	ulongMin);
+		FFI::simpleFunctionAdd(engine, util::String("abs"),	get_abs, &logger);
 
 		engine.addForeignFunction(util::String("sin"),	ulongUnimplemented);
 		engine.addForeignFunction(util::String("cos"),	ulongUnimplemented);
@@ -168,13 +181,16 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 		engine.addForeignFunction(util::String("ulong_lte"),	ulongLessThanOrEq);
 		engine.addForeignFunction(util::String("ulong_gt"),		ulongGreaterThan);
 		engine.addForeignFunction(util::String("ulong_lt"),		ulongLessThan);
-		engine.addForeignFunction(util::String("ulong_sum"),	ulongSum);
-		engine.addForeignFunction(util::String("ulong_rdc"),	ulongRdc);
-		engine.addForeignFunction(util::String("ulong_mul"),	ulongMul);
-		engine.addForeignFunction(util::String("ulong_div"),	ulongDiv);
-		engine.addForeignFunction(util::String("ulong_mod"),	ulongMod);
+		engine.addForeignFunction(util::String("ulong+"),		ulongSum);
+		engine.addForeignFunction(util::String("ulong-"),		ulongRdc);
+		engine.addForeignFunction(util::String("ulong*"),		ulongMul);
+		engine.addForeignFunction(util::String("ulong/"),		ulongDiv);
+		engine.addForeignFunction(util::String("ulong%"),		ulongMod);
 		engine.addForeignFunction(util::String("ulong_pow"),	ulongPow);
 		engine.addForeignFunction(util::String("ulong_avg"),	ulongAvg);
+		engine.addForeignFunction(util::String("ulong_max"),	ulongMax);
+		engine.addForeignFunction(util::String("ulong_min"),	ulongMin);
+		FFI::simpleFunctionAdd(engine, util::String("ulong_abs"),	get_abs, &logger);
 	}
 
 	ulongAreULong->deref();
@@ -191,6 +207,8 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	ulongMod->deref();
 	ulongPow->deref();
 	ulongAvg->deref();
+	ulongMax->deref();
+	ulongMin->deref();
 	ulongUnimplemented->deref();
 }
 
@@ -339,7 +357,7 @@ bool SingleOperation::call( const List<Object*>& params, RefPtr<Object>& result 
 	result.setWithoutRef(new ULong(total));
 	return true;
 }
-
+/*
 bool SingleParamOperation::call( const List<Object*>& params, RefPtr<Object>& result )
 {
 	List<Object*>::ConstIter paramsIter = params.constStart();
@@ -355,7 +373,7 @@ bool SingleParamOperation::call( const List<Object*>& params, RefPtr<Object>& re
 	// Create a zeroed instance
 	result.setWithoutRef(new ULong(total));
 	return true;
-}
+}*/
 
 bool Avg::call( const List<Object*>& params, RefPtr<Object>& result )
 {
@@ -377,6 +395,20 @@ bool Avg::call( const List<Object*>& params, RefPtr<Object>& result )
 	if ( used_count > 0 )
 		total /= used_count;
 	result.setWithoutRef(new ULong(total));
+	return true;
+}
+
+bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
+	List<Object*>::ConstIter paramsIter = params.constStart();
+	if ( ! paramsIter.has() ) {
+		result.setWithoutRef(new ULong(0));
+		return true;
+	}
+	ulong value;
+	if ( ! getULong(*paramsIter, value) ) {
+		FFI::printWarning(logger, "ULong-abs function requires numeric parameter.");
+	}
+	result.setWithoutRef(new ULong(value));
 	return true;
 }
 

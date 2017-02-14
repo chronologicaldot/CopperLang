@@ -15,6 +15,7 @@
 #include "exts/Math/doublemath.h"
 #include "exts/Math/BasicPrimitiveSizes.h"
 #include "exts/Iterable/ManagedList.h"
+#include "exts/Time/timemath.h"
 
 // function by tgamblin
 // https://stackoverflow.com/questions/77005/how-to-generate-a-stacktrace-when-my-gcc-c-app-crashes
@@ -45,6 +46,7 @@ int main() {
 	Cu::Numeric::Double::addFunctionsToEngine(engine, logger, false);
 	Cu::Numeric::Sizes::addFunctionsToEngine(engine, logger, false);
 	Cu::ManagedList::addFunctionsToEngine(engine, logger, true);
+	Cu::MSecTime::addFunctionsToEngine(engine, logger, true);
 
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);

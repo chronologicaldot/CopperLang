@@ -2,6 +2,23 @@
 2017/2/12
 v 2-0.17
 
+- Changed "type" to "type_of".
+- LANG CHANGE: Version 2.01.
+- Fixed bug in String::isLiteralNumber() that failed to properly bound numbers to the range 0-9 and check for decimal.
+
+docs.html
+- Updated function information and some tag coloring.
+
+Now tracking CopperLang/IDE folder, containing GTK-sourceview syntax highlighting files.
+
+TODO:
+- FIXME: ObjectNumber has no way of being identified as separate from the Number class, thereby making its functions useless. There should be some way of indicating what kind of number it is.
+
+
+====================
+2017/2/12
+v 2-0.17
+
 Now on branch "master".
 
 This is the new master branch with syntax changes. The key change is the creation of functions using square brackets instead of "fn". Details will be outlined in docs/docs.html.

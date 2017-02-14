@@ -1,0 +1,11 @@
+===========
+2017/2/12
+
+intmath/
+- Added max(), min(), and abs().
+ulongmath/
+- Added max(), min(), and abs().
+floatmath/
+- Added max(), min(), abs(), ceiling(), and floor().
+doublemath/
+- Added max(), min(), abs(), ceiling(), and floor().

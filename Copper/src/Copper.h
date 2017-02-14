@@ -52,7 +52,7 @@
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 2.0
+#define COPPER_LANG_VERSION 2.01
 
 // ******* Language modifications *******
 

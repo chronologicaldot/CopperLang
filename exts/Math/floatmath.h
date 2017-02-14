@@ -33,10 +33,9 @@ float multiply(float, float, Logger*);
 float divide(float, float, Logger*);
 float power(float, float, Logger*);
 float mod(float, float, Logger*);
-
-float sine(float, Logger*);
-float cosine(float, Logger*);
-float tangent(float, Logger*);
+float pick_max(float, float, Logger*);
+float pick_min(float, float, Logger*);
+float abs_(float);
 
 
 class Float : public BasicPrimitive {
@@ -126,9 +125,9 @@ struct SingleOperation : public Base {
 };
 
 struct SingleParamOperation : public Base {
-	float (*operation)(float, Logger*);
+	float (*operation)(float);
 
-	SingleParamOperation(Logger* pLogger, float (*pOperation)(float, Logger*) )
+	SingleParamOperation(Logger* pLogger, float (*pOperation)(float) )
 		: Base(pLogger)
 		, operation(pOperation)
 	{}

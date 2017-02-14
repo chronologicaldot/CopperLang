@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language id="copper" _name="Copper" version="2.0" _section="Scripts">
+<!--
+Copyright 2016 Nic Anderson
+
+Description:
+Rainbow syntax highlighter language for Gtk sourceview 2.0.
+Modified for the Copper language.
+
+License:
+This software is provided AS-IS without any expressed guarantee of merchantability or fitness. In no way shall the authors or contributors be liable for any damages or loss of any kind - tangible or intangible - arising from the possession or use of this software.
+You are free to use, modify and redistribute this code to your heart's content, provided the above license and copyright notices are maintained.
+-->
+
+<metadata>
+  <!--<property name="mimetypes">text/x-c;text/x-csrc</property>-->
+  <property name="globs">*.cu</property>
+  <property name="block-comment-start">\#</property>
+  <property name="block-comment-end">\#</property>
+</metadata>
+<styles>
+  <style id="comment" _name="Comment" map-to="def:comment" />
+  <style id="keyword" _name="Keyword" map-to="def:keyword" />
+
+  <style id="level1" _name="Level1" map-to="rainbow:level1" />
+  <style id="level2" _name="Level2" map-to="rainbow:level2" />
+  <style id="level3" _name="Level3" map-to="rainbow:level3" />
+  <style id="level4" _name="Level4" map-to="rainbow:level4" />
+  <style id="level5" _name="Level5" map-to="rainbow:level5" />
+  <style id="level6" _name="Level6" map-to="rainbow:level6" />
+  <style id="level7" _name="Level7" map-to="rainbow:level7" />
+  <style id="level8" _name="Level8" map-to="rainbow:level8" />
+
+  <style id="level1str" _name="Level1" map-to="rainbow:level1str" />
+  <style id="level2str" _name="Level2" map-to="rainbow:level2str" />
+  <style id="level3str" _name="Level3" map-to="rainbow:level3str" />
+  <style id="level4str" _name="Level4" map-to="rainbow:level4str" />
+  <style id="level5str" _name="Level5" map-to="rainbow:level5str" />
+  <style id="level6str" _name="Level6" map-to="rainbow:level6str" />
+  <style id="level7str" _name="Level7" map-to="rainbow:level7str" />
+  <style id="level8str" _name="Level8" map-to="rainbow:level8str" />
+</styles>
+<definitions>
+
+  <context id="comment-multiline" end-at-line-end="false" style-ref="comment">
+	<start>\#</start>
+	<end>\#</end>
+  </context>
+
+  <context id="string" end-at-line-end="true" style-ref="comment">
+    <start>"</start>
+	<end>"</end>
+  </context>
+
+  <context id="keywords" style-ref="keyword">
+    <keyword>if</keyword>
+    <keyword>elif</keyword>
+    <keyword>else</keyword>
+    <keyword>loop</keyword>
+    <keyword>stop</keyword>
+    <keyword>skip</keyword>
+    <keyword>ret</keyword>
+    <keyword>this</keyword>
+    <keyword>super</keyword>
+    <keyword>own</keyword>
+    <keyword>is_ptr</keyword>
+    <keyword>is_owner</keyword>
+    <keyword>are_same</keyword>
+    <keyword>member</keyword>
+    <keyword>member_count</keyword>
+    <keyword>is_member</keyword>
+    <keyword>set_member</keyword>
+    <keyword>union</keyword>
+    <keyword>type_of</keyword>
+    <keyword>are_same_type</keyword>
+    <keyword>are_fn</keyword>
+    <keyword>are_bool</keyword>
+    <keyword>are_string</keyword>
+    <keyword>are_number</keyword>
+    <keyword>are_empty</keyword>
+    <keyword>assert</keyword>
+
+    <keyword>not</keyword>
+    <keyword>all</keyword>
+    <keyword>any</keyword>
+    <keyword>nall</keyword>
+    <keyword>none</keyword>
+
+    <keyword>true</keyword>
+    <keyword>false</keyword>
+  </context>
+
+  <!-- Level 8 -->
+  <context id="level8p" style-ref="level8">
+    <start>\(</start>
+    <end>\)</end>
+    <include>
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level8str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level8b" style-ref="level8">
+    <start>\{</start>
+    <end>\}</end>
+    <include>
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level8str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level8s" style-ref="level8">
+    <start>\[</start>
+    <end>\]</end>
+    <include>
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level8str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <!-- Level 7 -->
+  <context id="level7p" style-ref="level7">
+    <start>\(</start>
+    <end>\)</end>
+    <include>
+      <context ref="level8p" />
+      <context ref="level8b" />
+      <context ref="level8s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level7str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level7b" style-ref="level7">
+    <start>\{</start>
+    <end>\}</end>
+    <include>
+      <context ref="level8p" />
+      <context ref="level8b" />
+      <context ref="level8s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level7str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level7s" style-ref="level7">
+    <start>\[</start>
+    <end>\]</end>
+    <include>
+      <context ref="level8p" />
+      <context ref="level8b" />
+      <context ref="level8s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level7str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <!-- Level 6 -->
+  <context id="level6p" style-ref="level6">
+    <start>\(</start>
+    <end>\)</end>
+    <include>
+      <context ref="level7p" />
+      <context ref="level7b" />
+      <context ref="level7s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level6str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level6b" style-ref="level6">
+    <start>\{</start>
+    <end>\}</end>
+    <include>
+      <context ref="level7p" />
+      <context ref="level7b" />
+      <context ref="level7s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level6str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level6s" style-ref="level6">
+    <start>\[</start>
+    <end>\]</end>
+    <include>
+      <context ref="level7p" />
+      <context ref="level7b" />
+      <context ref="level7s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level6str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <!-- Level 5 -->
+  <context id="level5p" style-ref="level5">
+    <start>\(</start>
+    <end>\)</end>
+    <include>
+      <context ref="level6p" />
+      <context ref="level6b" />
+      <context ref="level6s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level5str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level5b" style-ref="level5">
+    <start>\{</start>
+    <end>\}</end>
+    <include>
+      <context ref="level6p" />
+      <context ref="level6b" />
+      <context ref="level6s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level5str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level5s" style-ref="level5">
+    <start>\[</start>
+    <end>\]</end>
+    <include>
+      <context ref="level6p" />
+      <context ref="level6b" />
+      <context ref="level6s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level5str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <!-- Level 4 -->
+  <context id="level4p" style-ref="level4">
+    <start>\(</start>
+    <end>\)</end>
+    <include>
+      <context ref="level5p" />
+      <context ref="level5b" />
+      <context ref="level5s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level4str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level4b" style-ref="level4">
+    <start>\{</start>
+    <end>\}</end>
+    <include>
+      <context ref="level5p" />
+      <context ref="level5b" />
+      <context ref="level5s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level4str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level4s" style-ref="level4">
+    <start>\[</start>
+    <end>\]</end>
+    <include>
+      <context ref="level5p" />
+      <context ref="level5b" />
+      <context ref="level5s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level4str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <!-- Level 3 -->
+  <context id="level3p" style-ref="level3">
+    <start>\(</start>
+    <end>\)</end>
+    <include>
+      <context ref="level4p" />
+      <context ref="level4b" />
+      <context ref="level4s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level3str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level3b" style-ref="level3">
+    <start>\{</start>
+    <end>\}</end>
+    <include>
+      <context ref="level4p" />
+      <context ref="level4b" />
+      <context ref="level4s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level3str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level3s" style-ref="level3">
+    <start>\[</start>
+    <end>\]</end>
+    <include>
+      <context ref="level4p" />
+      <context ref="level4b" />
+      <context ref="level4s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level3str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <!-- Level 2 -->
+  <context id="level2p" style-ref="level2">
+    <start>\(</start>
+    <end>\)</end>
+    <include>
+      <context ref="level3p" />
+      <context ref="level3b" />
+      <context ref="level3s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level2str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level2b" style-ref="level2">
+    <start>\{</start>
+    <end>\}</end>
+    <include>
+      <context ref="level3p" />
+      <context ref="level3b" />
+      <context ref="level3s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level2str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level2s" style-ref="level2">
+    <start>\[</start>
+    <end>\]</end>
+    <include>
+      <context ref="level3p" />
+      <context ref="level3b" />
+      <context ref="level3s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level2str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <!-- Level 1 -->
+  <context id="level1p" style-ref="level1">
+    <start>\(</start>
+    <end>\)</end>
+    <include>
+      <context ref="level2p" />
+      <context ref="level2b" />
+      <context ref="level2s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level1str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level1b" style-ref="level1">
+    <start>\{</start>
+    <end>\}</end>
+    <include>
+      <context ref="level2p" />
+      <context ref="level2b" />
+      <context ref="level2s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level1str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="level1s" style-ref="level1">
+    <start>\[</start>
+    <end>\]</end>
+    <include>
+      <context ref="level2p" />
+      <context ref="level2b" />
+      <context ref="level2s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level1str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+
+  <context id="copper">
+    <include>
+      <context ref="level1p" />
+      <context ref="level1b" />
+      <context ref="level1s" />
+      <context ref="comment-multiline" />
+      <context ref="string" style-ref="level0str" />
+      <context ref="keywords"/>
+    </include>
+  </context>
+</definitions>
+</language>

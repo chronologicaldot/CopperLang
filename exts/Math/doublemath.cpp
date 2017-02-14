@@ -1,6 +1,7 @@
 // Copyright 2016 Nicolaus Anderson
 #include "doublemath.h"
 #include <math.h>
+#include <cmath>
 #include <climits>
 #include <sstream>
 
@@ -78,16 +79,16 @@ double power(double p, double q, Logger* logger) {
 	return powf(p, q);
 }
 
-double sine(double p, Logger* logger) {
-	return sinf(p);
+double pick_max(double p, double q, Logger*) {
+	return (p > q ? p : q);
 }
 
-double cosine(double p, Logger* logger) {
-	return cosf(p);
+double pick_min(double p, double q, Logger*) {
+	return (p < q ? p : q);
 }
 
-double tangent(double p, Logger* logger) {
-	return tanf(p);
+double abs_(double d) {
+	return ( d < 0 ? -d : d);
 }
 
 void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
@@ -105,9 +106,14 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	SingleOperation*	doubleDiv = new SingleOperation(&logger, divide);
 	SingleOperation*	doublePow = new SingleOperation(&logger, power);
 	Avg*				doubleAvg = new Avg(&logger);
-	SingleParamOperation*	doubleSin = new SingleParamOperation(&logger, sine);
-	SingleParamOperation*	doubleCos = new SingleParamOperation(&logger, cosine);
-	SingleParamOperation*	doubleTan = new SingleParamOperation(&logger, tangent);
+	SingleOperation*	doubleMax = new SingleOperation(&logger, pick_max);
+	SingleOperation*	doubleMin = new SingleOperation(&logger, pick_min);
+	SingleParamOperation*	doubleSin = new SingleParamOperation(&logger, sin);
+	SingleParamOperation*	doubleCos = new SingleParamOperation(&logger, cos);
+	SingleParamOperation*	doubleTan = new SingleParamOperation(&logger, tan);
+	SingleParamOperation*	doubleFloor = new SingleParamOperation(&logger, floor);
+	SingleParamOperation*	doubleCeiling = new SingleParamOperation(&logger, ceil);
+	SingleParamOperation*	doubleAbs = new SingleParamOperation(&logger, abs_);
 
 	Unimplemented* doubleUnimplemented = new Unimplemented(&logger);
 
@@ -120,32 +126,42 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 		engine.addForeignFunction(util::String("lte"),		doubleLessThanOrEq);
 		engine.addForeignFunction(util::String("gt"),		doubleGreaterThan);
 		engine.addForeignFunction(util::String("lt"),		doubleLessThan);
-		engine.addForeignFunction(util::String("sum"),		doubleSum);
-		engine.addForeignFunction(util::String("rdc"),		doubleRdc);
-		engine.addForeignFunction(util::String("mul"),		doubleMul);
-		engine.addForeignFunction(util::String("div"),		doubleDiv);
-		engine.addForeignFunction(util::String("mod"),		doubleUnimplemented);
+		engine.addForeignFunction(util::String("+"),		doubleSum);
+		engine.addForeignFunction(util::String("-"),		doubleRdc);
+		engine.addForeignFunction(util::String("*"),		doubleMul);
+		engine.addForeignFunction(util::String("/"),		doubleDiv);
+		engine.addForeignFunction(util::String("%"),		doubleUnimplemented);
 		engine.addForeignFunction(util::String("pow"),		doublePow);
 		engine.addForeignFunction(util::String("avg"),		doubleAvg);
+		engine.addForeignFunction(util::String("max"),		doubleMax);
+		engine.addForeignFunction(util::String("min"),		doubleMin);
 		engine.addForeignFunction(util::String("sin"),		doubleSin);
 		engine.addForeignFunction(util::String("cos"),		doubleCos);
 		engine.addForeignFunction(util::String("tan"),		doubleTan);
+		engine.addForeignFunction(util::String("floor"),	doubleFloor);
+		engine.addForeignFunction(util::String("ceiling"),	doubleCeiling);
+		engine.addForeignFunction(util::String("abs"),		doubleAbs);
 	} else {
 		engine.addForeignFunction(util::String("double_equal"),	doubleEqual);
 		engine.addForeignFunction(util::String("double_gte"),	doubleGreaterThanOrEq);
 		engine.addForeignFunction(util::String("double_lte"),	doubleLessThanOrEq);
 		engine.addForeignFunction(util::String("double_gt"),	doubleGreaterThan);
 		engine.addForeignFunction(util::String("double_lt"),	doubleLessThan);
-		engine.addForeignFunction(util::String("double_sum"),	doubleSum);
-		engine.addForeignFunction(util::String("double_rdc"),	doubleRdc);
-		engine.addForeignFunction(util::String("double_mul"),	doubleMul);
-		engine.addForeignFunction(util::String("double_div"),	doubleDiv);
+		engine.addForeignFunction(util::String("double+"),		doubleSum);
+		engine.addForeignFunction(util::String("double-"),		doubleRdc);
+		engine.addForeignFunction(util::String("double*"),		doubleMul);
+		engine.addForeignFunction(util::String("double/"),		doubleDiv);
 		//engine.addForeignFunction(util::String("double_mod"),	doubleMod); // Only for return auto conversion
 		engine.addForeignFunction(util::String("double_pow"),	doublePow);
 		engine.addForeignFunction(util::String("double_avg"),	doubleAvg);
+		engine.addForeignFunction(util::String("double_max"),	doubleMax);
+		engine.addForeignFunction(util::String("double_min"),	doubleMin);
 		engine.addForeignFunction(util::String("double_sin"),	doubleSin);
 		engine.addForeignFunction(util::String("double_cos"),	doubleCos);
 		engine.addForeignFunction(util::String("double_tan"),	doubleTan);
+		engine.addForeignFunction(util::String("double_floor"),	doubleFloor);
+		engine.addForeignFunction(util::String("double_ceiling"),	doubleCeiling);
+		engine.addForeignFunction(util::String("double_abs"),		doubleAbs);
 	}
 
 	doubleAreDouble->deref();
@@ -162,9 +178,14 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	//doubleMod->deref();
 	doublePow->deref();
 	doubleAvg->deref();
+	doubleMax->deref();
+	doubleMin->deref();
 	doubleSin->deref();
 	doubleCos->deref();
 	doubleTan->deref();
+	doubleFloor->deref();
+	doubleCeiling->deref();
+	doubleAbs->deref();
 	doubleUnimplemented->deref();
 }
 
@@ -324,7 +345,7 @@ bool SingleParamOperation::call( const List<Object*>& params, RefPtr<Object>& re
 			total = 0;
 			print(LogLevel::warning, "Double math function should have a single numeric parameter.");
 		} else {
-			total = operation(total, logger);
+			total = operation(total);
 		}
 	}
 	// Create a zeroed instance

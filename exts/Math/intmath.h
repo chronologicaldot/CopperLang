@@ -37,6 +37,8 @@ int multiply(int, int, Logger*);
 int divide(int, int, Logger*);
 int power(int, int, Logger*);
 int mod(int, int, Logger*);
+int pick_max(int, int, Logger*);
+int pick_min(int, int, Logger*);
 
 class Int : public BasicPrimitive {
 	int value;
@@ -123,7 +125,7 @@ struct SingleOperation : public Base {
 
 	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
 };
-
+/*
 struct SingleParamOperation : public Base {
 	int (*operation)(int, Logger*);
 
@@ -133,7 +135,7 @@ struct SingleParamOperation : public Base {
 	{}
 
 	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
-};
+};*/
 
 // Int Average
 struct Avg : public Base {
@@ -143,6 +145,8 @@ struct Avg : public Base {
 
 	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
 };
+
+bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logger );
 
 }}}
 #endif

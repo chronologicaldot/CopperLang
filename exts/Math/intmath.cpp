@@ -164,6 +164,14 @@ int mod(int p, int q, Logger* logger) {
 	return p % q;
 }
 
+int pick_max(int p, int q, Logger*) {
+	return (p > q ? p : q);
+}
+
+int pick_min(int p, int q, Logger*) {
+	return (p < q ? p : q);
+}
+
 void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 
 	AreInt*				intAreInt	= new AreInt();
@@ -180,6 +188,8 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	SingleOperation*	intMod = new SingleOperation(&logger, mod);
 	SingleOperation*	intPow = new SingleOperation(&logger, power);
 	Avg*				intAvg = new Avg(&logger);
+	SingleOperation*	intMax = new SingleOperation(&logger, pick_max);
+	SingleOperation*	intMin = new SingleOperation(&logger, pick_min);
 
 	Unimplemented* intUnimplemented = new Unimplemented(&logger);
 
@@ -192,13 +202,16 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 		engine.addForeignFunction(util::String("lte"),	intLessThanOrEq);
 		engine.addForeignFunction(util::String("gt"),	intGreaterThan);
 		engine.addForeignFunction(util::String("lt"),	intLessThan);
-		engine.addForeignFunction(util::String("sum"),	intSum);
-		engine.addForeignFunction(util::String("rdc"),	intRdc);
-		engine.addForeignFunction(util::String("mul"),	intMul);
-		engine.addForeignFunction(util::String("div"),	intDiv);
-		engine.addForeignFunction(util::String("mod"),	intMod);
+		engine.addForeignFunction(util::String("+"),	intSum);
+		engine.addForeignFunction(util::String("-"),	intRdc);
+		engine.addForeignFunction(util::String("*"),	intMul);
+		engine.addForeignFunction(util::String("/"),	intDiv);
+		engine.addForeignFunction(util::String("%"),	intMod);
 		engine.addForeignFunction(util::String("pow"),	intPow);
 		engine.addForeignFunction(util::String("avg"),	intAvg);
+		engine.addForeignFunction(util::String("max"),	intMax);
+		engine.addForeignFunction(util::String("min"),	intMin);
+		FFI::simpleFunctionAdd(engine, util::String("abs"),	get_abs, &logger);
 
 		engine.addForeignFunction(util::String("sin"),	intUnimplemented);
 		engine.addForeignFunction(util::String("cos"),	intUnimplemented);
@@ -209,13 +222,16 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 		engine.addForeignFunction(util::String("int_lte"),	intLessThanOrEq);
 		engine.addForeignFunction(util::String("int_gt"),	intGreaterThan);
 		engine.addForeignFunction(util::String("int_lt"),	intLessThan);
-		engine.addForeignFunction(util::String("int_sum"),	intSum);
-		engine.addForeignFunction(util::String("int_rdc"),	intRdc);
-		engine.addForeignFunction(util::String("int_mul"),	intMul);
-		engine.addForeignFunction(util::String("int_div"),	intDiv);
-		engine.addForeignFunction(util::String("int_mod"),	intMod);
+		engine.addForeignFunction(util::String("int+"),		intSum);
+		engine.addForeignFunction(util::String("int-"),		intRdc);
+		engine.addForeignFunction(util::String("int*"),		intMul);
+		engine.addForeignFunction(util::String("int/"),		intDiv);
+		engine.addForeignFunction(util::String("int%"),		intMod);
 		engine.addForeignFunction(util::String("int_pow"),	intPow);
 		engine.addForeignFunction(util::String("int_avg"),	intAvg);
+		engine.addForeignFunction(util::String("int_max"),	intMax);
+		engine.addForeignFunction(util::String("int_min"),	intMin);
+		FFI::simpleFunctionAdd(engine, util::String("int_abs"),	get_abs, &logger);
 	}
 
 	intAreInt->deref();
@@ -232,6 +248,8 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	intMod->deref();
 	intPow->deref();
 	intAvg->deref();
+	intMax->deref();
+	intMin->deref();
 	intUnimplemented->deref();
 }
 
@@ -373,7 +391,7 @@ bool SingleOperation::call( const List<Object*>& params, RefPtr<Object>& result 
 	result.setWithoutRef(new Int(total));
 	return true;
 }
-
+/*
 bool SingleParamOperation::call( const List<Object*>& params, RefPtr<Object>& result )
 {
 	List<Object*>::ConstIter paramsIter = params.constStart();
@@ -389,7 +407,7 @@ bool SingleParamOperation::call( const List<Object*>& params, RefPtr<Object>& re
 	// Create a zeroed instance
 	result.setWithoutRef(new Int(total));
 	return true;
-}
+}*/
 
 bool Avg::call( const List<Object*>& params, RefPtr<Object>& result )
 {
@@ -411,6 +429,20 @@ bool Avg::call( const List<Object*>& params, RefPtr<Object>& result )
 	if ( used_count > 0 )
 		total /= used_count;
 	result.setWithoutRef(new Int(total));
+	return true;
+}
+
+bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
+	List<Object*>::ConstIter paramsIter = params.constStart();
+	if ( ! paramsIter.has() ) {
+		result.setWithoutRef(new Int(0));
+		return true;
+	}
+	int value;
+	if ( ! getInt(*paramsIter, value) ) {
+		FFI::printWarning(logger, "Int-abs function requires numeric parameter.");
+	}
+	result.setWithoutRef(new Int( value < 0 ? -value : value ));
 	return true;
 }
 

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2016 Nic Anderson
+Lower half of scheme based on Oblivion by Paolo Borelli, Copyright (C) 2007 GtkSourceView team.
+Colors have been modified.
+
+Description:
+Rainbow syntax highlighter for Gtk sourceview 2.0.
+
+License:
+This software is provided AS-IS without any expressed guarantee of merchantability or fitness. In no way shall the authors or contributors be liable for any damages or loss of any kind - tangible or intangible - arising from the possession or use of this software.
+You are free to use, modify and redistribute this code to your heart's content, provided the above license and copyright notices are maintained.
+-->
+
+<style-scheme id="rainbow" _name="Rainbow" version="1.0">
+  <author>Nic Anderson</author>
+  <_description>Rainbow highlighter for gtk-sourceview</_description>
+
+  <color name="red"         value="#FF0000"/>
+  <color name="orange"      value="#FF8000"/>
+  <color name="yellow"      value="#FFFF00"/>
+  <color name="green"       value="#00FF00"/>
+  <color name="darkteal"    value="#008A8C"/>
+  <color name="lightblue"   value="#6CC9FF"/>
+  <color name="violetblue"  value="#8080FF"/>
+  <color name="darkpink"    value="#FF00FF"/>
+  <color name="darktan"     value="#6B3908"/>
+  <color name="white"       value="#FFFFFF"/>
+  <color name="grey"        value="#666666"/>
+  <color name="softblack"   value="#111111"/>
+  <color name="cyansilver1" value="#A3B3B2"/>
+  <color name="cyandark1"   value="#0D2C2B"/>
+  <color name="cyansilver2" value="#607574"/>
+  <color name="cyandark2"   value="#173534"/>
+  <color name="lightgreen"  value="#55FFAA"/>
+  <color name="softred"     value="#686060"/>
+
+  <!-- Pastels -->
+  <color name="pastelred"         value="#FF3030"/>
+  <color name="pastelorange"      value="#FFB030"/>
+  <color name="pastelyellow"      value="#FFFF30"/>
+  <color name="pastelgreen"       value="#30FF30"/>
+  <color name="pasteldarkteal"    value="#30BABC"/>
+  <color name="pastellightblue"   value="#9CF9FF"/>
+  <color name="pastelvioletblue"  value="#B0B0FF"/>
+  <color name="pasteldarkpink"    value="#FF30FF"/>
+  <color name="pasteldarktan"     value="#9B6938"/>
+
+  <!-- Global colors -->
+  <style name="text"                        foreground="cyansilver1" background="cyandark1"/>
+  <style name="selection"                   foreground="white" background="cyansilver2"/>
+  <style name="cursor"                      foreground="white"/>
+  <style name="current-line"                background="cyandark2"/>
+  <style name="line-numbers"                foreground="cyansilver2" background="softblack"/>
+  <style name="draw-spaces"                 foreground="cyandark2"/>
+
+  <!-- Brackets -->
+  <style name="bracket-match"               foreground="white" background="grey" bold="true"/>
+  <style name="bracket-mismatch"            foreground="white" background="red" bold="true"/>
+
+
+  <!-- Levels -->
+  <style name="rainbow:level1"             foreground="red"/>
+  <style name="rainbow:level2"             foreground="orange"/>
+  <style name="rainbow:level3"             foreground="yellow"/>
+  <style name="rainbow:level4"             foreground="green"/>
+  <style name="rainbow:level5"             foreground="darkteal"/>
+  <style name="rainbow:level6"             foreground="violetblue"/>
+  <style name="rainbow:level7"             foreground="darkpink"/>
+  <style name="rainbow:level8"             foreground="darktan"/>
+
+  <!-- Should handle more levels -->
+
+  <!-- String levels -->
+  <style name="rainbow:level0str"             foreground="grey"/>
+  <style name="rainbow:level1str"             foreground="pastelred"/>
+  <style name="rainbow:level2str"             foreground="pastelorange"/>
+  <style name="rainbow:level3str"             foreground="pastelyellow"/>
+  <style name="rainbow:level4str"             foreground="pastelgreen"/>
+  <style name="rainbow:level5str"             foreground="pasteldarkteal"/>
+  <style name="rainbow:level6str"             foreground="pastelvioletblue"/>
+  <style name="rainbow:level7str"             foreground="pasteldarkpink"/>
+  <style name="rainbow:level8str"             foreground="pasteldarktan"/>
+
+  <!-- Right Margin -->
+  <style name="right-margin"                foreground="#white" background="#black"/>
+  
+  <!-- Search Matching -->
+  <style name="search-match"                foreground="#white" background="#black"/>
+
+  <!-- Comments -->
+  <style name="def:comment"                 foreground="softred"/>
+  <style name="def:shebang"                 foreground="grey" bold="true"/>
+  <style name="def:doc-comment-element"     italic="true"/>
+
+  <!-- Constants -->
+  <style name="def:constant"                foreground="red"/>
+  <style name="def:string"                  foreground="yellow"/>
+  <style name="def:special-char"            foreground="green"/>
+  <style name="def:special-constant"        foreground="orange"/>
+  <style name="def:floating-point"          foreground="darkteal"/>
+
+  <!-- Identifiers -->
+  <style name="def:identifier"              bold="true"/>
+
+  <!-- Statements -->
+  <style name="def:statement"               bold="true"/>
+
+  <!-- Types -->
+  <style name="def:type"                    foreground="lightgreen" bold="true"/> 
+
+  <!-- Others -->
+  <style name="def:preprocessor"            foreground="#grey"/>
+  <style name="def:error"                   foreground="#white" background="red" bold="true"/>
+  <style name="def:note"                    background="#white" foreground="red" bold="true"/>
+  <style name="def:underlined"              italic="true" underline="true"/>
+
+  <!-- Language specific -->
+  <style name="diff:added-line"             foreground="green"/>
+  <style name="diff:changed-line"           foreground="grey"/>
+  <style name="diff:removed-line"           foreground="red"/>
+  <style name="diff:diff-file"              foreground="#white" bold="true"/> 
+  <style name="diff:location"               foreground="#white"/> 
+  <style name="diff:special-case"           foreground="#white" bold="true"/>
+
+</style-scheme>

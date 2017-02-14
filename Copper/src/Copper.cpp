@@ -457,7 +457,7 @@ void Scope::setVariableFrom(const String& pName, Object* pObject, bool pReuseSto
 
 void Scope::appendNamesByInterface(AppendObjectInterface* aoi) {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
-	std::printf("[DEBUG: Scope::appendNamesToList\n");
+	std::printf("[DEBUG: Scope::appendNamesByInterface\n");
 #endif
 	// This implementation is slow due to the need to copy strings.
 	// Saving string addresses is possible but not safe.
@@ -1412,9 +1412,18 @@ bool Engine::isStringToken(const char c) const {
 }
 
 Result::Value Engine::scanComment( ByteStream& stream ) {
+	char c = '`';
 	while ( ! stream.atEOS() ) {
-		if ( isCommentToken(stream.getNextByte()) ) {
-			return Result::Ok;
+		c = stream.getNextByte();
+		if ( isEscapeCharacter(c) ) {
+			if ( !stream.atEOS() ) {
+				c = stream.getNextByte();
+				continue;
+			}
+		} else {
+			if ( isCommentToken(c) ) {
+				return Result::Ok;
+			}
 		}
 	}
 	//print(LogLevel::error, "ERROR: Stream halted before comment ended.");
@@ -1587,7 +1596,7 @@ bool Engine::taskpushSystemFunction( const String& pName ) {
 		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_union)) );
 		return true;
 	}
-	if ( pName.equals("type") ) {
+	if ( pName.equals("type_of") ) {
 		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_type)) );
 		return true;
 	}
