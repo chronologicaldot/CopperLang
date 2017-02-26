@@ -24,7 +24,13 @@
 #undef REAL_NULL
 #endif
 
+	// Note: "__cplusplus" indicates the version on linux, at least in the standard library.
+	// See /usr/include/c++/#.#/numeric, line 126
+	// I don't know what other operating systems use.
+	// However, the user might want to continue using 0 for null. Otherwise, you can use the following line:
+//#if (defined(__cplusplus) && __cplusplus >= 201103L)
 #ifdef COMPILE_COPPER_FOR_C_PLUS_PLUS_11
+
 	// For ensuring items in RefPtr inherit Ref.
 #include <type_traits> // Requires C++11 support
 #define REAL_NULL nullptr
@@ -84,10 +90,10 @@
 
 // ******* Error templates *******
 
-template<class T>
+template<typename T>
 class UnimplementedFunction {};
 
-template<class T>
+template<typename T>
 class BadParameterException {};
 
 class RandomNullByteInStream {};
@@ -247,7 +253,7 @@ struct EngineMessage {
 	TokenNotHandled,
 
 	// ERROR
-	// Bad token found at the start of a function (after "fn").
+	// For compatibility reasons, this error remains.
 	InvalidTokenAtFunctionStart,
 
 	// WARNING
@@ -343,6 +349,10 @@ struct EngineMessage {
 	// ERROR
 	// A different token was found while searching for the body-opener token of an if-statment.
 	InvalidTokenBeforeIfBody,
+
+	// ERROR
+	// A stray porameter was found while searching for the body of a loop.
+	StrayTokenInLoopHead,
 
 	// WARNING
 	// The "own" control structure is disabled.
@@ -749,7 +759,7 @@ public:
 #endif
 };
 
-template<class T>
+template<typename T>
 class RefPtr
 #ifdef COMPILE_COPPER_FOR_C_PLUS_PLUS_11
 	: std::enable_if<std::is_base_of<Ref, T::value>> // Requires C++11 support

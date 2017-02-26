@@ -249,9 +249,7 @@ unsigned int ULong::getAsUnsignedInt() const {
 }
 
 unsigned long ULong::getAsUnsignedLong() const {
-	if ( value >= 0 )
-		return value;
-	return 0;
+	return value;
 }
 
 float ULong::getAsFloat() const {

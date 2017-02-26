@@ -268,6 +268,12 @@ const char* getStringFromEngineMessage(const EngineMessage::Value& msg, EngineEr
 		errLevel = EngineErrorLevel::error;
 		return "Invalid token encountered before \"if\" structure body.";
 
+	// ERROR
+	// A stray porameter was found while searching for the body of a loop.
+	case EngineMessage::StrayTokenInLoopHead:
+		errLevel = EngineErrorLevel::error;
+		return "Invalid token encountered before \"loop\" structure body.";
+
 	// WARNING
 	// The "own" control structure is disabled.
 	case EngineMessage::PointerNewOwnershipDisabled:

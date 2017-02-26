@@ -10,7 +10,7 @@ workspace "Copper"
 
 	filter { "configurations:ConsoleApp" }
 		targetdir "bin/ConsoleApp"
-		optimize "Off"
+		optimize "On"
 
 	filter { "configurations:DebugAll or DebugFe" }
 		targetdir "bin/debug"
@@ -20,7 +20,7 @@ workspace "Copper"
 		warnings "Extra"
 
 	filter { "configurations:DebugAll", "action:gmake" }
-		buildoptions " -g "
+		buildoptions " -g"
 
 	filter { "configurations:DebugFe" }
 		flags { "FatalWarnings" }

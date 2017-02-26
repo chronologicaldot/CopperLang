@@ -11,7 +11,7 @@ class NullListNodeException {};
 
 typedef unsigned long	uint;
 
-template<class T>
+template<typename T>
 class List
 {
 public:

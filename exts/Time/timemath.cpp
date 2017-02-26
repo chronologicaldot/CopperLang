@@ -2,8 +2,6 @@
 #include "timemath.h"
 #include <sstream>
 
-#include <cstdio>
-
 namespace Cu {
   namespace MSecTime {
 
@@ -23,13 +21,13 @@ void MSecTime::fromUnsignedLong(unsigned long p) {
   }
 }
 
-void MSecTime::fromNativeTime(clock_t p) {
+void MSecTime::fromNativeTime(time_t p) {
 #ifdef __linux__
-  // glibc makes clock_t long int.
-  value = static_cast<ms_time>(p) * 1000 / CLOCKS_PER_SEC;
+  // glibc makes clock_t long int, which records in millionths of a second.
+  value = (static_cast<ms_time>(p) * 1000) / CLOCKS_PER_SEC; // Could still have wrapping problems
 #else
   // Convert to long double since we have no idea what this is
-  long double ld = (static_cast<long double>(p) / CLOCKS_PER_SEC) * 1000;
+  long double ld = (static_cast<long double>(p) * 1000) / CLOCKS_PER_SEC;
   value = static_cast<ms_time>(ld); // Could still have wrapping problems, but deal with that later.
 #endif
 }

@@ -2926,17 +2926,6 @@ TaskResult::Value Engine::FunctionFound_processAssignmentObj(TaskFunctionFound& 
 	// in which case, the last object is set to a new function.
 	switch(task.type) {
 	case TASK_FFTYPE_variable:
-/*
-		switch( obj->getType() ) {
-		case ObjectType::Function:
-			task.varPtr.raw()->setFunc((FunctionContainer*)obj, false);
-			break;
-		case ObjectType::Data:
-			task.varPtr.raw()->setFuncReturn( obj );
-			break;
-		}
-		lastObject.set(task.varPtr.raw()->getRawContainer());
-*/
 		switch( obj->getType() ) {
 		case ObjectType::Function:
 			if ( task.varPtr.obtain(var) ) {
@@ -3176,16 +3165,6 @@ TaskResult::Value Engine::ifStatement_seekElse(TaskIfStructure& task, const Toke
 		task.state = TASK_IF_seek_body;
 		task.condition = ! task.condition;
 	} else {
-		//taskStack.pop();
-		//return performObjProcessAndCycle(lastToken);
-		/*
-		switch( process(lastToken) ) {
-		case EngineResult::Error:
-			return TaskResult::_error;
-		case EngineResult::Done:
-			return TaskResult::_done;
-		default: break;
-		}*/
 		return TaskResult::_pop_loop;
 	}
 	return TaskResult::_cycle;
@@ -3218,27 +3197,43 @@ TaskResult::Value Engine::processLoop(TaskLoopStructure& task, const Token& last
 #endif
 	switch( task.state ) {
 	case TASK_LOOP_find_body:
-		if ( lastToken.type == TT_body_open ) {
+		if ( lastToken.type == TT_body_open )
+		{
 			task.openBodies = 1;
 			task.state = TASK_LOOP_collect_body;
+			return TaskResult::_cycle;
+		} else {
+			//print(LogLevel::error, "Stray token between loop keyword and definition.");
+			print(LogLevel::error, EngineMessage::StrayTokenInLoopHead);
+			return TaskResult::_error;
 		}
-		return TaskResult::_cycle;
 
 	case TASK_LOOP_collect_body:
-		if ( lastToken.type == TT_body_open ) {
-			task.openBodies += 1;
-		}
-		else if ( lastToken.type == TT_body_close ) {
+		switch ( lastToken.type )
+		{
+		case TT_body_open:
+			task.openBodies += 1; break;
+		case TT_body_close:
 			task.openBodies -= 1;
 			if ( task.openBodies == 0 ) {
 				task.state = TASK_LOOP_run;
 				return loopStructure_runBody(task);
 			}
+			break;
+		case TT_function_end_run:
+			print(LogLevel::error, "SYSTEM ERROR: Found stray function-end-run token for processLoop.");
+			return TaskResult::_error;
+		default:
+			 break;
 		}
 		task.body.addToken(lastToken);
 		return TaskResult::_cycle;
 
 	case TASK_LOOP_run:
+		if ( lastToken.type == TT_function_end_run ) {
+			print(LogLevel::error, "SYSTEM ERROR: Found stray function-end-run token in processLoop.");
+ 			return TaskResult::_error;
+		}
 		return TaskResult::_none;
 
 	default:
@@ -3269,16 +3264,20 @@ int debug_max = 0;
 		}
 		// If at the end, restart
 		if ( ! ++tokenIter || loopSkipMailbox ) {
+#ifdef COPPER_DEBUG_LOOP_STRUCTURE
+			debug_max++;
+			if ( debug_max == 100 ) break;
+#endif
 			tokenIter.reset();
 			loopSkipMailbox = false;
 		}
-#ifdef COPPER_DEBUG_LOOP_STRUCTURE
-		debug_max++;
-		if ( debug_max == 100 ) break;
-#endif
 	} while( !loopEndMailbox );
 	loopEndMailbox = false; // Prevents cascading loop-end effect on outer loops
 	loopSkipMailbox = false; // Prevents cascading loop-skip effect on outer loops
+	// Pop overhead tasks (which should all be done when "stop" is found)
+	while ( ! taskStack.getLast().areSameTask(&task) ) {
+		taskStack.pop();
+	}
 	taskStack.pop();
 	return TaskResult::_cycle;
 }

@@ -1,4 +1,17 @@
 ====================
+2017/2/14
+v 2-0.17
+
+- Changed template<class T> instances to template<typename T> for standards conformance, though it doesn't matter.
+- Fixed bug in Engine::processLoop() that didn't clear unfinished tasks above the loop task.
+- Added check for invalid token between "loop" and body.
+- Minor adjustments to calm g++ warnings. (Parentheses around comparison in String::isLiteralNumber().)
+
+EngMsgToStr.h
+- Updated to include processLoop() bad token error.
+
+
+====================
 2017/2/12
 v 2-0.17
 

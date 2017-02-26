@@ -1,6 +1,5 @@
 // Copyright 2017 Nicolaus Anderson
 #include "../../Copper/src/Copper.h"
-#include <time.h>
 #include <ctime>
 #include <limits.h>
 #include "../FFIBase.h"
@@ -49,7 +48,7 @@ public:
 
   void fromUnsignedLong(unsigned long);
 
-  void fromNativeTime(clock_t p);
+  void fromNativeTime(time_t p);
   
   // glibc makes clock_t long int.
   long int linuxTime();

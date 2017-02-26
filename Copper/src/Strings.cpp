@@ -676,7 +676,7 @@ bool String::isLiteralNumber() const {
 	uint i = 0;
 	char* s = str;
 	for ( ; i < len; ++i, ++s ) {
-		if ( *s >= '0' && *s <= '9' || *s == '.' )
+		if ( (*s >= '0' && *s <= '9') || *s == '.' )
 			continue;
 		else
 			return false;

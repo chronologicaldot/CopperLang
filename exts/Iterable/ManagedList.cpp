@@ -256,6 +256,7 @@ bool Iter::replace(Object* pData) {
 	if ( isNull(node) )
 		return false;
 	node->setElem(pData);
+	return true;
 }
 
 List::~List() {
