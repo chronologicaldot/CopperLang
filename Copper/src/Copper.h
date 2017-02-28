@@ -647,7 +647,12 @@ struct SystemFunction {
 	_are_bool,
 	_are_string,
 	_are_number,
-	_assert
+	_assert,
+
+		// Built-in control structures that use a different task
+	_own,
+	_is_ptr,
+	_is_owner,	
 	};
 };
 
@@ -2091,6 +2096,7 @@ class Engine {
 	bool loopSkipMailbox;
 	bool systemExitTrigger;
 	EngineEndProcCallback* endMainCallback;
+	RobinHoodHash<SystemFunction::Value> builtinFunctions;
 	RobinHoodHash<ForeignFuncContainer> foreignFunctions;
 	bool ownershipChangingEnabled;
 	bool stackTracePrintingEnabled;
@@ -2197,6 +2203,7 @@ protected:
 	void taskpushUserFunction( const String& pName );
 
 private:
+	void				setupSystemFunctions();
 	TaskResult::Value	processTask(Task& task, const Token& lastToken);
 	TaskResult::Value	processTaskOnLastObject(Task& task);
 

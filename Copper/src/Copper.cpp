@@ -263,7 +263,7 @@ void Scope::copyAsgnFromHashTable( RobinHoodHash<RefVariableStorage>& pTable ) {
 	if ( notNull(listTable) ) {
 		for(; i < pTable.getSize(); ++i) {
 			bucket = pTable.get(i);
-			if ( notNull(bucket->data) ) {
+			if ( bucket->data != 0 ) {
 				listTable->push_back(
 					ListVariableStorage(bucket->data->name, bucket->data->item.getVariable())
 				);
@@ -467,7 +467,7 @@ void Scope::appendNamesByInterface(AppendObjectInterface* aoi) {
 	if ( notNull(robinHoodTable) ) {
 		for(; i < robinHoodTable->getSize(); ++i) {
 			bucket = robinHoodTable->get(i);
-			if ( notNull(bucket->data) ) {
+			if ( bucket->data != 0 ) {
 				obj = new ObjectString(bucket->data->name);
 				aoi->append(obj);
 				obj->deref();
@@ -676,12 +676,15 @@ Engine::Engine()
 	, loopSkipMailbox(false)
 	, systemExitTrigger(false)
 	, endMainCallback(REAL_NULL)
+	, builtinFunctions(50)
 	, foreignFunctions(100)
 	, ownershipChangingEnabled(false)
 	, stackTracePrintingEnabled(false)
 	, numberObjectFactoryPtr()
 	, nameFilter(REAL_NULL)
 {
+	setupSystemFunctions();
+
 	// Stack scope should be initialized to the slow (linked list) version for the 1st frame.
 	stack.getBottom().replaceScope(false);
 
@@ -1523,104 +1526,37 @@ bool Engine::taskpushSystemFunction( const String& pName ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::taskpushSystemFunction");
 #endif
-	// Note: Boolean function are built-in because they are required for functionality
-	if ( pName.equals(CONSTANT_FUNCTION_RETURN) ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_return)) );
-		return true;
-	}
-	if ( pName.equals("own") ) {
-		if ( ownershipChangingEnabled ) {
+	RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
+		= builtinFunctions.getBucketData(pName);
+
+	// No task found
+	if ( bucketData == 0 )
+		return false;
+
+	SystemFunction::Value taskName = bucketData->item;
+
+	// Some system functions are swapped for tasks
+	switch(taskName) {
+	case SystemFunction::_own:
+		if ( ! ownershipChangingEnabled ) {
 			print(LogLevel::warning, EngineMessage::PointerNewOwnershipDisabled);
 			return false;
 		}
 		taskStack.push_back( TaskContainer(new TaskProcessNamed(TaskName::_own)) );
 		return true;
-	}
-	if ( pName.equals("not") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_not)) );
-		return true;
-	}
-	if ( pName.equals("all") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_all)) );
-		return true;
-	}
-	if ( pName.equals("any") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_any)) );
-		return true;
-	}
-	if ( pName.equals("nall") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_nall)) );
-		return true;
-	}
-	if ( pName.equals("none") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_none)) );
-		return true;
-	}
-	if ( pName.equals("are_fn") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_are_fn)) );
-		return true;
-	}
-	if ( pName.equals("is_ptr") ) {
+
+	case SystemFunction::_is_ptr:
 		taskStack.push_back( TaskContainer(new TaskProcessNamed(TaskName::_is_ptr)) );
 		return true;
-	}
-	if ( pName.equals("is_owner") ) {
+
+	case SystemFunction::_is_owner:
 		taskStack.push_back( TaskContainer(new TaskProcessNamed(TaskName::_is_owner)) );
 		return true;
-	}
-	if ( pName.equals("are_empty") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_are_empty)) );
+
+	default:
+		taskStack.push_back( TaskContainer(new TaskFunctionFound(taskName)) );
 		return true;
 	}
-	if ( pName.equals("are_same") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_are_same)) );
-		return true;
-	}
-	if ( pName.equals("member") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_member)) );
-		return true;
-	}
-	if ( pName.equals("member_count") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_member_count)) );
-		return true;
-	}
-	if ( pName.equals("is_member") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_is_member)) );
-		return true;
-	}
-	if ( pName.equals("set_member") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_set_member)) );
-		return true;
-	}
-	if ( pName.equals("union") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_union)) );
-		return true;
-	}
-	if ( pName.equals("type_of") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_type)) );
-		return true;
-	}
-	if ( pName.equals("are_same_type") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_are_same_type)) );
-		return true;
-	}
-	if ( pName.equals("are_bool") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_are_bool)) );
-		return true;
-	}
-	if ( pName.equals("are_string") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_are_string)) );
-		return true;
-	}
-	if ( pName.equals("are_number") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_are_number)) );
-		return true;
-	}
-	if ( pName.equals("assert") ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(SystemFunction::_assert)) );
-		return true;
-	}
-	return false;
 }
 
 bool Engine::taskpushExternalFunction( const String& pName ) {
@@ -1663,6 +1599,36 @@ void Engine::taskpushUserFunction( const String& pName ) {
 		}
 	}
 }
+
+void Engine::setupSystemFunctions() {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::setupSystemFunctions");
+#endif
+	builtinFunctions.insert(String(CONSTANT_FUNCTION_RETURN), SystemFunction::_return);
+	builtinFunctions.insert(String("own"), SystemFunction::_own);
+	builtinFunctions.insert(String("not"), SystemFunction::_not);
+	builtinFunctions.insert(String("all"), SystemFunction::_all);
+	builtinFunctions.insert(String("any"), SystemFunction::_any);
+	builtinFunctions.insert(String("nall"), SystemFunction::_nall);
+	builtinFunctions.insert(String("none"), SystemFunction::_none);
+	builtinFunctions.insert(String("are_fn"), SystemFunction::_are_fn);
+	builtinFunctions.insert(String("is_ptr"), SystemFunction::_is_ptr);
+	builtinFunctions.insert(String("is_owner"), SystemFunction::_is_owner);
+	builtinFunctions.insert(String("are_empty"), SystemFunction::_are_empty);
+	builtinFunctions.insert(String("are_same"), SystemFunction::_are_same);
+	builtinFunctions.insert(String("member"), SystemFunction::_member);
+	builtinFunctions.insert(String("member_count"), SystemFunction::_member_count);
+	builtinFunctions.insert(String("is_member"), SystemFunction::_is_member);
+	builtinFunctions.insert(String("set_member"), SystemFunction::_set_member);
+	builtinFunctions.insert(String("union"), SystemFunction::_union);
+	builtinFunctions.insert(String("type_of"), SystemFunction::_type);
+	builtinFunctions.insert(String("are_same_type"), SystemFunction::_are_same_type);
+	builtinFunctions.insert(String("are_bool"), SystemFunction::_are_bool);
+	builtinFunctions.insert(String("are_string"), SystemFunction::_are_string);
+	builtinFunctions.insert(String("are_number"), SystemFunction::_are_number);
+	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
+}
+
 
 //-------------------------------------
 // &&&&&&&&& Task processing &&&&&&&&&&

@@ -1,4 +1,18 @@
 ====================
+2017/2/28
+v 2-0.171
+
+- Fixed checks for comparing bucket->data to nullptr in Scope functions. Now using "0" in accordance with RHHash.h.
+- Fixed bug in taskPushSystemFunction that incorrectly checked for ownership changing enabled.
+- Setup system/built-in functions to be acquired from a hash table instead of by direct namestring comparison.
+-- Added control structures to SystemFunction enum-struct.
+-- Added RobinHoodHash<SystemFunction> builtinFunctions to Engine.
+-- Replaced Engine::taskpushSystemFunction() to use hash table.
+-- Added Engine::setupSystemFunctions().
+-- Changed Engine constructor to call setupSystemFunctions().
+
+
+====================
 2017/2/14
 v 2-0.17
 
