@@ -214,125 +214,42 @@ Object* FunctionContainer::copy() {
 
 //--------------------------------------
 
-void Scope::getVariableFromHashTable(const String& pName, Variable*& pVariable) {
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-	std::printf("[DEBUG: Scope::getVariableFromHashTable\n");
-#endif
-	if ( isNull(robinHoodTable) ) throw NonExistentScopeTableException();
-
-	RobinHoodHash<RefVariableStorage>::BucketData* data = robinHoodTable->getBucketData(pName);
-	if ( !data ) {
-		// Create the slot
-		pVariable = &( robinHoodTable->insert(pName, RefVariableStorage())->getVariable() );
-	} else {
-		pVariable = &( data->item.getVariable() );
-	}
-}
-
-void Scope::getVariableFromList(const String& pName, Variable*& pVariable) {
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-	std::printf("[DEBUG: Scope::getVariableFromList\n");
-#endif
-	if ( isNull(listTable) ) throw NonExistentScopeTableException();
-
-	List<ListVariableStorage>::Iter lti = listTable->start();
-	if ( listTable->has() ) {
-		lti.makeLast(); // Newest items are at the back
-		do {
-			if ( (*lti).name.equals(pName) ) {
-				pVariable = &((*lti).getVariable());
-				return;
-			}
-		} while(--lti);
-	} // else
-	listTable->push_back(ListVariableStorage(pName));
-	pVariable = &(listTable->getLast().getVariable());
-}
-
 void Scope::copyAsgnFromHashTable( RobinHoodHash<RefVariableStorage>& pTable ) {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::copyAsgnFromHashTable\n");
 #endif
-	if ( notNull(robinHoodTable) ) {
-		delete robinHoodTable;
-		robinHoodTable = new RobinHoodHash<RefVariableStorage>(pTable);
-		return;
-	} // else
-	uint i=0;
-	RobinHoodHash<RefVariableStorage>::Bucket* bucket;
-	if ( notNull(listTable) ) {
-		for(; i < pTable.getSize(); ++i) {
-			bucket = pTable.get(i);
-			if ( bucket->data != 0 ) {
-				listTable->push_back(
-					ListVariableStorage(bucket->data->name, bucket->data->item.getVariable())
-				);
-			}
-		}
-	} else {
-		throw NonExistentScopeTableException();
-	}
+	CHECK_SCOPE_HASH_NULL(robinHoodTable)
+
+	delete robinHoodTable;
+	robinHoodTable = new RobinHoodHash<RefVariableStorage>(pTable);
 }
 
-void Scope::copyAsgnFromList( List<ListVariableStorage>& pList ) {
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-	std::printf("[DEBUG: Scope::copyAsgnFromList\n");
-#endif
-	List<ListVariableStorage>::Iter li = pList.start();
-	if ( li.has() ) {
-		li.makeLast();
-		if ( notNull(robinHoodTable) ) {
-			delete robinHoodTable;
-			robinHoodTable = new RobinHoodHash<RefVariableStorage>(100);
-			do {
-				robinHoodTable->insert( (*li).name, RefVariableStorage( ((*li).getVariable()) ) );
-			} while( ++li );
-		} else if ( notNull(listTable) ) {
-			delete listTable;
-			do {
-				listTable = new List<ListVariableStorage>();
-				listTable->push_back( ListVariableStorage( (*li).name, ((*li).getVariable()) ) );
-			} while( ++li );
-		} else {
-			throw NonExistentScopeTableException();
-		}
-	}
-}
-
-Scope::Scope( bool fast )
+Scope::Scope()
 	: robinHoodTable(REAL_NULL)
-	, listTable(REAL_NULL)
 {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope constructor 1 (bool) [%p]\n", (void*)this);
 #endif
-	if ( fast ) {
-		robinHoodTable = new RobinHoodHash<RefVariableStorage>(100);
-	} else {
-		listTable = new List<ListVariableStorage>();
-	}
+	robinHoodTable = new RobinHoodHash<RefVariableStorage>(100);
 }
 
 Scope::~Scope() {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::~Scope [%p]\n", (void*)this);
 #endif
-	if ( notNull(robinHoodTable) )
-		delete robinHoodTable;
-	if ( notNull(listTable) )
-		delete listTable;
+	CHECK_SCOPE_HASH_NULL(robinHoodTable)
+
+	delete robinHoodTable;
 }
 
 Scope& Scope::operator = (Scope& pOther) {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::operator = [%p]\n", (void*)this);
 #endif
-	if ( notNull(pOther.robinHoodTable) ) {
-		copyAsgnFromHashTable(*(pOther.robinHoodTable));
-	}
-	else if ( notNull(pOther.listTable) ) {
-		copyAsgnFromList(*(pOther.listTable));
-	}
+	CHECK_SCOPE_HASH_NULL(pOther.robinHoodTable)
+
+	copyAsgnFromHashTable(*(pOther.robinHoodTable));
+
 	return *this;
 }
 
@@ -351,14 +268,9 @@ Variable* Scope::addVariable(const String& pName) {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::addVariable , name=%s\n", pName.c_str());
 #endif
-	if ( notNull(robinHoodTable) ) {
-		return &( robinHoodTable->insert(pName, RefVariableStorage())->getVariable() );
-	}
-	else if ( notNull(listTable) ) {
-		listTable->push_back( ListVariableStorage(pName) );
-		return &(listTable->getLast().getVariable());
-	} // else
-	throw NonExistentScopeTableException();
+	CHECK_SCOPE_HASH_NULL(robinHoodTable)
+
+	return &( robinHoodTable->insert(pName, RefVariableStorage())->getVariable() );
 }
 
 // Gets the variable, creating it if it does not exist
@@ -366,15 +278,15 @@ void Scope::getVariable(const String& pName, Variable*& pVariable) {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::getVariable , name=%s\n", pName.c_str());
 #endif
+	CHECK_SCOPE_HASH_NULL(robinHoodTable)
 
-	if ( notNull( robinHoodTable ) ) {
-		getVariableFromHashTable(pName, pVariable);
+	RobinHoodHash<RefVariableStorage>::BucketData* data = robinHoodTable->getBucketData(pName);
+	if ( !data ) {
+		// Create the slot
+		pVariable = &( robinHoodTable->insert(pName, RefVariableStorage())->getVariable() );
+	} else {
+		pVariable = &( data->item.getVariable() );
 	}
-	else if ( notNull( listTable ) ) {
-		getVariableFromList(pName, pVariable);
-	}
-	else
-		throw NonExistentScopeTableException();
 }
 
 // Looks for the variable. If the function exists, it saves it to storage.
@@ -384,29 +296,14 @@ bool Scope::findVariable(const String& pName, Variable*& pStorage) {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::findVariable , name=%s\n", pName.c_str());
 #endif
+	CHECK_SCOPE_HASH_NULL(robinHoodTable)
+
 	RobinHoodHash<RefVariableStorage>::BucketData* bucketData;
-	if ( notNull(robinHoodTable) ) {
-		bucketData = robinHoodTable->getBucketData(pName);
-		if ( bucketData != 0 ) { // Hash table uses 0 instead of null
-			pStorage = &( bucketData->item.getVariable() );
-			return true;
-		}
-		pStorage = REAL_NULL;
-		return false;
-	}
-	// Should never happen
-	if ( isNull(listTable) ) {
-		throw NonExistentScopeTableException();
-	}
-	List<ListVariableStorage>::Iter varIter = listTable->start();
-	if ( varIter.has() ) {
-		varIter.makeLast();
-		do {
-			if ( pName.equals( (*varIter).name ) ) {
-				pStorage = &( (*varIter).getVariable() );
-				return true;
-			}
-		} while( --varIter );
+
+	bucketData = robinHoodTable->getBucketData(pName);
+	if ( bucketData != 0 ) { // Hash table uses 0 instead of null
+		pStorage = &( bucketData->item.getVariable() );
+		return true;
 	}
 	pStorage = REAL_NULL;
 	return false;
@@ -459,6 +356,7 @@ void Scope::appendNamesByInterface(AppendObjectInterface* aoi) {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::appendNamesByInterface\n");
 #endif
+	CHECK_SCOPE_HASH_NULL(robinHoodTable)
 	// This implementation is slow due to the need to copy strings.
 	// Saving string addresses is possible but not safe.
 	RobinHoodHash<RefVariableStorage>::Bucket* bucket;
@@ -475,22 +373,19 @@ void Scope::appendNamesByInterface(AppendObjectInterface* aoi) {
 		}
 		return;
 	}
-	if ( isNull(listTable) ) {
-		return;
-	}
-	List<ListVariableStorage>::Iter li = listTable->start();
-	if ( li.has() )
-	do {
-		obj = new ObjectString( (*li).name );
-		aoi->append(obj);
-		obj->deref();
-	} while( ++li );
 }
 
 void Scope::copyMembersFrom(Scope& pOther) {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::copyMembersFrom\n");
 #endif
+	// Creating a new scope is required for proper copy construction to delink pointers
+	Scope newScope;
+	newScope = pOther;
+	robinHoodTable->appendCopyOf(*(newScope.robinHoodTable));
+
+	// ^ I don't think this will work.
+/*
 	// Creating a new scope is required for proper copy construction to delink pointers
 	// Use a list version to make it easier to copy
 	Scope newScope(false);
@@ -500,19 +395,16 @@ void Scope::copyMembersFrom(Scope& pOther) {
 	do {
 		setVariable( (*li).name, &((*li).getVariable()), false );
 	} while( ++li );
+*/
 }
 
 unsigned int Scope::occupancy() {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::occupancy\n");
 #endif
-	if ( notNull(robinHoodTable) ) {
-		return robinHoodTable->getOccupancy();
-	}
-	if ( notNull( listTable ) ) {
-		return listTable->size();
-	}
-	return 0;
+	CHECK_SCOPE_HASH_NULL(robinHoodTable)
+
+	return robinHoodTable->getOccupancy();
 }
 
 //--------------------------------------
@@ -685,9 +577,6 @@ Engine::Engine()
 {
 	setupSystemFunctions();
 
-	// Stack scope should be initialized to the slow (linked list) version for the 1st frame.
-	stack.getBottom().replaceScope(false);
-
 	// Initialize the number object factory to the default.
 	numberObjectFactoryPtr.setWithoutRef(new NumberObjectFactory());
 }
@@ -717,7 +606,6 @@ void Engine::clearStacks() {
 	// Reinitialized the stack
 	// This is useful if the program should continue
 	stack.push();
-	stack.getBottom().replaceScope(false);
 }
 
 void Engine::setLogger( Logger* pLogger ) {
@@ -2652,10 +2540,10 @@ EngineResult::Value Engine::process_sys_member_count(TaskFunctionFound& task) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberCountParam);
 		return EngineResult::Error;
 	}
-	unsigned int size = parentFunc->getPersistentScope().occupancy();
+	unsigned long size = parentFunc->getPersistentScope().occupancy();
 	// The bummer here is that it's cramming an unsigned int into an int.
 	// On the bright side, no one should be creating 2.7 billion variables.
-	lastObject.setWithoutRef(new ObjectNumber(String(int(size))));
+	lastObject.setWithoutRef(new ObjectNumber(size));
 	return EngineResult::Ok;
 }
 
@@ -2864,9 +2752,7 @@ EngineResult::Value Engine::process_sys_assert(TaskFunctionFound& task) {
 		return EngineResult::Ok;
 	}
 	do {
-		if ( getBoolValue(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(true));
-		} else {
+		if ( ! getBoolValue(**paramIter) ) {
 			print(LogLevel::error, EngineMessage::AssertionFailed);
 			return EngineResult::Error;
 		}
@@ -3037,6 +2923,7 @@ TaskResult::Value Engine::ifStatement_findCondition(TaskIfStructure& task, const
 		} else {
 			task.state = TASK_IF_seek_cond_end;
 		}
+		// TODO: Should check for cap on openParamBodies so that the max value is not exceeded
 		task.openParamBodies += 1;
 		return TaskResult::_cycle;
 	} else {
@@ -3051,6 +2938,7 @@ TaskResult::Value Engine::ifStatement_getCondition(TaskIfStructure& task, const 
 	print(LogLevel::debug, "[DEBUG: Engine::ifStatement_getCondition");
 #endif
 	if ( lastToken.type == TT_parambody_open ) {
+		// TODO: Should check for cap on openParamBodies so that the max value is not exceeded
 		task.openParamBodies += 1;
 		return TaskResult::_none;
 	}
@@ -3078,6 +2966,7 @@ TaskResult::Value Engine::ifStatement_seekBody(TaskIfStructure& task, const Toke
 	print(LogLevel::debug, "[DEBUG: Engine::ifStatement_seekBody");
 #endif
 	if ( lastToken.type == TT_body_open ) {
+		// TODO: Should check for cap on openBodies so that the max value is not exceeded
 		task.openBodies += 1;
 		if ( task.condition && task.ran == false ) {
 			task.state = TASK_IF_run_body;
@@ -3099,6 +2988,7 @@ TaskResult::Value Engine::ifStatement_seekBodyEnd(TaskIfStructure& task, const T
 	// check for both { and }
 	switch( lastToken.type ) {
 	case TT_body_open:
+		// TODO: Should check for cap on openBodies so that the max value is not exceeded
 		task.openBodies += 1;
 		break;
 
@@ -3178,7 +3068,9 @@ TaskResult::Value Engine::processLoop(TaskLoopStructure& task, const Token& last
 		switch ( lastToken.type )
 		{
 		case TT_body_open:
-			task.openBodies += 1; break;
+			// TODO: Should check for cap on openBodies so that the max value is not exceeded
+			task.openBodies += 1;
+			break;
 		case TT_body_close:
 			task.openBodies -= 1;
 			if ( task.openBodies == 0 ) {

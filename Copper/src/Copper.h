@@ -53,8 +53,8 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_VIRTUAL_MACHINE_VERSION 0.17
-#define COPPER_VIRTUAL_MACHINE_BRANCH 2
+#define COPPER_INTERPRETER_VERSION 0.18
+#define COPPER_INTERPRETER_BRANCH 2
 
 // ******* Language version *******
 
@@ -1494,60 +1494,6 @@ public:
 	}
 };
 
-// TODO: Determine if this needs a reference pointer.
-struct ListVariableStorage {
-	String name;
-	Variable* variable;
-
-	ListVariableStorage(const String& pName)
-		: name(pName)
-		, variable(new Variable())
-	{
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: ListVariableStorage cstor 1 (const String&) [%p]\n", (void*)this);
-#endif
-	}
-
-	ListVariableStorage(const String& pName, Variable& pVariable)
-		: name(pName)
-		, variable(REAL_NULL)
-	{
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: ListVariableStorage cstor 2 (const String&, const Variable&) [%p]\n", (void*)this);
-#endif
-		// Note: Remove this line if there are copy problems.
-		// Copying should be the default, but it is expensive.
-		variable = pVariable.getCopy();
-	}
-
-	ListVariableStorage(const ListVariableStorage& pOther)
-		: name( pOther.name )
-		, variable(REAL_NULL)
-	{
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: ListVariableStorage cstor 3 (const ListVariableStorage&) [%p]\n", (void*)this);
-#endif
-		// Note: Remove this line if there are copy problems.
-		// Copying should be the default, but it is expensive.
-		variable = pOther.variable->getCopy();
-	}
-
-	~ListVariableStorage()
-	{
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: ListVariableStorage::~ListVariableStorage [%p]\n", (void*)this);
-#endif
-		variable->deref();
-	}
-
-	Variable& getVariable() {
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: ListVariableStorage::getVariable [%p]\n", (void*)this);
-#endif
-		return *variable;
-	}
-};
-
 //-------------------
 
 // Exception classes
@@ -1555,26 +1501,26 @@ class UninitializedStackException {};
 class UninitializedStackContextException {};
 class NonExistentScopeTableException {};
 
+#ifdef COMPILE_WITH_SCOPE_HASH_NULL_CHECKING
+#define CHECK_SCOPE_HASH_NULL(x) if ( !x ) throw NonExistentScopeTableException();
+#else
+#define CHECK_SCOPE_HASH_NULL(x)
+#endif
+
 
 class Scope : public Ref {
 	RobinHoodHash<RefVariableStorage>* robinHoodTable;
-	List<ListVariableStorage>* listTable;
 
 protected:
-	void getVariableFromHashTable(const String& pName, Variable*& pVariable);
-
-	void getVariableFromList(const String& pName, Variable*& pVariable);
-
 	void copyAsgnFromHashTable( RobinHoodHash<RefVariableStorage>& pTable );
-
-	void copyAsgnFromList( List<ListVariableStorage>& pList );
 
 public:
 	// Should probably have variable table allocation size as a parameter
 	// Or I could have an optional boolean parameter that requests a large variable size
 	// The Global Namespace would be better served having a list or tree (since it may be "infinite")
-	Scope( bool fast = true );
+	Scope();
 
+	// What's the point of this dance?
 #ifdef COMPILE_COPPER_FOR_C_PLUS_PLUS_11
 	Scope(const Scope& pOther) = delete;
 #else
@@ -1601,7 +1547,7 @@ public:
 	bool findVariable(const String& pName, Variable*& pStorage);
 
 	// Sets the variable, creating the variable if it does not exist
-	// The pMakePointer option may be ignored if the FunctionContainer is not owned
+	// The pReuseStorage option may be ignored if the FunctionContainer is not owned
 	void setVariable(const String& pName, Variable* pSourceVariable, bool pReuseStorage);
 
 	// Sets the variable, creating the variable if it does not exist
@@ -1614,6 +1560,7 @@ public:
 	// Copies members from another scope to this one
 	void copyMembersFrom(Scope& pOther);
 
+	// Number of occupied storage slots / actual Variables (there may be more storage allocated)
 	unsigned int occupancy();
 
 #ifdef COPPER_USE_DEBUG_NAMES
@@ -1653,11 +1600,6 @@ public:
 
 	Scope& getScope() {
 		return *scope;
-	}
-
-	void replaceScope(bool fast) {
-		scope->deref();
-		scope = new Scope(fast);
 	}
 
 #ifdef COPPER_USE_DEBUG_NAMES
@@ -1839,7 +1781,7 @@ enum TaskFunctionFoundType {
 struct TaskFunctionFound : public Task {
 	TaskFunctionFoundState state;
 	TaskFunctionFoundType type;
-	unsigned int openParamBodies; // Note: Copper.cpp line 893 depends on max value being for uint
+	unsigned int openParamBodies; // Note: Copper.cpp line 893 (1961 now?) depends on max value being for uint
 private:
 	List<Object*> params;
 public:

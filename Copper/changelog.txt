@@ -1,4 +1,33 @@
 ====================
+2017/3/14-23
+v 2-0.18
+
+- Changed COPPER_VIRTUAL_MACHINE_VERSION to COPPER_INTERPRETER_VERSION.
+- Changed COPPER_VIRTUAL_MACHINE_BRANCH to COPPER_INTERPRETER_BRANCH.
+- Fixed bug in utilList.h that failed to reset the list head and tail if Iter::destroy() was called.
+- Changed "size" to unsigned long and ObjectNumber(String(int)) to ObjectNumber(unsigned long) in Engine::process_sys_member_count().
+- Shortened Engine::process_sys_assert() by removing unnecessary setting of lastObject within the loop.
+
+docs.html
+- Updated "type" to "type_of".
+- Changed "virtual machine" references to say "interpreter".
+
+
+====================
+2017/2/28 - 2017/3/1
+v 2-0.18
+
+- Enabled RobinHoodHash::appendCopyOf().
+- Removed lists in scopes.
+- Added List::pop_front().
+- Added List::Iter::operator== and List::ConstIter::operator== .
+- Added List::Iter::destroy().
+
+Minor bug: TT_objectbody_close handling in Engine::interpret() should be handled and have its own error code but does not.
+To do: Add EngineMessage::OrphanObjectBodyCloser.
+
+
+====================
 2017/2/28
 v 2-0.171
 

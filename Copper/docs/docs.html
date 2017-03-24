@@ -108,7 +108,7 @@ orange { color:#ed9; }
 Copper Lang is a statically-typed language that revolves around the concept of object-functions. It is similar to a number of other high-level languages, such as Javascript, but differs in its emphasis on stack-based paradigms and memory safety.
 </p>
 <p>
-The virtual machine is designed to be a stand-alone engine for easily embedding into other applications and is written in portable, version agnostic C++ (tested with both C++98 and C++11 settings on GCC).
+The interpreter is designed to be a stand-alone engine for easily embedding into other applications and is written in portable, version agnostic C++ (tested with both C++98 and C++11 settings on GCC).
 </p>
 
 <h2 id="basics">Basics</h2>
@@ -266,7 +266,7 @@ A loop cycle can be restarted by using the keyword "skip".
 
 <h2 id="builtin-funcs">Built-in Functions</h2>
 <p>
-The Copper engine is very much a bare-bones virtual machine, so it has a limited set of functions. Most notably, it contains no print() function.
+The Copper engine is very much a bare-bones interpreter, so it has a limited set of functions. Most notably, it contains no print() function.
 </p>
 
 <h3>Pointer Structures</h3>
@@ -365,7 +365,7 @@ Accepts any number of functions and copies their persistent scopes into the pers
 
 <h3>Type Checks</h3>
 <div class="func">
-<h4>type()</h4>
+<h4>type_of()</h4>
 <p>
 Accepts a single parameter and returns the type name of the object as a string.
 </p>

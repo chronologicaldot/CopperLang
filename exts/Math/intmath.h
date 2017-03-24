@@ -73,6 +73,10 @@ public:
 	virtual float getAsFloat() const;
 
 	virtual double getAsDouble() const;
+
+	void incr() {
+		value++;
+	}
 };
 
 // Int object identification
@@ -147,6 +151,15 @@ struct Avg : public Base {
 };
 
 bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logger );
+
+
+struct Incr : public Base {
+	Incr(Logger* pLogger )
+		: Base(pLogger)
+	{}
+
+	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+};
 
 }}}
 #endif

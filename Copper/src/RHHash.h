@@ -64,7 +64,7 @@ public:
 	RobinHoodHash(uint pInitSize);
 	RobinHoodHash(const RobinHoodHash<T>& pOther);
 	~RobinHoodHash();
-	//void appendCopyOf(RobinHoodHash<T>& pOther); // Might be useful in the future
+	void appendCopyOf(RobinHoodHash<T>& pOther);
 	Bucket* get(uint pIndex);
 	BucketData* getBucketData(const String& pName);
 	T* insert(const String& pName, T pItem);
@@ -99,7 +99,7 @@ RobinHoodHash<T>::RobinHoodHash(const RobinHoodHash<T>& pOther) // Which is best
 	}
 }
 
-/*template<class T>
+template<class T>
 void RobinHoodHash<T>::appendCopyOf(RobinHoodHash<T>& pOther) {
 	uint i=0;
 	BucketData* bucketData;
@@ -109,7 +109,7 @@ void RobinHoodHash<T>::appendCopyOf(RobinHoodHash<T>& pOther) {
 			insert(bucketData->name, bucketData->item);
 		}
 	}
-}*/
+}
 
 template<class T>
 RobinHoodHash<T>::~RobinHoodHash() {

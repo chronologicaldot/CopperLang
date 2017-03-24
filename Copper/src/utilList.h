@@ -152,6 +152,11 @@ public:
 				node->setItem( pItem );
 		}
 
+		bool operator==( const Iter& pOther ) const
+		{
+			return (list == pOther.list) && (node == pOther.node);
+		}
+
 		Iter& operator=( Iter pOther )
 		{
 			list = pOther.list;
@@ -244,6 +249,15 @@ public:
 			}
 			list->count++;
 		}
+
+		// Invalidates the node
+		void destroy() {
+			if ( node == list->head )
+				list->head = node->next;
+			else if ( node == list->tail )
+				list->tail = node->prev;
+			node->destroy();
+		}
 	};
 
 	class ConstIter
@@ -273,6 +287,11 @@ public:
 			list = pOther.list;
 			node = pOther.node;
 			return *this;
+		}
+
+		bool operator==( const Iter& pOther ) const
+		{
+			return (list == pOther.list) && (node == pOther.node);
 		}
 
 		bool operator--()
@@ -606,6 +625,21 @@ public:
 			tail = n;
 		else
 			tail = 0;
+		count--;
+	}
+
+	void pop_front()
+	{
+		if ( count == 0 )
+			return;
+		Node* n = head->next;
+		if ( head == tail )
+			tail = 0;
+		head->destroy();
+		if ( n )
+			head = n;
+		else
+			head = 0;
 		count--;
 	}
 

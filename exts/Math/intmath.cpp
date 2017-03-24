@@ -190,6 +190,7 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	Avg*				intAvg = new Avg(&logger);
 	SingleOperation*	intMax = new SingleOperation(&logger, pick_max);
 	SingleOperation*	intMin = new SingleOperation(&logger, pick_min);
+	Incr*				incr	= new Incr(&logger);
 
 	Unimplemented* intUnimplemented = new Unimplemented(&logger);
 
@@ -216,6 +217,8 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 		engine.addForeignFunction(util::String("sin"),	intUnimplemented);
 		engine.addForeignFunction(util::String("cos"),	intUnimplemented);
 		engine.addForeignFunction(util::String("tan"),	intUnimplemented);
+
+		engine.addForeignFunction(util::String("++"),	incr);
 	} else {
 		engine.addForeignFunction(util::String("int_equal"),intEqual);
 		engine.addForeignFunction(util::String("int_gte"),	intGreaterThanOrEq);
@@ -232,6 +235,8 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 		engine.addForeignFunction(util::String("int_max"),	intMax);
 		engine.addForeignFunction(util::String("int_min"),	intMin);
 		FFI::simpleFunctionAdd(engine, util::String("int_abs"),	get_abs, &logger);
+
+		engine.addForeignFunction(util::String("++"),	incr);
 	}
 
 	intAreInt->deref();
@@ -250,6 +255,7 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 	intAvg->deref();
 	intMax->deref();
 	intMin->deref();
+	incr->deref();
 	intUnimplemented->deref();
 }
 
@@ -441,8 +447,28 @@ bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logge
 	int value;
 	if ( ! getInt(*paramsIter, value) ) {
 		FFI::printWarning(logger, "Int-abs function requires numeric parameter.");
+		result.setWithoutRef(new Int(0));
+		return true;
 	}
 	result.setWithoutRef(new Int( value < 0 ? -value : value ));
+	return true;
+}
+
+bool Incr::call( const List<Object*>& params, RefPtr<Object>& result ) {
+	List<Object*>::ConstIter paramsIter = params.constStart();
+	if ( ! paramsIter.has() ) {
+		result.setWithoutRef(new Int(0));
+		return true;
+	}
+	int value;
+	if ( !isObjectInt(*paramsIter) ) {
+		FFI::printWarning(logger, "Int-incr function requires numeric parameter.");
+		result.setWithoutRef(new Int(0));
+		return true;
+	}
+	Int* i = (Int*)(*paramsIter);
+	i->incr();
+	result.setWithoutRef(new Int(0)); // should be i->getAsInt() but that's expensize
 	return true;
 }
 
