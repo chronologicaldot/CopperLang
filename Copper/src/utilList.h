@@ -6,8 +6,14 @@
 
 namespace util {
 
+class NodeCopyException {};
 class IndexOutOfBoundsException {};
 class NullListNodeException {};
+class BadIteratorException {}; // Node could be null
+class BadListInitException {};
+
+// For debug
+class InvalidListException {};
 
 typedef unsigned long	uint;
 
@@ -27,6 +33,11 @@ public:
 			, next(0)
 			, item( pItem )
 		{}
+
+		Node( const Node& pOther )
+		{
+			throw NodeCopyException();
+		}
 
 		T& getItem()
 		{
@@ -80,6 +91,8 @@ public:
 			{
 				next->prev = 0;
 			}
+			prev = 0;
+			next = 0;
 		}
 
 		void destroy()
@@ -87,6 +100,10 @@ public:
 			delink();
 			delete this;
 		}
+
+/*
+		// These don't handle correcting the list head and tail
+		// and fail to serve as all-in-one solutions
 
 		void removeBefore()
 		{
@@ -117,6 +134,7 @@ public:
 			delete next;
 			next = 0;
 		}
+*/
 	};
 
 	class Iter
@@ -138,6 +156,11 @@ public:
 		//T& curr()	// current node
 		T& operator*()
 		{
+			return node->getItem();
+		}
+
+		// For explicitness
+		T& getItem() {
 			return node->getItem();
 		}
 
@@ -164,8 +187,16 @@ public:
 			return *this;
 		}
 
-		//bool prev()	// previous node
-		bool operator--()
+		// REQUIRED
+		Iter& set( Iter pOther )
+		{
+			list = pOther.list;
+			node = pOther.node;
+			return *this;
+		}
+
+		bool prev()	// previous node
+		//bool operator--() // <- was this
 		{
 			//if ( start() ) return false;
 			if ( !node || !(node->prev) ) return false;
@@ -173,8 +204,8 @@ public:
 			return true; // there may be more nodes
 		}
 
-		//bool next()	// next node
-		bool operator++()
+		bool next()	// next node
+		//bool operator++() // <- was this
 		{
 			if ( !node || !(node->next) ) return false;
 			node = node->next;
@@ -227,6 +258,10 @@ public:
 				n->next = node->prev;
 				node->prev->prev = n;
 			}
+			if ( node == list->head )
+			{
+				list->head = node->prev;
+			}
 			list->count++;
 		}
 
@@ -247,6 +282,10 @@ public:
 				node->next->next = n;
 				n->prev = node->next;
 			}
+			if ( node == list->tail )
+			{
+				list->tail = node->next;
+			}
 			list->count++;
 		}
 
@@ -254,9 +293,10 @@ public:
 		void destroy() {
 			if ( node == list->head )
 				list->head = node->next;
-			else if ( node == list->tail )
+			if ( node == list->tail )
 				list->tail = node->prev;
 			node->destroy();
+			node = 0;
 		}
 	};
 
@@ -282,6 +322,11 @@ public:
 			return node->getConstItem();
 		}
 
+		// For explicitness
+		const T& getItem() {
+			return node->getConstItem();
+		}
+
 		ConstIter& operator=( ConstIter pOther )
 		{
 			list = pOther.list;
@@ -294,14 +339,16 @@ public:
 			return (list == pOther.list) && (node == pOther.node);
 		}
 
-		bool operator--()
+		bool prev()
+		//bool operator--() // <- was
 		{
 			if ( !node || !(node->prev) ) return false;
 			node = node->prev;
 			return true; // there may be more nodes
 		}
 
-		bool operator++()
+		bool next()
+		//bool operator++() // <- was
 		{
 			if ( !node || !(node->next) ) return false;
 			node = node->next;
@@ -360,17 +407,20 @@ public:
 		if ( other.has() )
 		do {
 			push_back( *other );
-		} while ( ++other );
+		} while ( other.next() );
 	}
 */
 
 	List( const List& pOther )
+		: head(0)
+		, tail(0)
+		, count(0)
 	{
 		ConstIter other( pOther );
 		if ( other.has() )
 		do {
 			push_back( *other );
-		} while ( ++other );
+		} while ( other.next() );
 	}
 
 	~List()
@@ -467,7 +517,7 @@ public:
 		if ( i.has() )
 		do {
 			push_back(*i);
-		} while ( ++i );
+		} while ( i.next() );
 		return *this;
 	}
 
@@ -520,10 +570,13 @@ public:
 		n->destroy();
 		count--;
 	}
-
+/*
+	// QUARANTINED
+	// If you use this function via the old removeUpTo() code
+	// to remove all of the nodes, it eventually hits the NullListNodeException.
 	void remove( Iter& pIter )
 	{
-		if ( pIter->node == head )
+		if ( pIter.node == head )
 		{
 			if ( head != tail )
 			{
@@ -532,7 +585,7 @@ public:
 				head = 0;
 				tail = 0;
 			}
-		} else if ( pIter->node == tail )
+		} else if ( pIter.node == tail )
 		{
 			if ( head != tail )
 			{
@@ -542,11 +595,13 @@ public:
 				tail = 0;
 			}
 		}
-		if ( ! pIter->node )
+		if ( ! pIter.node )
 			throw NullListNodeException();
-		pIter->node->destroy();
+		pIter.node->destroy();
+		pIter.node = 0;
 		count--;
 	}
+*/
 /*
 	// This ends up removing all copies of the same item (because the iterator resets),
 	// which may or may not be desired activity.
@@ -564,27 +619,68 @@ public:
 				{
 					remove(me); break;
 				}
-			} while ( ++me );
-		} while ( ++other );
+			} while ( me.next() );
+		} while ( other.next() );
 	}
 */
+	// Removes all nodes PRIOR to the given iterator
+	void removeUpTo( const Iter& stopIter )
+	{
+		if ( stopIter.list != this )
+			throw BadIteratorException();
+
+		while ( stopIter.node != head )
+			pop_front();
+	}
+
+/*	// FAILS! (see note above remove( Iter& )
+	void removeUpTo( const Iter& stopIter )
+		Iter i(*this);
+		if ( count > 0 ) {
+			while ( ! (i == stopIter) ) {
+				remove(i);
+				i.reset();
+			}
+		}
+	}
+*/
+
 	void push_back( const T& pItem )
 	{
-		if ( !head )
+		if ( !tail )
 		{
-			head = new Node( pItem );
-			tail = head;
+			if ( head )
+				throw BadListInitException();
+			tail = new Node( pItem );
+			head = tail;
 		} else {
 			tail->insertAfter( pItem );
 			tail = tail->next;
 		}
 		count++;
+
+/*
+		if ( !head )
+		{
+			head = new Node( pItem );
+			tail = head;
+		} else {
+			if ( !tail )
+				throw NullListNodeException();
+
+			tail->insertAfter( pItem );
+			tail = tail->next;
+		}
+		count++;
+*/
 	}
 
 	void push_front( const T& pItem )
 	{
 		if ( !head )
 		{
+			if ( tail )
+				throw BadListInitException();
 			head = new Node( pItem );
 			tail = head;
 		} else {
@@ -619,12 +715,9 @@ public:
 			return;
 		Node* n = tail->prev;
 		if ( head == tail )
-			head = 0;
+			head = n;
 		tail->destroy();
-		if ( n )
-			tail = n;
-		else
-			tail = 0;
+		tail = n; // Could be 0
 		count--;
 	}
 
@@ -634,12 +727,9 @@ public:
 			return;
 		Node* n = head->next;
 		if ( head == tail )
-			tail = 0;
+			tail = n;
 		head->destroy();
-		if ( n )
-			head = n;
-		else
-			head = 0;
+		head = n; // Could be 0
 		count--;
 	}
 
@@ -649,7 +739,7 @@ public:
 		if ( !other.has() ) return;
 		do {
 			push_back( *other );
-		} while ( ++other );
+		} while ( other.next() );
 	}
 
 	Iter start()
@@ -662,25 +752,78 @@ public:
 		return ConstIter( *this );
 	}
 
+	Iter end() {
+		Iter i(*this);
+		i.makeLast();
+		return i;
+	}
+
 	// Primarily for debug stack-trace
 	uint indexOf( const Iter& pIter )
 	{
 		if ( ! pIter.list->has() )
 			return 0;
-		if ( pIter.list != this || pIter.atEnd() )
-			return size()-1;
+		if ( pIter.list != this )
+			throw BadIteratorException();
 		uint i=0;
-		Iter it = start();
-		for ( ; ! it.atEnd(); ++it, i++ )
-		{
-			if ( *it == *pIter )
-			{
+		ConstIter it = constStart();
+		if ( it.has() )
+		do {
+			if ( it == pIter )
 				return i;
-			}
-		}
-		return size()-1;
+			++i;
+		} while ( it.next() );
+		throw BadIteratorException();
+		//return count-1;
 	}
 
+	void validate() {
+		if ( !head && !tail )
+			return;
+
+		if ( head && !tail )
+			throw InvalidListException();
+		if ( tail && !head )
+			throw InvalidListException();
+
+		if ( head->prev )
+			throw InvalidListException();
+		if ( tail->next )
+			throw InvalidListException();
+
+		if ( head == tail ) {
+			return;
+		}
+
+		Node* n = head;
+		while ( n != tail ) {
+			if ( !( n->next ) )
+				throw InvalidListException();
+			n = n->next;
+		}
+		n = tail;
+		while ( n != head ) {
+			if ( !( n->prev ) )
+				throw InvalidListException();
+			n = n->prev;
+		}
+	}
+
+/*
+	bool validate( Iter& pIter ) {
+		uint pIdx = indexOf(pIter);
+		Iter follower = pIter;
+		if ( follower.next() ) {
+			if ( follower.node->prev != pIter.node || pIter.node->next != follower.node )
+				throw 1;
+			if ( indexOf(follower) != pIdx + 1 )
+				throw 2;
+			return true;
+		} else {
+			throw 0;
+		}
+	}
+*/
 /*
 	// This method is a useful walkaround for copy-construction of a list on the
 	// heap to a list on the stack and vice versa.

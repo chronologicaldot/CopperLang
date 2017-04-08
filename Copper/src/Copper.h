@@ -10,12 +10,21 @@
 //#define COPPER_FFI_LEVEL_MESSAGES
 //#define COPPER_SCOPE_LEVEL_MESSAGES
 //#define COPPER_TASK_LEVEL_MESSAGES
+//#define COPPER_DEBUG_ADDRESS_MESSAGES
+//#define COPPER_PARSER_LEVEL_MESSAGES
 //#define COPPER_DEBUG_ENGINE_MESSAGES
 //#define COPPER_USE_DEBUG_NAMES
-//#define COPPER_DEBUG_LOOP_STRUCTURE // Limits loops to 100 process() cycles
+
+// Shows the type of each opcode that is executed
+//#define COPPER_OPCODE_DEBUGGING
+
+// To force the interpreter to perform checks where the state machine should fulfill assumptions.
+// These checks should not be necessary for safety of the final VM, but they aid in debugging.
+// IF YOU MODIFY THE PARSER, YOU SHOULD ENABLE THIS FLAG!
+//#define COPPER_STRICT_CHECKS
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-//#include <cstdio>
+#include <cstdio>
 
 
 // ******* Null *******
@@ -29,6 +38,7 @@
 	// I don't know what other operating systems use.
 	// However, the user might want to continue using 0 for null. Otherwise, you can use the following line:
 //#if (defined(__cplusplus) && __cplusplus >= 201103L)
+	//... instead of...
 #ifdef COMPILE_COPPER_FOR_C_PLUS_PLUS_11
 
 	// For ensuring items in RefPtr inherit Ref.
@@ -53,8 +63,8 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.18
-#define COPPER_INTERPRETER_BRANCH 2
+#define COPPER_INTERPRETER_VERSION 0.19
+#define COPPER_INTERPRETER_BRANCH 3
 
 // ******* Language version *******
 
@@ -87,6 +97,13 @@
 #ifdef UNDEF_COPPER_ENABLE_NUMERIC_NAMES
 #undef COPPER_ENABLE_NUMERIC_NAMES
 #endif
+
+//! Open-body token cap
+// While the engine technically supports the full range of uint,
+// the actual memory available to the program is limited and hampered by the fact
+// that many things need to be created for each function call. Consequently, the number
+// of active open function parameter bodies and execution bodies must be limited.
+#define PARSER_OPENBODY_MAX_COUNT 350
 
 // ******* Error templates *******
 
@@ -137,7 +154,7 @@ struct OSInfo {
 
 	static OSType getOS()
 	{
-//#ifdef _MSC_VER
+//ifdef _MSC_VER
 #ifdef _WIN32
 		// Defined for both 32-bit and 64-bit versions, so check for 64-bit
 	#ifdef _WIN64
@@ -235,8 +252,12 @@ struct EngineMessage {
 	OrphanParamBodyCloser,
 
 	// ERROR
-	/* Function body has been closed without first being opened.
-	(Should only happen at the global scope.) */
+	// Object body has not been opened before but a closing token has been encountered.
+	OrphanObjectBodyCloser,
+
+	// ERROR
+	// Function body has been closed without first being opened.
+	// (Should only happen at the global scope.)
 	OrphanBodyCloser,
 
 	// ERROR
@@ -487,6 +508,15 @@ struct EngineResult {
 	};
 };
 
+struct ExecutionResult {
+	enum Value {
+		Ok,
+		Error,
+		Done,		// Used for indicating end-main/end processing
+		Reset		// Used for resetting the operation strand parsing (for user functions)
+	};
+};
+
 //-------------------
 
 /*
@@ -549,8 +579,8 @@ enum TokenType {
 	a = {}		// Basic, parameter-less function, created from body brackets.
 	a = [] {}	// Basic, parameter-less function, created from "[]".
 	a = []		// Basic, parameter-less function, created from "[]". */
-	TT_body_open,
-	TT_body_close,
+	TT_execbody_open,
+	TT_execbody_close,
 
 	/* Object-body open and close
 	Used for associating values with persistent scope variables in a function construction
@@ -613,17 +643,6 @@ enum TokenType {
 	TT_binary // Not yet implemented
 };
 
-struct TaskResult {
-	enum Value {
-	_none,		// Task may be waiting for something (possibly an object)
-	_pop_loop,	// Task is done, so remove from task stack and continue with other tasks
-	_cycle,		// Task consumed the token and a new run cycle must start
-							// (task will pop itself if necessary)
-	_skip,		// Task has handled the token and set the last object, so skip interpret()
-	_error,
-	_done		// Something has ended all processing.
-	};
-};
 
 struct SystemFunction {
 	enum Value {
@@ -648,11 +667,6 @@ struct SystemFunction {
 	_are_string,
 	_are_number,
 	_assert,
-
-		// Built-in control structures that use a different task
-	_own,
-	_is_ptr,
-	_is_owner,	
 	};
 };
 
@@ -704,6 +718,9 @@ struct BadReferenceCountingException {
 // Used for tracking reference counting for certain types of C++ objects
 class Ref {
 	int refs;
+#ifdef COPPER_REF_LEVEL_MESSAGES
+	bool isStackBased;
+#endif
 
 public:
 	Ref() : refs(1) {
@@ -716,7 +733,7 @@ public:
 		// Some people gawk at this, but it's actually useful in debugging.
 #ifdef COPPER_REF_LEVEL_MESSAGES
 		std::printf("!! Deletion refs: %i, ptr = %p\n", refs, (void*)this);
-		if ( refs != 0 ) {
+		if ( refs != 0 && !isStackBased ) {
 			std::printf("Bad ref count in dstor.\n");
 			throw BadReferenceCountingException(refs, this);
 		}
@@ -753,9 +770,15 @@ public:
 	}
 
 	// Used when an instance has been created as a stack variable rather than on the heap
-	void dropRef() {
-		refs -= 1;
+	//void dropRef() {
+	//	refs -= 1;
+	//}
+
+#ifdef COPPER_REF_LEVEL_MESSAGES
+	void declareStackBased() {
+		isStackBased = true;
 	}
+#endif
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
@@ -805,6 +828,10 @@ public:
 			obj->deref();
 		}
 		obj = pObject;
+	}
+
+	RefPtr<T> operator= (const RefPtr<T> pOther) {
+		set(pOther.obj);
 	}
 
 	bool obtain(T*& pStorage) {
@@ -860,41 +887,296 @@ public:
 #endif
 };
 
-//-------------------
+// *********** OPERATION PROCESSING BASE COMPONENTS **********
 
-class Body : public Ref {
-	List<Token> tokens; // This should probably be List<const Token>
-public:
-	Body() {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Body constructor [%p]\n", (void*)this);
+struct TaskName {
+	enum Value {
+		FuncBuild=0,
+		FuncFound
+	};
+};
+
+struct Task : public Ref {
+	TaskName::Value name;
+
+	Task(TaskName::Value pName) : name(pName) {}
+
+#ifdef COPPER_USE_DEBUG_NAMES
+	virtual const char* getDebugName() const {
+		return "Task";
+	}
 #endif
+};
+
+class TaskContainer {
+	Task* task;
+public:
+	// Expected to be passed: new Task() (e.g. "new TaskFunctionConstruct()")
+	TaskContainer(Task* newTask)
+		: task(newTask)
+	{}
+
+	TaskContainer(const TaskContainer& pOther)
+		: task(pOther.task)
+	{
+		task->ref();
 	}
 
-	~Body() {
-		tokens.clear();
+	~TaskContainer() {
+		task->deref();
 	}
 
-	void addToken(const Token& pToken) {
-		tokens.push_back(pToken);
+	// returning an address prevents deleting the pointer
+	Task& getTask() { return (Task&)*task; }
+
+	bool areSameTask(Task* pOther) {
+		return task == pOther;
+	}
+};
+
+typedef List<Token>			TokenQueue;
+typedef List<Token>::Iter	TokenQueueIter;
+
+typedef List<String> 			VarAddress;
+typedef List<String>::Iter 		VarAddressIter;
+typedef List<String>::ConstIter VarAddressConstIter;
+
+class BadVarAddressException {};
+
+class Body; // pre-declaration
+
+struct Opcode : public Ref {
+	enum Value {
+		Exit = 0,
+		FuncBuild_start,
+		FuncBuild_createRegularParam,
+		FuncBuild_assignToVar,
+		FuncBuild_pointerAssignToVar,
+		FuncBuild_execBody,
+		FuncBuild_end,
+
+		FuncFound_access,
+		FuncFound_assignment,
+		FuncFound_pointerAssignment,
+		FuncFound_call,
+		FuncFound_setParam,
+		FuncFound_finishCall,
+
+		Terminal,
+		Goto,
+		ConditionalGoto,
+
+		Own,
+		Is_owner,
+		Is_pointer,
+
+		CreateBoolTrue,
+		CreateBoolFalse,
+		CreateNumber,
+		CreateString
+	};
+
+protected:
+	Value type;
+
+public:
+	Opcode(Opcode::Value pType)
+		: type(pType)
+	{}
+
+	Opcode(const Opcode& pOther)
+		: type( pOther.type )
+	{}
+
+	virtual ~Opcode() {}
+
+	virtual Opcode* getCopy() const {
+		return new Opcode(type);
 	}
 
-	List<Token>::ConstIter getIterator() {
-		return tokens.constStart();
+	Value getType() const {
+		return type;
 	}
 
-	unsigned int size() const {
-		return tokens.size();
+	void setType( Opcode::Value pType ) {
+		type = pType;
 	}
+
+	// Task produced by this operation
+	virtual Task* getTask() const {
+		return REAL_NULL;
+	}
+
+	// Data produced by this operation
+	virtual Object* getData() const {
+		return REAL_NULL;
+	}
+
+	virtual const VarAddress* getAddressData() const {
+		return REAL_NULL;
+	}
+
+	virtual String getNameData() const {
+		return String();
+	}
+
+	virtual Body* getBody() const {
+		return REAL_NULL;
+	}
+};
+
+class BadOpcodeException {
+	const Opcode::Value v;
+	
+public:
+	BadOpcodeException(const Opcode::Value code)
+		: v(code)
+	{}
+
+	Opcode::Value getOpcodeType() const {
+		return v;
+	}
+};
+
+class OpcodeContainer {
+	// DO NOT SHARE
+	Opcode* code;
+public:
+	explicit OpcodeContainer( Opcode* pCode )
+		: code(pCode)
+		//: code( pCode->getCopy() ) // Make independent - WON'T WORK
+	{
+		// Unfortunately, making opcodes independent would make the creation of loops messier.
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+		std::printf("[DEBUG: OpcodeContainer cstor(code): code = %p, type = %u, pCode= %p\n", (void*)code, (unsigned)(code->getType()), (void*)pCode);
+#endif
+		code->ref();
+	}
+
+	OpcodeContainer( const OpcodeContainer& pOther ) // Used only for transmission in lists
+		//: code( pOther.code->getCopy() ) // Make independent
+		: code( pOther.code )
+	{
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+		std::printf("[DEBUG: OpcodeContainer cstor copy: code = %p\n", (void*)code);
+#endif
+		code->ref();
+	}
+
+	~OpcodeContainer() {
+		code->deref();
+	}
+
+	const Opcode* getOp() {
+		return code;
+	}
+
+	static OpcodeContainer indie( Opcode* pCode ) {
+		OpcodeContainer out(pCode);
+		pCode->deref();
+		return out;
+	}
+};
+
+//typedef List<OpcodeContainer> OpStrand;
+//typedef List<OpcodeContainer>::Iter OpStrandIter;
+
+struct OpStrand : public List<OpcodeContainer>, public Ref {};
+typedef OpStrand::Iter	OpStrandIter;
+
+class OpStrandContainer {
+	OpStrand* s;
+	OpStrandIter i; // Should be const but stuff may act through it. Find out what does.
+
+public:
+	OpStrandContainer( OpStrand* strand )
+		: s(strand)
+		, i(strand->start())
+	{
+		s->ref();
+	}
+
+	OpStrandContainer(const OpStrandContainer& pOther)
+		: s(pOther.s)
+		, i(pOther.i)
+	{
+		s->ref();
+	}
+
+	~OpStrandContainer() {
+		s->deref();
+	}
+
+	OpStrandIter& getCurrOp() {
+		return i;
+	}
+
+	OpStrand* getCurrStrand() {
+		return s;
+	}
+
+	void removeAllUpToCurrentCode() {
+		s->removeUpTo(i);
+	}
+};
+
+typedef List<OpStrandContainer> OpStrandStack;
+typedef List<OpStrandContainer>::Iter OpStrandStackIter;
+
+// Attempting to use or access a strand that is null
+class EmptyOpstrandException {};
+// Attempting to save an empty opcode
+class NullOpcodeException {};
+
+
+// ============= Bodies ==============
+class TokenPushToFinishedBodyException {};
+
+// predeclaration
+class Engine;
+
+// Some of this body code is in the C++ file because
+// it depends on functions defined later.
+struct Body : public Ref {
+	enum State {
+		Raw,
+		HasErrors,
+		Ready
+	};
+
+private:
+	State state;
+	TokenQueue tokens;
+	OpStrand* codes;
+
+public:
+	Body();
+
+	~Body();
+
+	void addToken(const Token& pToken);
+
+	State getState();
+
+	// Attempts to convert code. Returns true if succeeded.
+	bool compile(Engine* engine);
+
+	OpStrand* getOpcodeStrand();
+
+	bool isEmpty() const;
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
 		return "Body";
 	}
 #endif
+
+protected:
+	bool compile_internal(Engine* engine);
 };
 
-//-------------------
+
+//********* FUNCTIONS **********
 
 class Scope; // predeclaration - Not enough. Function methods need to be in a separate CPP file.
 
@@ -913,6 +1195,7 @@ public:
 	~Function();
 	Scope& getPersistentScope();
 	void set( Function& other );
+	void addParam( const String pName );
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
@@ -940,7 +1223,8 @@ When the owner changes its function, this container deletes the function but kee
 This prevents cyclic memory loops but prevents pointers from accessing dead memory.
 Pointers that wish to access the function will reference-count this object rather than the function.
 
-Oddly enough, this has to inherit Object (instead of Function) since this is what is passed along.
+Interestly enough, this (instead of Function) has to inherit Object since this is what is stored
+by variables and passed around the system.
 */
 class FunctionContainer : public Object {
 	RefPtr<Function> funcBox;
@@ -1020,14 +1304,7 @@ class Variable : public Ref {
 	FunctionContainer* box;
 
 public:
-	Variable()
-		: box(new FunctionContainer())
-	{
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable constructor [%p]\n", (void*)this);
-#endif
-		box->own(this);
-	}
+	Variable();
 
 #ifdef COMPILE_COPPER_FOR_C_PLUS_PLUS_11
 	Variable(const Variable& pOther) = delete;
@@ -1037,153 +1314,25 @@ private:
 public:
 #endif
 
-	~Variable() {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable::~Variable [%p]\n", (void*)this);
-#endif
-		box->disown(this);
-		box->deref();
-	}
+	~Variable();
 
-	void reset() {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable::reset [%p]\n", (void*)this);
-#endif
-		if ( isNull(box) )
-			throw NullVariableException();
+	void reset();
 
-		box->disown(this);
-		box->deref();
-		box = new FunctionContainer();
-		box->own(this);
-	}
+	void set( Variable* pOther, bool pReuseStorage );
 
-	void set( Variable* pOther, bool pReuseStorage ) {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable::set [%p]\n", (void*)this);
-#endif
-		if ( notNull(pOther) )
-			setFunc( pOther->box, pReuseStorage );
-		else
-			throw NullVariableException();
-	}
-
-	void setFunc( FunctionContainer* pContainer, bool pReuseStorage ) {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable::setFunc [%p]\n", (void*)this);
-#endif
-		if ( isNull(pContainer) ) {
-			throw BadParameterException<Variable>();
-		}
-		if ( isNull(box) )
-			throw NullVariableException();
-
-		FunctionContainer* fc = REAL_NULL;
-
-		if ( pReuseStorage ) {
-			pContainer->ref();
-			box->disown(this);
-			box->deref();
-			box = pContainer;
-			box->own(this);
-		} else {
-			// Data is either not owned or this is supposed to make a copy anyways.
-			// Delinks from pointers (which is desired).
-			// Copy occurs here in case of assigning box's contents to itself.
-			// (See changelog.txt: 2017/1/24 v 0.12)
-			fc = (FunctionContainer*)(pContainer->copy());
-			box->disown(this);
-			box->deref();
-			box = fc;
-			box->own(this);
-		}
-	}
+	void setFunc( FunctionContainer* pContainer, bool pReuseStorage );
 
 	// Used only for data
-	void setFuncReturn( Object* pData ) {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable::setFuncReturn [%p]\n", (void*)this);
-#endif
-		if ( isNull(box) )
-			throw NullVariableException();
-
-		Function* f = REAL_NULL;
-		if ( box->getFunction(f) ) {
-//std::printf("[DEBUG: Variable::setFuncReturn: using current function\n");
-			f->result.set(pData->copy());
-			f->constantReturn = true;
-		} else {
-//std::printf("[DEBUG: Variable::setFuncReturn: creating new container\n");
-			box->disown(this);
-			box->deref();
-			box = FunctionContainer::createInitialized(pData);
-			box->own(this);
-		}
-	}
+	void setFuncReturn( Object* pData );
 
 	// Used for FuncFound_processRunVariable
-	Function* getFunction(Logger* logger) {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable::getFunction [%p]\n", (void*)this);
-#endif
-		Function* f = REAL_NULL;
+	Function* getFunction(Logger* logger);
 
-		if ( isNull(box) )
-			throw NullVariableException();
+	bool isPointer() const;
 
-		if ( box->getFunction(f) ) {
-			return f;
-		}
-		// else:
-		// I need to print the variable name (which is only in the scope now)
-		// and it would be good to have all the stack info (which can be obtained otherwise).
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, EngineMessage::NoFunctionInContainer);
-		}
-		// Conveniently reset this variable if the function no longer exists.
-		// This happens when this variable is a pointer and the variable-it-points-to changes.
-		box->disown(this);
-		box->deref();
-		box = new FunctionContainer();
-		box->own(this);
-		box->getFunction(f);
-		return f;
-	}
+	FunctionContainer* getRawContainer();
 
-	bool isPointer() const {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable::isPointer [%p]\n", (void*)this);
-#endif
-		if ( isNull(box) )
-			throw NullVariableException();
-		return ! box->isOwner(this);
-	}
-
-	FunctionContainer* getRawContainer() {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable::getRawContainer [%p]\n", (void*)this);
-#endif
-		if ( isNull(box) )
-			throw NullVariableException();
-		return box;
-	}
-
-	Variable* getCopy() {
-#ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[DEBUG: Variable::getCopy [%p]\n", (void*)this);
-#endif
-		Variable* var = new Variable();
-		if ( isPointer() ) {
-			box->ref();
-			var->box = box;
-			var->box->own(var);
-			return var;
-		} // else
-		FunctionContainer* fc = (FunctionContainer*)(box->copy());
-		var->box = fc;
-		var->box->own(var);
-		return var;
-	}
+	Variable* getCopy();
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
@@ -1280,24 +1429,27 @@ public:
 /*
 	Interface for all numbers.
 	This ensures all numbers will have the same functionality belonging to numbers.
+	The problem is that it hides ObjectNumber whose string representation is useful for converting
+	to bignum classes.
+	I guess I could use writeToString for that, but it would be slow. hm...
 */
 static const char* NUMBER_TYPENAME = "number";
 
-struct Number : public Data {
-	virtual ~Number() {}
+//struct Number : public Data {
+//	virtual ~Number() {}
 
-	virtual unsigned long getAsUnsignedLong() const = 0;
+//	virtual unsigned long getAsUnsignedLong() const = 0;
 
-	virtual const char* typeName() const {
-		return NUMBER_TYPENAME;
-	}
-};
+//	virtual const char* typeName() const {
+//		return NUMBER_TYPENAME;
+//	}
+//};
 
 /*
 	Object numbers are base-10 numbers saved as strings.
 	This makes for easy integration with other libraries, like GNU MPC.
 */
-class ObjectNumber : public Number {
+class ObjectNumber : public Data /*Number*/ {
 	String value; // Numeric-only string
 
 public:
@@ -1362,13 +1514,17 @@ public:
 	virtual unsigned long getAsUnsignedLong() const {
 		return value.toUnsignedLong();
 	}
-};
 
-struct NumberObjectFactory : public Ref {
-	virtual Number* createNumber(const String& pValue) {
-		return new ObjectNumber(pValue);
+	virtual const char* typeName() const {
+		return NUMBER_TYPENAME;
 	}
 };
+
+//struct NumberObjectFactory : public Ref {
+//	virtual Number* createNumber(const String& pValue) {
+//		return new ObjectNumber(pValue);
+//	}
+//};
 
 
 //------------------
@@ -1377,25 +1533,37 @@ struct NumberObjectFactory : public Ref {
 This interface stands in place for a more concrete list implementation, which would otherwise
 prohibit flexibility. */
 struct AppendObjectInterface {
+	virtual ~AppendObjectInterface() {}
 	// Append objects
 	// Implementers of this function are expected to call ref() on each object passed in.
 	virtual void append(Object* pObject)=0;
 };
 
 
-//-------------------
+//*********** FOREIGN FUNCTION HANDLING *********
+
+class ForeignFunctionInterface; // predeclaration
 
 	// External/Foreign Functions
 /*
 For integrating libraries with this language, classes can directly inherit this interface.
-If the function returns, please set the "result" parameter to the resultant object (using set())
-and return true. Return false if the result was not set.
+If the function returns, use ForeignFunctionInterface::setResult(), which automatically calls
+ref() on the passed object.
 */
 class ForeignFunc : public Ref {
 public:
 	virtual ~ForeignFunc() {}
 
-	virtual bool call(const List<Object*>& params, RefPtr<Object>& result)=0;
+	// Calls the function. Return "false" on error.
+	virtual bool call( ForeignFunctionInterface& ffi )=0;
+
+	virtual bool isVariadic() { return false; }
+
+	//virtual List<String>& getParameterNames()=0;
+
+	virtual const char* getParameterName( unsigned int index )=0;
+
+	virtual unsigned int getParameterCount()=0;
 
 	//operator ForeignFunc* () {
 	//	return (ForeignFunc*)(*this);
@@ -1408,11 +1576,9 @@ public:
 #endif
 };
 
-/*
-Required because
-1) GCC can't handle nested templates.
-2) Hash table data slots don't handle reference counting.
-*/
+// Containers are required because
+// 1) GCC can't handle nested templates.
+// 2) Hash table data slots don't handle reference counting.
 class ForeignFuncContainer {
 	RefPtr<ForeignFunc> data;
 public:
@@ -1444,54 +1610,19 @@ public:
 
 // In order to keep reference counting working, this has to be done.
 // Note that users may try to save variables outside the context of the engine.
-// QUESTION: Should I leave the varPtr? It doesn't help anymore.
 class RefVariableStorage {
 	Variable* variable;
 
 public:
-	RefVariableStorage()
-		: variable( new Variable() )
-	{
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: RefVariableStorage cstor 1 [%p]\n", (void*)this);
-#endif
-	}
+	RefVariableStorage();
 
-	RefVariableStorage(Variable& refedVariable)
-		: variable(REAL_NULL)
-	{
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: RefVariableStorage cstor 2 (Variable&) [%p]\n", (void*)this);
-#endif
-		// Note: Remove this line if there are copy problems.
-		// Copying should be the default, but it is expensive.
-		variable = refedVariable.getCopy();
-	}
+	RefVariableStorage(Variable& refedVariable);
 
-	RefVariableStorage(const RefVariableStorage& pOther)
-		: variable(REAL_NULL)
-	{
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: RefVariableStorage cstor 3 (const RefVariableStorage&) [%p]\n", (void*)this);
-#endif
-		// Note: Remove this line if there are copy problems.
-		// Copying should be the default, but it is expensive.
-		variable = pOther.variable->getCopy();
-	}
+	RefVariableStorage(const RefVariableStorage& pOther);
 
-	~RefVariableStorage() {
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: RefVariableStorage::~RefVariableStorage [%p]\n", (void*)this);
-#endif
-		variable->deref();
-	}
+	~RefVariableStorage();
 
-	Variable& getVariable() {
-#ifdef COPPER_SCOPE_LEVEL_MESSAGES
-		std::printf("[DEBUG: RefVariableStorage::getVariable [%p]\n", (void*)this);
-#endif
-		return *variable;
-	}
+	Variable& getVariable();
 };
 
 //-------------------
@@ -1642,367 +1773,408 @@ public:
 };
 
 
-//========== Types of tasks and their states ============
+// ============= Execution Tasks, Opcode implementations, and Parse Tasks ==============
 
-
-struct TaskName {
-	enum Value {
-		_Function_Construct=0,
-		_Function_Found,
-		_if,
-		_loop,
-		_own,
-		_is_ptr,
-		_is_owner
-	};
-};
-
-struct Task : public Ref {
-	TaskName::Value name;
-
-	Task(TaskName::Value pName) : name(pName) {}
-
-#ifdef COPPER_USE_DEBUG_NAMES
-	virtual const char* getDebugName() const {
-		return "Task";
-	}
-#endif
-};
-
-class TaskContainer {
-	Task* task;
+#ifdef COPPER_STRICT_CHECKS
+// Used to check for invalid tokens triggering valid activity
+class ParserTokenException {
+	Token t;
 public:
-	// Expected to be passed: new Task() (e.g. "new TaskFunctionConstruct()")
-	TaskContainer(Task* newTask)
-		: task(newTask)
+	ParserTokenException(const Token& pOffendingToken)
+		: t(pOffendingToken)
 	{}
 
-	TaskContainer(const TaskContainer& pOther)
+	const Token& getOffendingToken() {
+		return t;
+	}
+};
+#endif
+
+// Parse tasks are temporary containers for parser information.
+// They are used to hold information when the parser must parse embedded expressions
+// or must pause due to lack of tokens needed to complete an expression.
+struct ParseTask : public Ref {
+	struct Result {
+		enum Value {
+			need_more,
+			task_done,
+			interpret_token,
+			syntax_error
+		};
+	};
+
+	enum Type {
+		FuncBuild,
+		FuncFound,
+		If,
+		Loop,
+		SRPS		// Single Raw Parameter Structure: own, is_owner, and is_ptr
+	} type;
+
+	ParseTask(Type t)
+		: type(t)
+	{}
+};
+
+struct ParseTaskContainer {
+	ParseTask* task;
+
+	ParseTaskContainer(ParseTask* t)
+		: task(t)
+	{
+		t->ref();
+	}
+
+	ParseTaskContainer( const ParseTaskContainer& pOther )
 		: task(pOther.task)
 	{
 		task->ref();
 	}
 
-	~TaskContainer() {
+	~ParseTaskContainer() {
 		task->deref();
 	}
 
-	// returning an address prevents deleting the pointer
-	Task& getTask() { return (Task&)*task; }
-
-	bool areSameTask(Task* pOther) {
-		return task == pOther;
+	ParseTask* getTask() {
+		return task;
 	}
 };
 
-enum TaskFunctionConstructState {
-	TASK_FCS_param_collect,		// Collecting parameter names
-	TASK_FCS_param_value,		// Collecting parameter value (for an instantiated parameter)
-	TASK_FCS_param_ptr_value,	// Collecting parameter pointer value (for an instantiated parameter)
-	TASK_FCS_end_param_collect,	// Closing parenthesis found and now searching for open body bracket
-	TASK_FCS_from_bodystart		// Can act as a start state (note: since the open bracket has been obtained, this merely adds to the body)
+typedef List<ParseTaskContainer> ParseTaskList;
+typedef List<ParseTaskContainer>::Iter ParseTaskIter;
+
+// Thrown when attempting to get a token when no token source was set
+// or the source is empty
+class ParserContextEmptySourceException {};
+
+
+struct ParseResult {
+	enum Value {
+		More,
+		Error,
+		Done
+	};
 };
 
-struct TaskFunctionConstruct : public Task {
-	TaskFunctionConstructState state;
-	//RefPtr<Function> functionPtr; // Too much of just obtaining the func when nothing else accesses it
+
+class ParserContext {
+	TokenQueue* tokenSource;
+	TokenQueueIter* currToken;
+	TokenQueueIter* lastUsedToken;
+
+public:
+	OpStrand* outputStrand;
+	ParseTaskList taskStack;
+
+	ParserContext();
+	~ParserContext();
+
+	void setTokenSource( TokenQueue& source );
+
+	void setCodeStrand( OpStrand* strand );
+
+	// Indicates there are no more tokens available to process
+	bool isFinished();
+
+	// Internal handling for when errors occur
+	void onError();
+
+	// Moves the iterator to the first unused token.
+	// Returns "true" if the move could be made.
+	bool moveToFirstUnusedToken();
+
+	// Gets the next token
+	Token peekAtToken();
+	bool moveToNextToken();
+	bool moveToPreviousToken();
+
+	// Triggers the context to save the state that all of the examined tokens were used
+	void commitTokenUsage();
+
+	// Deletes tokens that have been used upto the current one
+	void clearUsedTokens();
+
+	// Add new operation
+	void addNewOperation( Opcode* newOp );
+
+	// Add operation that has already been reference-counted
+	void addOperation( Opcode* op );
+};
+
+void
+addNewParseTask(
+	ParseTaskList&	taskStack,
+	ParseTask*		newTask
+);
+
+struct FuncBuildTask : public Task {
+
 	Function* function;
-	Body* body;
-	unsigned int openBodies;
-	bool hasOpenParam;
+
+	FuncBuildTask()
+		: Task(TaskName::FuncBuild)
+		, function(new Function())
+	{}
+
+	~FuncBuildTask() {
+		function->deref();
+	}
+};
+
+struct FuncBuildOpcode : public Opcode {
+	FuncBuildOpcode()
+		: Opcode( Opcode::FuncBuild_start )
+	{}
+
+	virtual Task* getTask() const {
+		return new FuncBuildTask();
+	}
+
+	virtual Opcode* getCopy() const {
+		return new FuncBuildOpcode();
+	}
+};
+
+// struct FuncBuildParseTask
+// The first op-code has already been created.
+// This is used to create related op-codes.
+struct FuncBuildParseTask : public ParseTask {
+	struct State {
+		enum Value {
+			FromObjectBody,
+			CollectParams,
+			AwaitAssignment,
+			AwaitPointerAssignment,
+			FromExecBody
+		};
+	};
+	State::Value state;
 	String paramName;
 
-	TaskFunctionConstruct(TaskFunctionConstructState pStartState)
-		: Task(TaskName::_Function_Construct)
-		, state(pStartState)
-		, function( new Function() )
-		, body( new Body() )
-		, openBodies(0)
-		, hasOpenParam(false)
+	FuncBuildParseTask(State::Value s)
+		: ParseTask(ParseTask::FuncBuild)
+		, state(s)
 		, paramName()
-	{
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionConstruct cstor 1 (TaskFunctionConstructState) [%p]\n", (void*)this);
-#endif
-		if ( state == TASK_FCS_from_bodystart )
-			openBodies = 1;
-		function->body.set(body);
-	}
-
-	TaskFunctionConstruct(const TaskFunctionConstruct& pOther)
-		: Task(TaskName::_Function_Construct)
-		, state( pOther.state )
-		, function( pOther.function )
-		, body( pOther.body )
-		, openBodies(0)
-		, hasOpenParam(false)
-		, paramName()
-	{
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionConstruct cstor 2 (const TaskFunctionConstruct&) [%p]\n", (void*)this);
-#endif
-		if ( state == TASK_FCS_from_bodystart )
-			openBodies = 1;
-		function->ref();
-		body->ref();
-	}
-
-	~TaskFunctionConstruct() {
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionConstruct::~TaskFunctionConstruct [%p]\n", (void*)this);
-#endif
-		function->deref();
-		body->deref();
-	}
-
-#ifdef COPPER_USE_DEBUG_NAMES
-	virtual const char* getDebugName() const {
-		return "TaskFunctionConstruct";
-	}
-#endif
+	{}
 };
 
-enum TaskFunctionFoundState {
-	TASK_FF_start,
-	TASK_FF_assignment,
-	TASK_FF_pointer_assignment,
-	TASK_FF_find_member,
-	TASK_FF_collect_params
+// Used for function parameters and so forth
+struct StringOpcode : public Opcode {
+	String name;
+
+	StringOpcode( Opcode::Value pType, const String& pName );
+	StringOpcode( const StringOpcode& pOther );
+	virtual String getNameData() const;
+	virtual Opcode* getCopy() const;
 };
 
-enum TaskFunctionFoundType {
-	TASK_FFTYPE_variable,
-	TASK_FFTYPE_cside,
-	TASK_FFTYPE_ext_cside // May be necessary as I may force saving a reference to the external
+struct BodyOpcode : public Opcode {
+	RefPtr<Body> body;
+
+	BodyOpcode();
+	void addToken(const Token& pToken);
+	virtual Body* getBody() const;
+	virtual Opcode* getCopy() const;
 };
 
-// Created when a function has been identified/created.
-// It checks for assignment (copy and pointer) or calling, and returns either itself or its function return.
-struct TaskFunctionFound : public Task {
-	TaskFunctionFoundState state;
-	TaskFunctionFoundType type;
-	unsigned int openParamBodies; // Note: Copper.cpp line 893 (1961 now?) depends on max value being for uint
-private:
-	List<Object*> params;
+class NullGotoOpcodeException {};
+
+class GotoOpcode : public Opcode {
+	OpStrandIter* target;
+
 public:
-	RefPtr<Variable> varPtr;
-	RefPtr<Variable> superPtr;
-	ForeignFunc* extFuncPtr;
-	SystemFunction::Value cSideCallback;
-
-	TaskFunctionFound( Variable* pVar )
-		: Task(TaskName::_Function_Found)
-		, state(TASK_FF_start)
-		, type(TASK_FFTYPE_variable)
-		, openParamBodies(0)
-		, params()
-		, varPtr()
-		, superPtr()
-		, extFuncPtr(REAL_NULL)
-		, cSideCallback(SystemFunction::_unset)
-	{
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionFound cstor 1 (Variable*) [%p]\n", (void*)this);
-#endif
-		varPtr.set(pVar);
-	}
-
-	TaskFunctionFound( ForeignFunc* pForeignFunc )
-		: Task(TaskName::_Function_Found)
-		, state(TASK_FF_start)
-		, type(TASK_FFTYPE_ext_cside)
-		, openParamBodies(0)
-		, params()
-		, varPtr()
-		, superPtr()
-		, extFuncPtr(pForeignFunc)
-		, cSideCallback(SystemFunction::_unset)
-	{
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionFound cstor 2 (ForeignFunc*) [%p]\n", (void*)this);
-#endif
-	}
-
-	TaskFunctionFound( SystemFunction::Value pCallback )
-		: Task(TaskName::_Function_Found)
-		, state(TASK_FF_start)
-		, type(TASK_FFTYPE_cside)
-		, openParamBodies(0)
-		, params()
-		, varPtr()
-		, superPtr()
-		, extFuncPtr(REAL_NULL)
-		, cSideCallback(pCallback)
-	{
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionFound cstor 3 (SystemFunction) [%p]\n", (void*)this);
-#endif
-	}
-
-#ifdef COMPILE_COPPER_FOR_C_PLUS_PLUS_11
-	TaskFunctionFound(const TaskFunctionFound& pOther) = delete;
-#else
-private:
-	TaskFunctionFound(const TaskFunctionFound& pOther);
-public:
-#endif
-
-	~TaskFunctionFound()
-	{
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionFound::~TaskFunctionFound [%p]\n", (void*)this);
-#endif
-		// Must dereference objects
-		List<Object*>::Iter i = params.start();
-		if ( params.has() )
-		do {
-			(*i)->deref();
-		} while ( ++i );
-		//params.clear(); // Should be automatically called
-	}
-
-	void addParam( Object* pObject ) {
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionFound::addParam [%p]\n", (void*)this);
-#endif
-		// If I don't call some kind of ref(), then the parameters will die as they are
-		// added to the list and lastObject is changed.
-		if ( notNull(pObject) ) {
-			pObject->ref();
-			params.push_back(pObject);
-		}
-	}
-
-	Object* getParam(unsigned int index) {
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionFound::getParam [%p]\n", (void*)this);
-#endif
-		return params[index];
-	}
-
-	unsigned int getParamCount() const {
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionFound::getParamCount = %u [%p]\n", params.size(), (void*)this);
-#endif
-		return params.size();
-	}
-
-	List<Object*>::Iter createParamsIterator() {
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionFound::createParamsIterator [%p]\n", (void*)this);
-#endif
-		return params.start();
-	}
-
-	// Used only for external functions
-	// May be removed or changed.
-	const List<Object*>& getParamsList() {
-#ifdef COPPER_TASK_LEVEL_MESSAGES
-		std::printf("[DEBUG: TaskFunctionFound::getParamsList [%p]\n", (void*)this);
-#endif
-		return params;
-	}
-
-#ifdef COPPER_USE_DEBUG_NAMES
-	virtual const char* getDebugName() const {
-		return "TaskFunctionFound";
-	}
-#endif
+	GotoOpcode(const Opcode::Value pType);
+	GotoOpcode(const GotoOpcode& pOther);
+	~GotoOpcode();
+	void setTarget( const OpStrandIter pTarget );
+	OpStrandIter& getOpStrandIter();
+	virtual Opcode* getCopy() const;
 };
 
-// If-structures are handled by treating each if, elif, and else as a section of code meant to be run.
-// if and elif are conditionally run whereas else always runs if no previous section had run
-// Only if a body of code has not been run will the next section execute.
-// Each section is scanned and must check for the "ran" to see if it should check the condition and
-// possible execute its body of code.
-enum TaskIfStructureState {
-	TASK_IF_find_cond,
-	TASK_IF_get_cond,
-	TASK_IF_seek_cond_end,
-	TASK_IF_seek_body,
-	TASK_IF_run_body,
-	TASK_IF_seek_body_end,
-	TASK_IF_seek_else // or elif
+
+typedef List<Object*>			ParamsList;
+typedef List<Object*>::Iter		ParamsIter;
+
+struct FuncFoundTask : public Task {
+	const VarAddress varAddress; // MUST NOT BE A VarAddress&!!
+	ParamsList params;
+
+	explicit FuncFoundTask( const VarAddress& pVarAddress );
+	FuncFoundTask( const FuncFoundTask& pOther );
+	~FuncFoundTask();
+	void addParam( Object* p );
+	ParamsIter getParamsIter();
 };
 
-struct TaskIfStructure : public Task {
-	TaskIfStructureState state;
-	bool ran;
-	bool isConditionSet;
-	bool condition;
-	unsigned int openParamBodies;
+struct AddressOpcode : public Opcode {
+	VarAddress varAddress;
+
+	AddressOpcode( const Opcode::Value value );
+	AddressOpcode( const Opcode::Value value, const VarAddress& pAddress );
+	virtual const VarAddress* getAddressData() const;
+	virtual Opcode* getCopy() const;
+};
+
+struct FuncFoundOpcode : public AddressOpcode {
+
+	FuncFoundOpcode( const String& pStartName );
+	FuncFoundOpcode( const FuncFoundOpcode& other );
+	virtual Task* getTask() const;
+	virtual Opcode* getCopy() const;
+};
+
+struct FuncFoundParseTask : public ParseTask {
+	enum State {
+		Start,
+		ValidateAssignment,
+		ValidatePointerAssignment,
+		CompleteAssignment,
+		CompletePointerAssignment,
+		VerifyParams,
+		CollectParams,
+	} state;
+
+	FuncFoundOpcode* code;
+	bool waitingOnAssignment;
 	unsigned int openBodies;
 
-	TaskIfStructure()
-		: Task( TaskName::_if )
-		, state( TASK_IF_find_cond )
-		, ran(false)
-		, isConditionSet(false)
-		, condition(false)
-		, openParamBodies(0)
-		, openBodies(0)
+	FuncFoundParseTask( const String& pName )
+		: ParseTask(ParseTask::FuncFound)
+		, state(Start)
+		, code(new FuncFoundOpcode(pName))
+		, waitingOnAssignment(false)
+		, openBodies(1)
 	{}
 
-#ifdef COPPER_USE_DEBUG_NAMES
-	virtual const char* getDebugName() const {
-		return "TaskIfStructure";
+	~FuncFoundParseTask() {
+		code->deref();
 	}
-#endif
 };
 
-enum TaskLoopStructureState {
-	TASK_LOOP_find_body,
-	TASK_LOOP_collect_body,
-	TASK_LOOP_run
+class NullIfStructureConditionException {};
+
+struct IfStructureParseTask : public ParseTask {
+	OpStrandIter firstIter;
+	unsigned int openBodies; // used for both parameter and execution body token counting
+	GotoOpcode* conditionalGoto;
+	List<GotoOpcode*> finalGotos;
+	bool atElse;
+
+	enum State {
+		Start,
+		CreateCondition,
+		CreateBody,
+		PostBody
+	} state;
+
+	IfStructureParseTask( OpStrand* strand );
+
+	// Queues a conditional goto meant to be set to the next terminal when added
+	void queueNewConditionalJump( GotoOpcode* jump );
+
+	// Queues a new goto meant to be set to the last terminal when added
+	void queueNewFinalJumpCode( GotoOpcode* jump );
+
+	void finalizeConditionalGoto( ParserContext& context );
+
+	void finalizeGotos( ParserContext& context );
 };
 
-struct TaskLoopStructure : public Task {
-	TaskLoopStructureState state;
+struct LoopStructureParseTask : public ParseTask {
+	OpStrandIter firstIter;
+	List<GotoOpcode*> finalGotos;
 	unsigned int openBodies;
-	Body body;
 
-	TaskLoopStructure()
-		: Task( TaskName::_loop )
-		, state(TASK_LOOP_find_body)
-		, openBodies(0)
-		, body()
-	{
-		body.dropRef(); // Bodies are created as constant, so we don't worry about reference counting here.
-	}
+	enum State {
+		Start,
+		CollectBody,
+		AwaitFinish
+	} state;
 
-#ifdef COPPER_USE_DEBUG_NAMES
-	virtual const char* getDebugName() const {
-		return "TaskLoopStructure";
-	}
-#endif
+	LoopStructureParseTask( OpStrand* strand );
+
+	void setGotoOpcodeToLoopStart( GotoOpcode* code );
+
+	void queueFinalGoto( GotoOpcode* code );
+
+	void finalizeGotos( OpStrand* strand );
 };
 
-enum TaskProcessNamedState {
-	TASK_PROC_NAMED_find_opening,
-	TASK_PROC_NAMED_param_name,
-	TASK_PROC_NAMED_find_closing,
-	TASK_PROC_NAMED_find_member
-};
+struct SRPSParseTask : ParseTask {
+	const Opcode::Value codeType;
 
-struct TaskProcessNamed : public Task {
-	TaskProcessNamedState state;
-	RefPtr<Variable> varPtr;
-
-	TaskProcessNamed(TaskName::Value pName)
-		: Task( pName )
-		, state(TASK_PROC_NAMED_find_opening)
-		, varPtr()
+	SRPSParseTask(const Opcode::Value value)
+		: ParseTask(ParseTask::SRPS)
+		, codeType(value)
 	{}
-
-#ifdef COPPER_USE_DEBUG_NAMES
-	virtual const char* getDebugName() const {
-		return "TaskProcessNamed";
-	}
-#endif
 };
 
-//-------------------------------
-// Helper functions
+
+// Function Execution Return
+// Engine::execute() is the only place where functions are run.
+struct FuncExecReturn {
+	enum Value {
+		Ran,			// Function ran successfully
+		Reset,			// Function is about to run and needs the opstrand iterator reset
+		ErrorOnRun,		// Function ran but had an error
+		ExitCalled,		// Function ran and met an "exit" token
+		Return,			// "ret()" function called. The opcode stack should be popped.
+		NoMatch			// No matching function was found for calling
+	};
+};
+
+//------ Task Exceptions
+
+class BadFuncFoundTaskException {};
+
+// For when trying to access a task when the task stack is empty
+class EmptyTaskStackException {};
+
+//----------- Foreign Function Interface -------------
+
+// Exceptions usually occur for things like calling getNextParam() too much.
+class FFIMisuseException {};
+
+// class Engine was declared before this
+
+class ForeignFunctionInterface {
+	Engine&			engine;
+	ParamsIter		paramsIter;
+	bool			done;		// Indicates parameter iteration is complete
+
+public:
+	ForeignFunctionInterface( Engine& enginePtr, ParamsIter paramsStart );
+
+	// Returns each successive parameter sent to the function
+	Object* getNextParam();
+
+	// Indicates more parameters are available (which is useful for variadic functions)
+	bool hasMoreParams();
+
+	// Wrapper for Engine::print(LogLevel::info, const char*)
+	void printInfo(const char* message);
+
+	// Wrapper for Engine::print(LogLevel::warning, const char*)
+	void printWarning(const char* message);
+
+	// Wrapper for Engine::print(LogLevel::error, const char*)
+	void printError(const char* message);
+
+	// Sets the Engine lastObject.
+	void setResult(Object* obj);
+};
+
+
+// ********** HELPER FUNCTIONS **********
+
+// Accepts an address in string format and converts it to an address
+// Can be used to reverse the effect of addressToString()
+VarAddress createAddress( const char* textAddress );
+
+// Accepts an address and returns a string
+// Can be used to reverse the effect of createAddress()
+String addressToString( const VarAddress& address );
+
 
 bool isObjectFunction( const Object& pObject );
 bool isObjectEmptyFunction( const Object& pObject );
@@ -2027,22 +2199,24 @@ It then sends it to process(), where the token causes changes in the state machi
 run() is used to filter out bad tokens, so passing any bad tokens to process() could be fatal.
 You can use process() directly if you know what you are doing.
 */
+
 class Engine {
+	friend ForeignFunctionInterface; // Not needed if you don't require the FFI to directly set the lastObject
+
 	Logger* logger;
 	Stack stack;
 	List<TaskContainer> taskStack; // Needs a getLast() method
 	RefPtr<Object> lastObject;
-	unsigned int functionID;
-	bool functionReturnMailbox; // Set by the function "return" task to inform a function of its ending
-	bool loopEndMailbox;
-	bool loopSkipMailbox;
-	bool systemExitTrigger;
+	List<Token> bufferedTokens;
+	ParserContext globalParserContext;
+	OpStrandStack opcodeStrandStack;
 	EngineEndProcCallback* endMainCallback;
 	RobinHoodHash<SystemFunction::Value> builtinFunctions;
 	RobinHoodHash<ForeignFuncContainer> foreignFunctions;
+	bool ignoreBadForeignFunctionCalls;
 	bool ownershipChangingEnabled;
-	bool stackTracePrintingEnabled;
-	RefPtr<NumberObjectFactory> numberObjectFactoryPtr;
+	//bool stackTracePrintingEnabled; // TODO: Re-implement
+	//RefPtr<NumberObjectFactory> numberObjectFactoryPtr; // TODO: Re-implement
 	bool (* nameFilter)(const String& pName);
 
 public:
@@ -2060,15 +2234,21 @@ public:
 		endMainCallback = pCallback;
 	}
 
-	// Print the stack trace when a function fails
-	void setStackTracePrintingEnabled( bool on ) {
-		stackTracePrintingEnabled = on;
+	void setIgnoreBadForeignFunctionCalls( bool yes ) {
+		ignoreBadForeignFunctionCalls = yes;
 	}
 
+	// TODO: Re-implement
+	// Print the stack trace when a function fails
+	//void setStackTracePrintingEnabled( bool on ) {
+	//	stackTracePrintingEnabled = on;
+	//}
+
+	// TODO: Re-implement
 	// Note: You will need to call "deref" (on the factory) separately anyways.
-	void setNumberObjectFactory( NumberObjectFactory* pFactory ) {
-		numberObjectFactoryPtr.set(pFactory);
-	}
+	//void setNumberObjectFactory( NumberObjectFactory* pFactory ) {
+	//	numberObjectFactoryPtr.set(pFactory);
+	//}
 
 	/* Set the filter used for checking the validity of names.
 	The filter should return true if the name is valid.
@@ -2083,21 +2263,10 @@ public:
 	*/
 	void addForeignFunction( const String& pName, ForeignFunc* pFunction );
 
-	/*
-	\param pName - The token's assume name.
-	\return - Returns the token that this name resolves to or TT_unknown if it does not resolve. */
-	TokenType resolveTokenType( const String& pName );
-
 	/* Run Copper code.
 	This accepts bytes from a byte stream and treats it as Copper code. */
-	EngineResult::Value run( ByteStream& stream );
-
-	/*
-	\param pToken - The token to be processed.
-	If the token is invalid, an error will be returned before any processing has been done.
-	NOTE: Some errors are meant to be caught in tokenize() and will therefore create internal problems
-	if not caught. */
-	EngineResult::Value process( const Token& pToken );
+	EngineResult::Value
+	run( ByteStream& stream );
 
 	/*
 	This is meant to be called by extensions that need to run functions passed to them.
@@ -2107,122 +2276,360 @@ public:
 	\return - Signal indicating the success (EngineResult::Ok) or failure (EngineResult::Error)
 		of processing. Return may also indicate the end of the VM running (EngineResult::Done).
 	*/
-	EngineResult::Value runFunction( FunctionContainer* pFunction, const List<Object*>& pParams );
+	//runFunction( FunctionContainer* pFunction, const List<Object*>& pParams );
+
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	void
+	printGlobalStrand();
+#endif
 
 protected:
 	void clearStacks();
 	void signalEndofProcessing();
-	void printFunctionError( unsigned int id, unsigned int tokenIdx, const Token& token ) const;
-	TaskResult::Value processTasksOnObjects();
-	TaskResult::Value performObjProcessAndCycle(const Token& lastToken);
-	Result::Value tokenize( CharList& tokenValue, List<Token>& tokens );
-	Result::Value handleCommentsStringsAndSpecials(
-						const TokenType& tokenType,
-						CharList& tokenValue,
-						List<Token>& tokens,
-						ByteStream& stream );
-	TaskResult::Value interpret( const Token& pToken );
-	bool isWhitespace(const char c) const;
-	bool isSpecialCharacter(const char c, TokenType& pTokenType);
-	bool isEscapeCharacter(const char c) const;
-	bool isValidToken( const TokenType& token ) const;
-	bool isValidNameCharacter( const char c ) const;
-	bool isValidName( const String& pName ) const;
-	bool isCommentToken(const char c) const;
-	bool isStringToken(const char c) const;
-	Result::Value scanComment( ByteStream& stream );
-	Result::Value collectString( ByteStream& stream, CharList& collectedValue );
 
-	// For the individual token types
-	void processBodyOpen();
-	void constructFunctionFromObjBody();
-	void processFunctionReturn();
-	void constructBoolean(bool value);
-	void constructString(const String& value);
-	void constructNumber(const String& value);
-	bool taskpushSystemFunction( const String& pName );
-	bool taskpushExternalFunction( const String& pName );
-	void taskpushUserFunction( const String& pName );
+	Scope&
+	getGlobalScope();
 
-private:
-	void				setupSystemFunctions();
-	TaskResult::Value	processTask(Task& task, const Token& lastToken);
-	TaskResult::Value	processTaskOnLastObject(Task& task);
+	Scope&
+	getCurrentTopScope();
 
-	// Note: The actual order in the file is that related functions are one-after-another
-	TaskResult::Value	processFunctionConstruct(TaskFunctionConstruct& task, const Token& lastToken);
-	TaskResult::Value	processFunctionFound(TaskFunctionFound& task, const Token& lastToken);
-	TaskResult::Value	processIfStatement(TaskIfStructure& task, const Token& lastToken);
-	TaskResult::Value	processLoop(TaskLoopStructure& task, const Token& lastToken);
-	TaskResult::Value	processNamed(TaskProcessNamed& task, const Token& lastToken);
+	ParserContext&
+	getGlobalParserContext();
 
-	TaskResult::Value	processObjForFunctionConstruct(TaskFunctionConstruct& task);
-	TaskResult::Value	processObjForFunctionFound(TaskFunctionFound& task);
-	TaskResult::Value	processObjForIfStatement(TaskIfStructure& task);
+	void
+	setVariableByAddress(
+		const VarAddress&	address,
+		Object*				obj,
+		bool				reuseStorage
+	);
+
+	ParseResult::Value
+	lexAndParse( ByteStream& stream, bool srcDone );
+	//lexAndParse( const CharList& byteQueue );
 
 	/*
-		PLEASE NOTE:
-		Task subprocesses should not have to clean up their data on failure.
-		This should all be handled when the task itself is deleted, esp. by
-		dropping references (reference counting).
-	*/
+	\param pName - The token's assume name.
+	\return - Returns the token that this name resolves to or TT_unknown if it does not resolve. */
+	TokenType
+	resolveTokenType( const String& pName );
 
-	TaskResult::Value	FuncBuild_processAtParamCollect(TaskFunctionConstruct& task, const Token& lastToken);
-	TaskResult::Value	FuncBuild_processCollectPointerValue(const Token& lastToken);
-	TaskResult::Value	FuncBuild_processEndParamCollect(TaskFunctionConstruct& task, const Token& lastToken);
-	TaskResult::Value	FuncBuild_processFromBodyStart(TaskFunctionConstruct& task, const Token& lastToken);
-	unsigned int generateFunctionID();
+	Result::Value
+	tokenize(
+		CharList& tokenValue,
+		List<Token>& tokens
+	);
 
-	TaskResult::Value	FuncFound_processFromStart(TaskFunctionFound& task, const Token& lastToken);
-	TaskResult::Value	FuncFound_processAssignment(const Token& lastToken);
-	TaskResult::Value	FuncFound_processPointerAssignment(const Token& lastToken);
-	TaskResult::Value	FuncFound_processFindMember(TaskFunctionFound& task, const Token& lastToken);
-	TaskResult::Value	FuncFound_processCollectParams(TaskFunctionFound& task, const Token& lastToken);
-	TaskResult::Value	FuncFound_processRun(TaskFunctionFound& task);
+	Result::Value
+	handleCommentsStringsAndSpecials(
+					const TokenType&	tokenType,
+					CharList&			tokenValue,
+					List<Token>&		tokens,
+					ByteStream&			stream
+	);
 
-	TaskResult::Value	FuncFound_processRunVariable(TaskFunctionFound& task);
-	TaskResult::Value	FuncFound_processRunSysFunction(TaskFunctionFound& task);
-	void				process_sys_return(TaskFunctionFound& task);
-	void				process_sys_not(TaskFunctionFound& task);
-	void				process_sys_all(TaskFunctionFound& task);
-	void				process_sys_any(TaskFunctionFound& task);
-	void				process_sys_nall(TaskFunctionFound& task);
-	void				process_sys_none(TaskFunctionFound& task);
-	void				process_sys_are_fn(TaskFunctionFound& task);
-	void				process_sys_are_empty(TaskFunctionFound& task);
-	void				process_sys_are_same(TaskFunctionFound& task);
-	EngineResult::Value	process_sys_member(TaskFunctionFound& task);
-	EngineResult::Value	process_sys_member_count(TaskFunctionFound& task);
-	EngineResult::Value	process_sys_is_member(TaskFunctionFound& task);
-	EngineResult::Value	process_sys_set_member(TaskFunctionFound& task);
-	void				process_sys_union(TaskFunctionFound& task);
-	void				process_sys_type(TaskFunctionFound& task);
-	void				process_sys_are_same_type(TaskFunctionFound& task);
-	void				process_sys_are_bool(TaskFunctionFound& task);
-	void				process_sys_are_string(TaskFunctionFound& task);
-	void				process_sys_are_number(TaskFunctionFound& task);
-	EngineResult::Value	process_sys_assert(TaskFunctionFound& task);
+	bool isWhitespace(			const char c ) const;
+	bool isSpecialCharacter(	const char c, TokenType& pTokenType );
+	bool isEscapeCharacter(		const char c ) const;
+	bool isValidToken(			const TokenType& token ) const;
+	bool isValidNameCharacter(	const char c ) const;
+	bool isValidName(			const String& pName ) const;
+	bool isCommentToken(		const char c ) const;
+	bool isStringToken(			const char c ) const;
 
+	Result::Value
+	scanComment( ByteStream& stream );
 
-	// Please recall: running a function without a body results in a new empty function
+	Result::Value
+	collectString(
+		ByteStream& stream,
+		CharList& collectedValue
+	);
 
-	// Note when assigning (from =):
-	// It must differentiate between assigning a function and assigning a regular object
-	// since the former must be copied while the latter is saved as the direct return.
-	// Pointer assignment (from ~) must ALWAYS be to a function, and should return an error when not.
-	TaskResult::Value	FunctionFound_processAssignmentObj(TaskFunctionFound& task);
-	TaskResult::Value	FunctionFound_processPointerAssignmentObj(TaskFunctionFound& task);
+	void
+	opStrandAddNewOperation(
+		OpStrand*	strand,
+		Opcode*		newOp	// passed directly after creation with "new"
+	);
 
-	TaskResult::Value	ifStatement_findCondition(TaskIfStructure& task, const Token& lastToken);
-	TaskResult::Value	ifStatement_getCondition(TaskIfStructure& task, const Token& lastToken);
-	TaskResult::Value	ifStatement_seekBody(TaskIfStructure& task, const Token& lastToken);
-	TaskResult::Value	ifStatement_seekBodyEnd(TaskIfStructure& task, const Token& lastToken);
-	TaskResult::Value	ifStatement_seekElse(TaskIfStructure& task, const Token& lastToken);
+	void
+	opStrandAddOperation(
+		OpStrand*	strand,
+		Opcode*		op
+	);
 
-	TaskResult::Value	loopStructure_runBody(TaskLoopStructure& task);
+	void setupSystemFunctions();
 
-	void				processNamed_collectVariable(TaskProcessNamed& task, const Token& lastToken);
-	void				processNamed_collectMember(TaskProcessNamed& task, const Token& lastToken);
+	// ----- PARSING SYSTEM -----
+
+	// 			HOW THE PARSING SYSTEM WORKS!
+	// The new parse system is styled much like the previous one: first-in, first-processed.
+	// That is due to the nature of the language.
+	// However, this new system uses ParseTask to generate task information that is then converted into
+	// operation codes, through which the execution of the code is performed, as opposed to executing the
+	// code using Tasks.
+
+	// The ParserContext must be passed in by whatever called this function. If none is provided, a new
+	// context is made.
+public:
+	ParseResult::Value
+	parse(
+		ParserContext&	context,
+		bool			srcDone
+	);
+
+protected:
+	ParseTask::Result::Value
+	moveToFirstUnusedToken(
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseResult::Value
+	interpretToken(
+		ParserContext&	context,
+		bool			srcDone
+	);
+
+	ParseTask::Result::Value
+	processParseTask(
+		ParseTask*		task,
+		ParserContext&	context,
+		bool			srcDone
+	);
+
+	ParseTask::Result::Value
+	parseFuncBuildTask(
+		FuncBuildParseTask*	task,
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseFunctionBuild_FromObjectBody(
+		FuncBuildParseTask*	task,
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseFunctionBuild_CollectParameters(
+		FuncBuildParseTask*	task,
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseFunctionBuild_FromExecBody(
+		FuncBuildParseTask*	task,
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseTask::Result::Value
+	parseFuncFoundTask(
+		FuncFoundParseTask*	task,
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseFuncFound_ValidateAssignment(
+		FuncFoundParseTask*	task,
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseFuncFound_ValidatePointerAssignment(
+		FuncFoundParseTask*	task,
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseFuncFound_VerifyParams(
+		FuncFoundParseTask*	task,
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseFuncFound_CollectParams(
+		FuncFoundParseTask*	task,
+		ParserContext&		context,
+		bool				srcDone
+	);
+
+	ParseTask::Result::Value
+	parseIfStructure(
+		IfStructureParseTask*	task,
+		ParserContext&			context,
+		bool					srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseIfStructure_InitScan(
+		IfStructureParseTask*	task,
+		ParserContext&			context,
+		bool					srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseIfStructure_ScanExecBody(
+		IfStructureParseTask*	task,
+		ParserContext&			context,
+		bool					srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseIfStructure_CreateCondition(
+		IfStructureParseTask*	task,
+		ParserContext&			context,
+		bool					srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseIfStructure_CreateBody(
+		IfStructureParseTask*	task,
+		ParserContext&			context,
+		bool					srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseIfStructure_PostBody(
+		IfStructureParseTask*	task,
+		ParserContext&			context,
+		bool					srcDone
+	);
+
+	ParseTask::Result::Value
+	parseLoopStructure(
+		LoopStructureParseTask*	task,
+		ParserContext&			context,
+		bool					srcDone
+	);
+
+	ParseTask::Result::Value
+	ParseLoop_AwaitFinish(
+		LoopStructureParseTask*	task,
+		ParserContext&			context
+	);
+
+	ParseResult::Value
+	ParseLoop_AddEndLoop(
+		ParserContext&			context
+	);
+
+	ParseResult::Value
+	ParseLoop_AddLoopSkip(
+		ParserContext&			context
+	);
+
+	ParseTask::Result::Value
+	parseSRPS(
+		SRPSParseTask*			task,
+		ParserContext&			context,
+		bool					srcDone
+	);
+
+	// ----- EXECUTION SYSTEM -----
+
+	void
+	addNewTaskToStack(
+		Task* t
+	);
+
+	Task*
+	getLastTask();
+
+	void
+	popLastTask();
+
+	void
+	addOpStrandToStack(
+		OpStrand*	strand
+	);
+
+public:
+	EngineResult::Value
+	execute();
+
+protected:
+	ExecutionResult::Value
+	operate(
+		OpStrandStackIter&	opStrandStackIter,
+		OpStrandIter&		opIter
+	);
+
+	FuncExecReturn::Value
+	setupFunctionExecution(
+		FuncFoundTask& task,
+		OpStrandStackIter&	opStrandStackIter,
+		OpStrandIter&		opIter
+	);
+
+	FuncExecReturn::Value
+	setupBuiltinFunctionExecution(
+		FuncFoundTask& task
+	);
+
+	FuncExecReturn::Value
+	setupForeignFunctionExecution(
+		FuncFoundTask& task
+	);
+
+	FuncExecReturn::Value
+	setupUserFunctionExecution(
+		FuncFoundTask& task,
+		OpStrandStackIter&	opStrandStackIter,
+		OpStrandIter&		opIter
+	);
+
+	Variable*
+	resolveVariableAddress(
+		const VarAddress& address
+	);
+
+	ExecutionResult::Value
+	run_Own(
+		const VarAddress& address
+	);
+
+	bool
+	is_var_pointer(
+		const VarAddress& address
+	);
+
+	ExecutionResult::Value
+	run_Is_owner(
+		const VarAddress& address
+	);
+
+	ExecutionResult::Value
+	run_Is_ptr(
+		const VarAddress& address
+	);
+
+	FuncExecReturn::Value	process_sys_return(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_not(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_all(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_any(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_nall(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_none(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_fn(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_empty(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_same(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_member(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_member_count(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_is_member(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_set_member(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_union(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_type(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_same_type(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_bool(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_string(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_number(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
 };
 
 }

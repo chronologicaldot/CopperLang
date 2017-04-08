@@ -1,4 +1,26 @@
 ====================
+2017/3/24 - 2017/4/8
+v 3-0.19
+
+Welcome to branch Cheetah!
+The bulk of engine processing has been rewritten. The entire processing task system has been replaced by a parsing task system that creates "opcodes" to be executed by the engine. The effected files are:
+- Copper.h
+- Copper.cpp
+
+Updates to other files:
+- Moved EngMsgToStr.h contents of getStringFromEngineMessage() to a .cpp file with the same name and included new error and warning messages.
+- Added Iter List::end().
+- Added void removeUpTo( const Iter& ).
+- Changed Printer to use new FFI.
+- Changed premake5.lua file to use -Wall for DebugAll build configuration and changed the configuration names ("ConsoleApp", "DebugAll", and "DebugFe") to all lowercase letters. (The program "make" doesn't support configuration names containing capital letters apparently.)
+- Changed List::Iter::operator++() to next() and List::Iter::operator--() to prev().
+- Changed List::ConstIter::operator++() to next() and List::ConstIter::operator--() to prev().
+- Removed List::Node::removeBefore() and List::Node::removeAfter().
+- Fixed bugs in List::Iter::insertBefore() and List::Iter::insertAfter() that failed to set the list head and tail when the node was equal to them before the insertion.
+- Added List::Iter::set().
+
+
+====================
 2017/3/14-23
 v 2-0.18
 

@@ -236,7 +236,7 @@ void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
 		engine.addForeignFunction(util::String("int_min"),	intMin);
 		FFI::simpleFunctionAdd(engine, util::String("int_abs"),	get_abs, &logger);
 
-		engine.addForeignFunction(util::String("++"),	incr);
+		engine.addForeignFunction(util::String("int++"),	incr);
 	}
 
 	intAreInt->deref();

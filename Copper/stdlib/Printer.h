@@ -6,9 +6,10 @@ namespace CuStd {
 using util::List;
 using Cu::RefPtr;
 using Cu::Object;
+using Cu::ForeignFunctionInterface;
 
 /*
-A printer class for printing the basics:
+A printer class for printing the return of writeToString, including:
 > function info
 > booleans
 > strings
@@ -30,19 +31,25 @@ public:
 		}
 	}
 
-	virtual bool call(const List<Object*>& params, RefPtr<Object>& result) {
+	virtual bool call( ForeignFunctionInterface& ffi ) {
 		util::String out;
-		List<Object*>::ConstIter paramsIter = params.constStart();
-		if ( paramsIter.has() )
-		do {
-			if ( isNull(*paramsIter) ) {
-				//std::fprintf(writeFile, "\nPRINT ERROR: Null parameter.\n");
-				continue;
-			}
-			(*paramsIter)->writeToString(out);
+		while ( ffi.hasMoreParams() ) {
+			ffi.getNextParam()->writeToString(out);
 			std::fprintf(writeFile, "%s", out.c_str());
-		} while( ++paramsIter );
-		return false;
+		}
+		return true;
+	}
+
+	virtual bool isVariadic() {
+		return true;
+	}
+
+	virtual const char* getParameterName( unsigned int index ) {
+		return "";
+	}
+
+	virtual unsigned int getParameterCount() {
+		return 0;
 	}
 };
 

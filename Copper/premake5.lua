@@ -5,27 +5,27 @@
 -- The make config=[some configuration] requires that the configuration be in lowercase letters.
 
 workspace "Copper"
-	configurations { "ConsoleApp", "DebugAll", "DebugFe" }
+	configurations { "consoleapp", "debugall", "debugfe" }
 	location "build"
 
-	filter { "configurations:ConsoleApp" }
+	filter { "configurations:consoleapp" }
 		targetdir "bin/ConsoleApp"
 		optimize "Off"
 
-	filter { "configurations:DebugAll or DebugFe" }
+	filter { "configurations:debugall or debugfe" }
 		targetdir "bin/debug"
 --		optimize "Debug"
 
-	filter { "configurations:DebugAll" }
+	filter { "configurations:debugall" }
 		warnings "Extra"
 
-	filter { "configurations:DebugAll", "action:gmake" }
-		buildoptions " -g "
+	filter { "configurations:debugall", "action:gmake" }
+		buildoptions " -Wall -g "
 
-	filter { "configurations:DebugFe" }
+	filter { "configurations:debugfe" }
 		flags { "FatalWarnings" }
 
-	filter { "configurations:DebugFe", "action:gmake" }
+	filter { "configurations:debugfe", "action:gmake" }
 		buildoptions " -Wfatal-errors -g "
 
 project "Copper"
@@ -49,12 +49,12 @@ project "Copper"
 	filter { "system:linux or bsd or hurd" }
 		linkoptions { " -rdynamic " }
 
-	filter { "configurations:DebugAll" }
+	filter { "configurations:debugall" }
 		includedirs { "debug" }
 		files { "debug/driver.cpp" }
 		excludes { "console.cpp" }
 
-	filter { "configurations:DebugFe" }
+	filter { "configurations:debugfe" }
 		includedirs { "debug" }
 		files { "debug/driver.cpp" }
 		excludes { "console.cpp" }

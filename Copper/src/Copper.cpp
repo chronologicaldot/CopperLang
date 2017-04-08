@@ -23,6 +23,83 @@ static const char CONSTANT_COMMENT_TOKEN = '#';
 static const char CONSTANT_STRING_TOKEN = '"';
 static const char CONSTANT_ESCAPE_CHARACTER_TOKEN = '\\';
 
+// *********** OPERATION PROCESSING BASE COMPONENTS **********
+
+Body::Body()
+	: state(Raw)
+	, tokens()
+	, codes(new OpStrand())
+{}
+
+Body::~Body() {
+	codes->deref();
+}
+
+void
+Body::addToken(const Token& pToken) {
+	if ( state == Raw )
+		tokens.push_back(pToken);
+	else
+		throw TokenPushToFinishedBodyException();
+}
+
+Body::State
+Body::getState() {
+	return state;
+}
+
+// Attempts to convert code. Returns true if succeeded.
+bool
+Body::compile(Engine* engine) {
+	switch( state ) {
+	case Raw:
+		return compile_internal(engine);
+	case HasErrors:
+		return false;
+	case Ready:
+		return true;
+	// to get -Wall to stop griping:
+	default:
+		return false;
+	}
+}
+
+OpStrand*
+Body::getOpcodeStrand() {
+	return codes;
+}
+
+bool
+Body::isEmpty() const {
+	return (! tokens.has()) && ( notNull(codes) ? codes->size() == 0 : true );
+}
+
+bool
+Body::compile_internal(Engine* engine) {
+	ParserContext context;
+	context.setCodeStrand(codes);
+	context.setTokenSource(tokens);
+	if ( isNull(engine) )
+		return false; //throw 0;
+	if ( isEmpty() )
+		return false;
+	switch( engine->parse(context, true) ) {
+	case ParseResult::More: // Wat?
+		// Should throw
+		return false;
+	case ParseResult::Error:
+		state = HasErrors;
+		return false;
+	case ParseResult::Done:
+		tokens.clear();
+		state = Ready;
+		return true;
+	// to get -Wall to stop griping:
+	default:
+		return false;
+	}
+}
+
 // ******* Function definitions *******
 
 Function::Function()
@@ -58,14 +135,16 @@ Function::~Function() {
 	persistentScope->deref();
 }
 
-Scope& Function::getPersistentScope() {
+Scope&
+Function::getPersistentScope() {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Function::getPersistentScope [%p]\n", (void*)this);
 #endif
 	return *persistentScope;
 }
 
-void Function::set( Function& other ) {
+void
+Function::set( Function& other ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Function::set [%p]\n", (void*)this);
 #endif
@@ -74,6 +153,11 @@ void Function::set( Function& other ) {
 	params = other.params; // If params is changed to a pointer, this has to be changed to a copy
 	*persistentScope = *(other.persistentScope);
 	result.set( other.result.raw() ); // Should this be copied?
+}
+
+void
+Function::addParam( const String pName ) {
+	params.push_back(pName);
 }
 
 //--------------------------------------
@@ -210,6 +294,221 @@ Object* FunctionContainer::copy() {
 	FunctionContainer* c = new FunctionContainer(f, ID);
 	f->deref();
 	return c;
+}
+
+//--------------------------------------
+
+
+Variable::Variable()
+	: box(new FunctionContainer())
+{
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable constructor [%p]\n", (void*)this);
+#endif
+	box->own(this);
+}
+
+Variable::~Variable() {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable::~Variable [%p]\n", (void*)this);
+#endif
+	box->disown(this);
+	box->deref();
+}
+
+void
+Variable::reset() {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable::reset [%p]\n", (void*)this);
+#endif
+	if ( isNull(box) )
+		throw NullVariableException();
+
+	box->disown(this);
+	box->deref();
+	box = new FunctionContainer();
+	box->own(this);
+}
+
+void
+Variable::set( Variable* pOther, bool pReuseStorage ) {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable::set [%p]\n", (void*)this);
+#endif
+	if ( notNull(pOther) )
+		setFunc( pOther->box, pReuseStorage );
+	else
+		throw NullVariableException();
+}
+
+void
+Variable::setFunc( FunctionContainer* pContainer, bool pReuseStorage ) {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable::setFunc [%p]\n", (void*)this);
+#endif
+	if ( isNull(pContainer) ) {
+		throw BadParameterException<Variable>();
+	}
+	if ( isNull(box) )
+		throw NullVariableException();
+
+	FunctionContainer* fc = REAL_NULL;
+
+	if ( pReuseStorage ) {
+		pContainer->ref();
+		box->disown(this);
+		box->deref();
+		box = pContainer;
+		box->own(this);
+	} else {
+		// Data is either not owned or this is supposed to make a copy anyways.
+		// Delinks from pointers (which is desired).
+		// Copy occurs here in case of assigning box's contents to itself.
+		// (See changelog.txt: 2017/1/24 v 0.12)
+		fc = (FunctionContainer*)(pContainer->copy());
+		box->disown(this);
+		box->deref();
+		box = fc;
+		box->own(this);
+	}
+}
+
+// Used only for data
+void
+Variable::setFuncReturn( Object* pData ) {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable::setFuncReturn [%p]\n", (void*)this);
+#endif
+	if ( isNull(box) )
+		throw NullVariableException();
+
+	Function* f = REAL_NULL;
+	if ( box->getFunction(f) ) {
+//std::printf("[DEBUG: Variable::setFuncReturn: using current function\n");
+		f->result.set(pData->copy());
+		f->constantReturn = true;
+	} else {
+//std::printf("[DEBUG: Variable::setFuncReturn: creating new container\n");
+		box->disown(this);
+		box->deref();
+		box = FunctionContainer::createInitialized(pData);
+		box->own(this);
+	}
+}
+
+// Used for FuncFound_processRunVariable
+Function*
+Variable::getFunction(Logger* logger) {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable::getFunction [%p]\n", (void*)this);
+#endif
+	Function* f = REAL_NULL;
+
+	if ( isNull(box) )
+		throw NullVariableException();
+
+	if ( box->getFunction(f) ) {
+		return f;
+	}
+	// else:
+	// I need to print the variable name (which is only in the scope now)
+	// and it would be good to have all the stack info (which can be obtained otherwise).
+	if ( notNull(logger) ) {
+		logger->print(LogLevel::warning, EngineMessage::NoFunctionInContainer);
+	}
+	// Conveniently reset this variable if the function no longer exists.
+	// This happens when this variable is a pointer and the variable-it-points-to changes.
+	box->disown(this);
+	box->deref();
+	box = new FunctionContainer();
+	box->own(this);
+	box->getFunction(f);
+	return f;
+}
+
+bool
+Variable::isPointer() const {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable::isPointer [%p]\n", (void*)this);
+#endif
+	if ( isNull(box) )
+		throw NullVariableException();
+	return ! box->isOwner(this);
+}
+
+FunctionContainer*
+Variable::getRawContainer() {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable::getRawContainer [%p]\n", (void*)this);
+#endif
+	if ( isNull(box) )
+		throw NullVariableException();
+	return box;
+}
+
+Variable*
+Variable::getCopy() {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Variable::getCopy [%p]\n", (void*)this);
+#endif
+	Variable* var = new Variable();
+	if ( isPointer() ) {
+		box->ref();
+		var->box = box;
+		var->box->own(var);
+		return var;
+	} // else
+	FunctionContainer* fc = (FunctionContainer*)(box->copy());
+	var->box = fc;
+	var->box->own(var);
+	return var;
+}
+
+//--------------------------------------
+
+RefVariableStorage::RefVariableStorage()
+	: variable( new Variable() )
+{
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: RefVariableStorage cstor 1 [%p]\n", (void*)this);
+#endif
+}
+
+RefVariableStorage::RefVariableStorage(Variable& refedVariable)
+	: variable(REAL_NULL)
+{
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: RefVariableStorage cstor 2 (Variable&) [%p]\n", (void*)this);
+#endif
+	// Note: Remove this line if there are copy problems.
+	// Copying should be the default, but it is expensive.
+	variable = refedVariable.getCopy();
+}
+
+RefVariableStorage::RefVariableStorage(const RefVariableStorage& pOther)
+	: variable(REAL_NULL)
+{
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: RefVariableStorage cstor 3 (const RefVariableStorage&) [%p]\n", (void*)this);
+#endif
+	// Note: Remove this line if there are copy problems.
+	// Copying should be the default, but it is expensive.
+	variable = pOther.variable->getCopy();
+}
+
+RefVariableStorage::~RefVariableStorage() {
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: RefVariableStorage::~RefVariableStorage [%p]\n", (void*)this);
+#endif
+	variable->deref();
+}
+
+Variable&
+RefVariableStorage::getVariable() {
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: RefVariableStorage::getVariable [%p]\n", (void*)this);
+#endif
+	return *variable;
 }
 
 //--------------------------------------
@@ -394,7 +693,7 @@ void Scope::copyMembersFrom(Scope& pOther) {
 	if ( li.has() )
 	do {
 		setVariable( (*li).name, &((*li).getVariable()), false );
-	} while( ++li );
+	} while( li.next() );
 */
 }
 
@@ -430,7 +729,8 @@ Stack::~Stack() {
 	clear();
 }
 
-void Stack::clear() {
+void
+Stack::clear() {
 	StackFrame* parent;
 	while( notNull(top) ) {
 		parent = top->parent;
@@ -439,23 +739,27 @@ void Stack::clear() {
 	}
 }
 
-StackFrame& Stack::getBottom() { // Global namespace
+StackFrame&
+Stack::getBottom() { // Global namespace
 	if ( size == 0 || isNull(bottom) )
 		throw UninitializedStackException();
 	return *bottom;
 }
 
-StackFrame& Stack::getTop() {
+StackFrame&
+Stack::getTop() {
 	if ( size == 0 || isNull(top) )
 		throw UninitializedStackException();
 	return *top;
 }
 
-unsigned int Stack::getCurrLevel() {
+unsigned int
+Stack::getCurrLevel() {
 	return size;
 }
 
-StackPopReturn Stack::pop() {
+StackPopReturn
+Stack::pop() {
 	if ( size == 0 )
 		return STACK_POP_done;
 	StackFrame* parent; // initialized below
@@ -477,7 +781,8 @@ StackPopReturn Stack::pop() {
 	return STACK_POP_more;
 }
 
-void Stack::push() {
+void
+Stack::push() {
 	if ( isNull(bottom) ) {
 		bottom = new StackFrame();
 		top = bottom;
@@ -490,7 +795,8 @@ void Stack::push() {
 	++size;
 }
 
-void Stack::push(StackFrame* pContext) {
+void
+Stack::push(StackFrame* pContext) {
 	if ( pContext == 0 )
 		throw UninitializedStackContextException();
 	pContext->ref();
@@ -506,13 +812,633 @@ void Stack::push(StackFrame* pContext) {
 	++size;
 }
 
-//--------------------------------------
+// ************ PARSE TASKS **********
 
-bool isObjectFunction( const Object& pObject ) {
+ParserContext::ParserContext()
+	: tokenSource(REAL_NULL)
+	, currToken(REAL_NULL)
+	, lastUsedToken(REAL_NULL)
+	, outputStrand(new OpStrand())
+	, taskStack()
+{
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: ParserContext constructor, outputStrand = %p\n", (void*)outputStrand);
+#endif
+}
+
+ParserContext::~ParserContext() {
+	if ( notNull(currToken) ) {
+		delete currToken;
+	}
+	if ( notNull(lastUsedToken) ) {
+		delete lastUsedToken;
+	}
+	outputStrand->deref();
+}
+
+void
+ParserContext::setTokenSource(
+	TokenQueue& source
+) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: ParserContext::setTokenSource\n");
+#endif
+	// Avoid resets
+	if ( tokenSource == &source )
+		return;
+	tokenSource = &source;
+	if ( notNull(currToken) ) {
+		delete currToken;
+	}
+	if ( notNull(lastUsedToken) ) {
+		delete lastUsedToken;
+	}
+	lastUsedToken = REAL_NULL;
+	if ( source.has() )
+		currToken = new TokenQueueIter(source);
+}
+
+void
+ParserContext::setCodeStrand( OpStrand* strand ) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: ParserContext::setCodeStrand\n");
+#endif
+	// Should probably throw if the strand is null
+	outputStrand->deref();
+	outputStrand = strand;
+	outputStrand->ref();
+}
+
+bool
+ParserContext::isFinished() {
+	if ( notNull(lastUsedToken) ) {
+		return lastUsedToken->atEnd();
+	}
+	return (isNull(tokenSource)) ? true : (! tokenSource->has());
+}
+
+void
+ParserContext::onError() {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: ParserContext::onError\n");
+#endif
+	// Current activity: "Chew up" the bad tokens.
+	if ( notNull(lastUsedToken) ) {
+		delete lastUsedToken;
+		lastUsedToken = new TokenQueueIter(*currToken);
+	}
+	// I may experiment with different actions here.
+}
+
+// Returns "true" if the move could be made
+bool
+ParserContext::moveToFirstUnusedToken() {
+	if ( notNull(lastUsedToken) ) {
+		if ( notNull(currToken) ) {
+			delete currToken;
+		}
+		currToken = new TokenQueueIter(*lastUsedToken);
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+		if ( currToken->next() ) {
+			std::printf("[DEBUG: ParserContext::moveToFirstUnusedToken fulfilled\n");
+			return true;
+		} else {
+			return false;
+		}
+#else
+		return currToken->next();
+#endif
+	}
+	// Start from the beginning
+	if ( isNull(tokenSource) )
+		throw ParserContextEmptySourceException();
+
+	// Apparently, none have been used yet
+	if ( isNull( currToken ) ) {
+		currToken = new TokenQueueIter(*tokenSource);
+	} else {
+		currToken->reset();
+	}
+	return currToken->has();
+}
+
+Token
+ParserContext::peekAtToken() {
+	if ( isNull(currToken) || ! currToken->has() )
+		throw ParserContextEmptySourceException();
+	return **currToken;
+}
+
+bool
+ParserContext::moveToNextToken() {
+	if ( isNull(currToken) )
+		throw ParserContextEmptySourceException();
+	if ( ! currToken->has() )
+		return false;
+	return currToken->next();
+}
+
+bool
+ParserContext::moveToPreviousToken() {
+	if ( isNull(currToken) )
+		throw ParserContextEmptySourceException();
+	if ( ! currToken->has() )
+		return false;
+	return currToken->prev();
+}
+
+void
+ParserContext::commitTokenUsage() {
+	if ( notNull(lastUsedToken) ) {
+		delete lastUsedToken;
+		lastUsedToken = REAL_NULL;
+	}
+	// Should this be if(notNull(currToken)) ?
+	// Seems like it would mess up for clearUsedTokens().
+	if ( currToken->has() ) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+		std::printf("[DEBUG: ParserContext::commitTokenUsage fulfilled\n");
+#endif
+		lastUsedToken = new TokenQueueIter(*currToken);
+	}
+}
+
+void
+ParserContext::clearUsedTokens() {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: ParserContext::clearUsedTokens\n");
+#endif
+	if ( notNull(lastUsedToken) ) {
+		if ( notNull(tokenSource) ) {
+			tokenSource->removeUpTo(*lastUsedToken);
+			// Note: The lastUsedToken is NOT removed so that complicated re-init
+			// for the context is not needed
+		}
+	}
+}
+
+void
+ParserContext::addNewOperation( Opcode* newOp ) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: ParserContext::addNewOperation, type = %u\n", (newOp? newOp->getType() : 0));
+#endif
+	if ( isNull(outputStrand) )
+		throw EmptyOpstrandException();
+	if ( isNull(newOp) )
+		throw NullOpcodeException();
+	outputStrand->push_back(OpcodeContainer(newOp));
+	newOp->deref();
+}
+
+void
+ParserContext::addOperation( Opcode* op ) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: ParserContext::addOperation, type = %u\n", (op? op->getType() : 0));
+#endif
+	if ( isNull(outputStrand) )
+		throw EmptyOpstrandException();
+	if ( isNull(op) )
+		throw NullOpcodeException();
+	outputStrand->push_back(OpcodeContainer(op));
+}
+
+void
+addNewParseTask(
+	ParseTaskList&	taskStack,
+	ParseTask*		newTask
+) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: addNewParseTask\n");
+#endif
+	taskStack.push_back(ParseTaskContainer(newTask));
+	newTask->deref();
+}
+
+StringOpcode::StringOpcode(
+	Opcode::Value	pType,
+	const String&	pName
+)
+	: Opcode( pType )
+	, name( pName )
+{}
+
+StringOpcode::StringOpcode(
+	const StringOpcode& pOther
+)
+	: Opcode( pOther.type )
+	, name( pOther.name )
+{}
+
+String
+StringOpcode::getNameData() const {
+	return name;
+}
+
+Opcode*
+StringOpcode::getCopy() const {
+	return new StringOpcode(type, name);
+}
+
+BodyOpcode::BodyOpcode()
+	: Opcode( Opcode::FuncBuild_execBody )
+	, body()
+{
+	body.setWithoutRef(new Body());
+}
+
+void
+BodyOpcode::addToken(
+	const Token& pToken
+) {
+	body.raw()->addToken(pToken);
+}
+
+Body*
+BodyOpcode::getBody() const {
+	return body.raw();
+}
+
+Opcode*
+BodyOpcode::getCopy() const {
+	BodyOpcode* out = new BodyOpcode();
+	out->body.set(body.raw());
+	return out;
+}
+
+GotoOpcode::GotoOpcode(
+	const Opcode::Value		pType
+)
+	: Opcode(pType)
+	, target(REAL_NULL)
+{}
+
+GotoOpcode::GotoOpcode(
+	const GotoOpcode& pOther
+)
+	: Opcode(pOther.type)
+	, target(REAL_NULL)
+{
+	if ( pOther.target )
+		target = new OpStrandIter(*(pOther.target));
+}
+
+GotoOpcode::~GotoOpcode() {
+	if ( notNull(target) )
+		delete target;
+}
+
+void
+GotoOpcode::setTarget(
+	const OpStrandIter pTarget
+) {
+	target = new OpStrandIter(pTarget);
+}
+
+OpStrandIter&
+GotoOpcode::getOpStrandIter() {
+	if ( isNull(target) )
+		throw NullGotoOpcodeException();
+	return *target;
+}
+
+Opcode*
+GotoOpcode::getCopy() const {
+	return new GotoOpcode(*this);
+}
+
+FuncFoundTask::FuncFoundTask(
+	const VarAddress& pVarAddress
+)
+	: Task(TaskName::FuncFound)
+	, varAddress(pVarAddress)
+	, params()
+{}
+
+FuncFoundTask::FuncFoundTask(
+	const FuncFoundTask& pOther
+)
+	: Task(TaskName::FuncFound)
+	, varAddress(pOther.varAddress)
+	, params(pOther.params)
+{}
+
+FuncFoundTask::~FuncFoundTask() {
+	ParamsIter pi = params.start();
+	if ( pi.has() )
+	do {
+		(*pi)->deref();
+	} while ( pi.next() );
+	// params.clear(); // implicit
+}
+
+void
+FuncFoundTask::addParam(
+	Object* p
+) {
+	if ( notNull(p) ) {
+		p->ref();
+		params.push_back(p);
+	}
+}
+
+ParamsIter
+FuncFoundTask::getParamsIter() {
+	return params.start();
+}
+
+AddressOpcode::AddressOpcode(
+	const Opcode::Value value
+)
+	: Opcode(value)
+	, varAddress()
+{}
+
+AddressOpcode::AddressOpcode(
+	const Opcode::Value		value,
+	const VarAddress&		pAddress
+)
+	: Opcode(value)
+	, varAddress(pAddress)
+{}
+
+const VarAddress*
+AddressOpcode::getAddressData() const {
+	return &varAddress;
+}
+
+Opcode*
+AddressOpcode::getCopy() const {
+	return new AddressOpcode(type, varAddress);
+}
+
+FuncFoundOpcode::FuncFoundOpcode(
+	const String& pStartName
+)
+	: AddressOpcode(Opcode::FuncFound_access)
+{
+	varAddress.push_back(pStartName);
+}
+
+FuncFoundOpcode::FuncFoundOpcode(
+	const FuncFoundOpcode& pOther
+)
+	: AddressOpcode(pOther.type)
+{
+	varAddress = pOther.varAddress;
+}
+
+Task*
+FuncFoundOpcode::getTask() const {
+	return new FuncFoundTask(varAddress);
+}
+
+Opcode*
+FuncFoundOpcode::getCopy() const {
+	return new FuncFoundOpcode(*this);
+}
+
+IfStructureParseTask::IfStructureParseTask(
+	OpStrand* strand
+)
+	: ParseTask(ParseTask::If)
+	, firstIter(*strand)
+	, openBodies(1) // The first parameter body token is always skipped, so it is counted here
+	, conditionalGoto(REAL_NULL)
+	, finalGotos()
+	, atElse(false)
+	, state(Start)
+{
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: IfStructureParseTask constructor\n");
+#endif
+	// This task is created AFTER the terminal opcode has been added, which is the last opcode
+	firstIter.makeLast();
+}
+
+// Queues a conditional goto meant to be set to the next terminal when added
+void
+IfStructureParseTask::queueNewConditionalJump(
+	GotoOpcode* jump
+) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: IfStructureParseTask::queueNewConditionalJump\n");
+#endif
+	// Fortunately, only one of these ever shows up at a time
+	conditionalGoto = jump;
+}
+
+// Queues a new goto meant to be set to the last terminal when added
+void
+IfStructureParseTask::queueNewFinalJumpCode(
+	GotoOpcode* jump
+) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: IfStructureParseTask::queueNewFinalJumpCode\n");
+#endif
+	finalGotos.push_back(jump);
+}
+
+void
+IfStructureParseTask::finalizeConditionalGoto(
+	ParserContext& context
+) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: IfStructureParseTask::finalizeConditionalGoto\n");
+#endif
+	context.addNewOperation( new Opcode(Opcode::Terminal) );
+	if ( notNull( conditionalGoto ) ) {
+		conditionalGoto->setTarget( context.outputStrand->end() );
+		conditionalGoto = REAL_NULL;
+	} else {
+		throw NullIfStructureConditionException();
+	}
+}
+
+void
+IfStructureParseTask::finalizeGotos(
+	ParserContext& context
+) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: IfStructureParseTask::finalizeGotos\n");
+#endif
+	context.addNewOperation( new Opcode(Opcode::Terminal) );
+	OpStrandIter lastIter = context.outputStrand->end();
+	List<GotoOpcode*>::Iter fg = finalGotos.start();
+	if ( fg.has() )
+	do {
+		(*fg)->setTarget( lastIter );
+	} while ( fg.next() );
+	finalGotos.clear();
+}
+
+LoopStructureParseTask::LoopStructureParseTask(
+	OpStrand* strand
+)
+	: ParseTask( ParseTask::Loop )
+	, firstIter(*strand)
+	, finalGotos()
+	, openBodies(0)
+	, state(Start)
+{
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: LoopStructureParseTask constructor\n");
+#endif
+	// This task is created AFTER the terminal opcode has been added, which is the last opcode
+	firstIter.makeLast();
+}
+
+void
+LoopStructureParseTask::setGotoOpcodeToLoopStart(
+	GotoOpcode* code
+) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: LoopStructureParseTask::setGotoOpcodeToLoopStart\n");
+#endif
+	code->setTarget( firstIter );
+}
+
+void
+LoopStructureParseTask::queueFinalGoto(
+	GotoOpcode* code
+) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: LoopStructureParseTask::queueFinalGoto\n");
+#endif
+	finalGotos.push_back(code);
+}
+
+void
+LoopStructureParseTask::finalizeGotos(
+	OpStrand* strand
+) {
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: LoopStructureParseTask::finalizeGotos\n");
+#endif
+	OpStrandIter lastIter = strand->end();
+	List<GotoOpcode*>::Iter fg = finalGotos.start();
+	if ( fg.has() )
+	do {
+		(*fg)->setTarget( lastIter );
+	} while ( fg.next() );
+	finalGotos.clear();
+}
+
+// *********** FOREIGN FUNCTION INTERFACE ************
+
+ForeignFunctionInterface::ForeignFunctionInterface(
+	Engine&			enginePtr,
+	ParamsIter		paramsStart
+)
+	: engine(enginePtr)
+	, paramsIter(paramsStart)
+	, done( ! paramsIter.has() )
+{}
+
+// returns each successive parameter sent to the function
+Object*
+ForeignFunctionInterface::getNextParam() {
+	Object* out;
+	if ( done )
+		throw FFIMisuseException(); // Prevents accidental misuse
+
+	out = *paramsIter;
+	done = ! paramsIter.next();
+	return out;
+}
+
+bool
+ForeignFunctionInterface::hasMoreParams() {
+	return !done;
+}
+
+void
+ForeignFunctionInterface::printInfo(
+	const char* message
+) {
+	engine.print(LogLevel::info, message);
+}
+
+void
+ForeignFunctionInterface::printWarning(
+	const char* message
+) {
+	engine.print(LogLevel::warning, message);
+}
+
+void
+ForeignFunctionInterface::printError(
+	const char* message
+) {
+	engine.print(LogLevel::error, message);
+}
+
+void
+ForeignFunctionInterface::setResult(
+	Object* obj
+) {
+	engine.lastObject.set(obj);
+}
+
+
+// *********** HELPER FUNCTIONS ********
+
+// Accepts an address in string format and converts it to an address
+// Can be used to reverse the effect of addressToString()
+VarAddress
+createAddress(
+	const char* textAddress
+) {
+#ifdef COPPER_DEBUG_ADDRESS_MESSAGES
+	std::printf("[DEBUG: Engine::createAddress\n");
+#endif
+	CharList asCL(textAddress);
+	CharList::Iter asCLIter = asCL.start();
+	CharList part;
+	VarAddress finalAddress;
+	if ( asCLIter.has() )
+	do {
+		if ( *asCLIter == '.' ) {
+			if ( part.has() ) {
+				finalAddress.push_back(part);
+				part.clear();
+			}
+		} else {
+			part.push_back(*asCLIter);
+		}
+	} while ( asCLIter.next() );
+	if ( part.size() > 0 )
+		finalAddress.push_back(part);
+	return finalAddress;
+}
+
+// Accepts an address and returns a string
+// Can be used to reverse the effect of createAddress()
+String
+addressToString(
+	const VarAddress& address
+) {
+#ifdef COPPER_DEBUG_ADDRESS_MESSAGES
+	std::printf("[DEBUG: Engine::addressToString\n");
+#endif
+	VarAddressConstIter addrIter = address.constStart();
+	CharList builder;
+	if ( addrIter.has() )
+	do {
+		builder.append( *addrIter );
+		if ( addrIter.atEnd() == false ) {
+			builder.push_back('.');
+		}
+	} while ( addrIter.next() );
+	return String(builder);
+}
+
+bool
+isObjectFunction( const Object& pObject ) {
 	return ( pObject.getType() == ObjectType::Function );
 }
 
-bool isObjectEmptyFunction( const Object& pObject ) {
+bool
+isObjectEmptyFunction( const Object& pObject ) {
 	if ( pObject.getType() != ObjectType::Function ) {
 		return false;
 	}
@@ -525,32 +1451,37 @@ bool isObjectEmptyFunction( const Object& pObject ) {
 			return false;
 	}
 	return (
-		function->body.raw()->size() == 0
+		function->body.raw()->isEmpty()
 		&& function->params.size() == 0
 		&& function->getPersistentScope().occupancy() == 0
 	);
 }
 
-bool isObjectBool( const Object& pObject ) {
+bool
+isObjectBool( const Object& pObject ) {
 	return ( pObject.getType() == ObjectType::Data && util::equals( ((Data&)pObject).typeName(), "bool") );
 }
 
-bool getBoolValue( const Object& pObject ) {
+bool
+getBoolValue( const Object& pObject ) {
 	if ( isObjectBool( pObject ) ) {
 		return ((ObjectBool&)pObject).getValue();
 	}
 	return false;
 }
 
-bool isObjectString( const Object& pObject ) {
+bool
+isObjectString( const Object& pObject ) {
 	return ( pObject.getType() == ObjectType::Data && util::equals( ((Data&)pObject).typeName(), "string") );
 }
 
-bool isObjectNumber( const Object& pObject ) {
+bool
+isObjectNumber( const Object& pObject ) {
 	return ( pObject.getType() == ObjectType::Data && util::equals( ((Data&)pObject).typeName(), "number") );
 }
 
-bool isObjectOfType( const Object& pObject, const char* pTypeName ) {
+bool
+isObjectOfType( const Object& pObject, const char* pTypeName ) {
 	return ( pObject.getType() == ObjectType::Data && util::equals( pObject.typeName(), pTypeName ) );
 }
 
@@ -562,50 +1493,32 @@ Engine::Engine()
 	, stack()
 	, taskStack()
 	, lastObject()
-	, functionID(0)
-	, functionReturnMailbox(false)
-	, loopEndMailbox(false)
-	, loopSkipMailbox(false)
-	, systemExitTrigger(false)
+	, bufferedTokens()
+	, globalParserContext()
+	, opcodeStrandStack()
 	, endMainCallback(REAL_NULL)
 	, builtinFunctions(50)
 	, foreignFunctions(100)
+	, ignoreBadForeignFunctionCalls(false)
 	, ownershipChangingEnabled(false)
-	, stackTracePrintingEnabled(false)
-	, numberObjectFactoryPtr()
+	//, stackTracePrintingEnabled(false)
+	//, numberObjectFactoryPtr()
 	, nameFilter(REAL_NULL)
 {
 	setupSystemFunctions();
 
+	// TODO:
 	// Initialize the number object factory to the default.
-	numberObjectFactoryPtr.setWithoutRef(new NumberObjectFactory());
-}
+	//numberObjectFactoryPtr.setWithoutRef(new NumberObjectFactory());
 
-void Engine::signalEndofProcessing() {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::signalEndofProcessing");
-#endif
-	if ( notNull(endMainCallback) ) {
-printf("has endMainCallback\n");
-		endMainCallback->CuEngineDoneProcessing();
-	}
-}
+	// Ensures global/starting OpStrandContainer gets a valid iterator
+	// Add a do-nothing "operation"
+	globalParserContext.addNewOperation( new Opcode(Opcode::Terminal) );
 
-void Engine::clearStacks() {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::clearStacks");
-#endif
-	taskStack.clear();
-	stack.clear();
-	// Some extra cleanup
-	functionReturnMailbox = false;
-	loopEndMailbox = false;
-	loopSkipMailbox = false;
-	functionID = 0;
-
-	// Reinitialized the stack
-	// This is useful if the program should continue
-	stack.push();
+	// Tie the base strand used by the parser to the base stack used by execute()
+	opcodeStrandStack.push_back(
+		OpStrandContainer(globalParserContext.outputStrand)
+	);
 }
 
 void Engine::setLogger( Logger* pLogger ) {
@@ -654,25 +1567,234 @@ void Engine::print(const LogLevel::Value& logLevel, const EngineMessage::Value& 
 #endif
 }
 
-void Engine::printFunctionError( unsigned int id, unsigned int tokenIdx, const Token& token ) const {
-	if ( notNull(logger) ) {
-		logger->printFunctionError(id, tokenIdx, token.type);
-	}
-#ifdef USE_CSTDIO
-	else {
-		std::fprintf(stderr, "Stack trace: fn( %u ) token( %u )::id(%u)", id, tokenIdx, (unsigned int)token.type);
-	}
-#endif
-}
-
-void Engine::addForeignFunction(const String& pName, ForeignFunc* pFunction) {
+void
+Engine::addForeignFunction(const String& pName, ForeignFunc* pFunction) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::addForeignFunction");
 #endif
 	foreignFunctions.insert(pName, ForeignFuncContainer(pFunction));
 }
 
-TokenType Engine::resolveTokenType( const String& pName ) {
+EngineResult::Value
+Engine::run(
+	ByteStream& stream
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::run");
+#endif
+	//char c;
+	//CharList byteQueue; // Waste of space but fast (only needs to be a singly-linked list)
+	//while( ! stream.atEOS() ) {
+	//	c = stream.getNextByte();
+	//	byteQueue.push_front(c);
+	//}
+	//switch( lexAndParse(byteQueue, false) ) {
+	switch( lexAndParse(stream, false) ) {
+	case ParseResult::Done:
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+		printGlobalStrand();
+#endif
+		return execute();
+	case ParseResult::Error:
+		return EngineResult::Error;
+	case ParseResult::More:
+		return EngineResult::Ok;
+	// to get -Wall to stop griping:
+	default:
+		return EngineResult::Error;
+	}
+}
+
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+void
+Engine::printGlobalStrand() {
+	print(LogLevel::debug, "[DEBUG: Engine::printGlobalStrand()");
+	OpStrandIter opIter = globalParserContext.outputStrand->start();
+	if ( opIter.has() ) {
+		print(LogLevel::debug, "[DEBUG: Global strand:");
+		do {
+			std::printf("[ Opcode = %p, value = %u\n", (void*)(opIter->getOp()), (unsigned int)(opIter->getOp()->getType()) );
+		} while ( opIter.next() );
+	} else {
+		print(LogLevel::debug, "[DEBUG: Global strand is empty.");
+	}
+}
+#endif
+
+ParseResult::Value
+Engine::lexAndParse(
+	ByteStream& stream,
+	//const CharList& byteQueue
+	bool srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::lexAndParse");
+#endif
+	//if ( byteQueue.size() == 0 )
+	//	return ParseResult::More;
+
+	char c;
+	CharList tokenValue; // Since I have to build with it, it's an easy-to-append-to list
+	//List<Token> bufferedTokens; // Within the engine, so it's state is saved
+	TokenType tokenType;
+
+	//CharList::ConstIter ci = byteQueue.constStart();
+	//do {
+		//c = *ci;
+	while ( ! stream.atEOS() ) {
+		c = stream.getNextByte();
+
+		if ( c == '\0' )
+			throw RandomNullByteInStream();
+
+		if ( isWhitespace(c) ) {
+			if ( tokenValue.size() == 0 ) {
+				continue;
+			}
+			switch( tokenize(tokenValue, bufferedTokens) ) {
+			case Result::Error:
+				return ParseResult::Error;
+			default: break;
+			}
+		}
+		else if ( isSpecialCharacter(c, tokenType) ) {
+			// If another token was started, finish it.
+			if ( tokenValue.size() > 0 ) {
+				// To allow for numbers to be tokenized with decimal places.
+				if ( c == '.' && tokenValue[0] >= '0' && tokenValue[0] <= '9' ) {
+					// Should check here for already-existing decimal and throw an error if found.
+					tokenValue.push_back(c);
+					continue;
+				} else {
+					switch( tokenize(tokenValue, bufferedTokens) ) {
+					case Result::Error:
+						return ParseResult::Error;
+					default: break;
+					}
+				}
+				tokenValue.clear();
+			}
+//#if COPPER_DEBUG_ENGINE_MESSAGES
+			tokenValue.push_back(c);
+//#endif
+			// Comments, strings, and special chars are special cases that need to be handled immediately
+			switch( handleCommentsStringsAndSpecials(tokenType, tokenValue, bufferedTokens, stream) ) {
+			case Result::Error:
+				return ParseResult::Error;
+			default: break;
+			}
+		}
+		else {
+			if ( tokenValue.size() >= 255 ) { // Don't accept tokens longer than this
+				//print(LogLevel::error, "ERROR: Token identifier is too long." );
+				print(LogLevel::error, EngineMessage::LongToken);
+				return ParseResult::Error;
+			}
+			tokenValue.push_back(c);
+		}
+	} //while ( ci.next() );
+
+	if ( tokenValue.size() > 0 ) {
+		// Push the last token
+		switch( tokenize(tokenValue, bufferedTokens) ) {
+		case Result::Error:
+			return ParseResult::Error;
+		default: break;
+		}
+	}
+
+	if ( ! bufferedTokens.has() )
+		return ParseResult::More;
+
+	ParserContext& context = getGlobalParserContext();
+	context.setTokenSource( bufferedTokens );
+
+	switch( parse( context, srcDone ) ) {
+	case ParseResult::More:
+		return ParseResult::More;
+	case ParseResult::Error:
+		return ParseResult::Error;
+	case ParseResult::Done:
+		//bufferedTokens.clear(); // removed for now
+		context.clearUsedTokens();
+		return ParseResult::Done;
+	// to get -Wall to stop griping
+	default:
+		return ParseResult::Error;
+	}
+}
+
+
+void Engine::signalEndofProcessing() {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::signalEndofProcessing");
+#endif
+	if ( notNull(endMainCallback) ) {
+printf("has endMainCallback\n");
+		endMainCallback->CuEngineDoneProcessing();
+	}
+}
+
+void Engine::clearStacks() {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::clearStacks");
+#endif
+	taskStack.clear();
+	stack.clear();
+	//globalParserContext.clear();
+	//globalParserContext.moveToFirstUnusedToken(); // may conflict with ParserContext.onError() ?
+
+	// Reinitialized the stack
+	// This is useful if the program should continue
+	stack.push();
+}
+
+Scope&
+Engine::getGlobalScope() {
+	return stack.getBottom().getScope();
+}
+
+Scope&
+Engine::getCurrentTopScope() {
+	return stack.getTop().getScope();
+}
+
+ParserContext&
+Engine::getGlobalParserContext() {
+	return globalParserContext;
+}
+
+void
+Engine::setVariableByAddress(
+	const VarAddress&	address,
+	Object*				obj,
+	bool				reuseStorage
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::setVariableByAddress");
+#endif
+	Variable* var = resolveVariableAddress(address);
+	if ( notNull(var) ) {
+		if ( isNull(obj) ) {
+			throw BadParameterException<Engine>();
+		}
+		switch( obj->getType() ) {
+		case ObjectType::Function:
+			var->setFunc((FunctionContainer*)obj, reuseStorage);
+			lastObject.set(var->getRawContainer());
+			break;
+		case ObjectType::Data:
+			var->setFuncReturn( obj );
+			lastObject.set(var->getRawContainer());
+			break;
+		}
+	} else {
+		lastObject.setWithoutRef(new FunctionContainer());
+	}
+}
+
+TokenType
+Engine::resolveTokenType( const String& pName ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::resolveTokenType");
 #endif
@@ -681,17 +1803,13 @@ TokenType Engine::resolveTokenType( const String& pName ) {
 		return TT_malformed;
 	}
 
-	// I don't want this here. It forces repeat-duty.
-	// Unfortunately, if the user decides to use it or tokenize() separate from run(), I have issues.
-	// To resolve this, I could make a public version of resolveTokenType (which checks isSpecialCharacter)
-	// and a private one, which is the rest of this. But then I would have to do the same for tokenize().
-	// This isn't a big slow-down, so it's not a big deal.
-	TokenType tokenType;
-	if ( isSpecialCharacter(pName[0], tokenType) ) {
-		if ( pName.size() > 1 )
-			return TT_malformed;
-		return tokenType;
-	}
+	//TokenType tokenType;
+	// Repeat duty
+	//if ( isSpecialCharacter(pName[0], tokenType) ) {
+	//	if ( pName.size() > 1 )
+	//		return TT_malformed;
+	//	return tokenType;
+	//}
 
 	if ( pName.equals(CONSTANT_END_MAIN) )
 		return TT_end_main;
@@ -737,7 +1855,8 @@ TokenType Engine::resolveTokenType( const String& pName ) {
 	return TT_unknown;
 }
 
-Result::Value Engine::tokenize( CharList& tokenValue, List<Token>& tokens ) {
+Result::Value
+Engine::tokenize( CharList& tokenValue, List<Token>& tokens ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::tokenize");
 #endif
@@ -756,12 +1875,12 @@ Result::Value Engine::tokenize( CharList& tokenValue, List<Token>& tokens ) {
 }
 
 Result::Value
-	Engine::handleCommentsStringsAndSpecials(
-			const TokenType& tokenType,
-			CharList& tokenValue,
-			List<Token>& tokens,
-			ByteStream& stream )
-{
+Engine::handleCommentsStringsAndSpecials(
+	const TokenType&	tokenType,
+	CharList&			tokenValue,
+	List<Token>&		tokens,
+	ByteStream&			stream
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::handleCommentsStringsAndSpecials");
 #endif
@@ -809,392 +1928,8 @@ Result::Value
 	return Result::Ok;
 }
 
-EngineResult::Value Engine::run( ByteStream& stream ) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::info, EngineMessage::Running);
-#endif
-
-	char c;
-	CharList tokenValue; // Since I have to build with it, it's an easy-to-append-to list
-	List<Token> tokens;
-	TokenType tokenType;
-
-	while ( ! stream.atEOS() ) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::info, EngineMessage::COUNT);
-#endif
-		c = stream.getNextByte();
-		if ( c == '\0' )
-			throw RandomNullByteInStream();
-		// Quit adding to a token identifier when whitespace is found
-		if ( isWhitespace(c) ) {
-			if ( tokenValue.size() == 0 ) {
-				continue;
-			}
-			switch( tokenize(tokenValue, tokens) ) {
-			case Result::Error:
-				return EngineResult::Error;
-			default: break;
-			}
-		}
-		else if ( isSpecialCharacter(c, tokenType) ) {
-			// If another token was started, finish it.
-			if ( tokenValue.size() > 0 ) {
-				// To allow for numbers to be tokenized with decimal places.
-				if ( c == '.' && tokenValue[0] >= '0' && tokenValue[0] <= '9' ) {
-					// Should check here for already-existing decimal and throw an error if found.
-					tokenValue.push_back(c);
-					continue;
-				} else {
-					switch( tokenize(tokenValue, tokens) ) {
-					case Result::Error:
-						return EngineResult::Error;
-					default: break;
-					}
-				}
-				tokenValue.clear();
-			}
-//#if COPPER_DEBUG_ENGINE_MESSAGES
-			tokenValue.push_back(c);
-//#endif
-			// Comments, strings, and special chars are special cases that need to be handled immediately
-			switch( handleCommentsStringsAndSpecials(tokenType, tokenValue, tokens, stream) ) {
-			case Result::Error:
-				return EngineResult::Error;
-			default: break;
-			}
-		}
-		else {
-			if ( tokenValue.size() >= 255 ) { // Don't accept tokens longer than this
-				//print(LogLevel::error, "ERROR: Token identifier is too long." );
-				print(LogLevel::error, EngineMessage::LongToken);
-				return EngineResult::Error;
-			}
-			tokenValue.push_back(c);
-		}
-	}
-	if ( tokenValue.size() > 0 ) {
-		// Push the last token
-		switch( tokenize(tokenValue, tokens) ) {
-		case Result::Error:
-			return EngineResult::Error;
-		default: break;
-		}
-	}
-	List<Token>::Iter i = tokens.start();
-	if ( i.has() )
-	do {
-		switch ( process(*i) ) {
-		case EngineResult::Ok:
-			break;
-		case EngineResult::Error:
-			return EngineResult::Error;
-		case EngineResult::Done:
-			return EngineResult::Done;
-		}
-	} while( ++i );
-	return EngineResult::Ok;
-}
-
-EngineResult::Value Engine::process( const Token& pToken )
-{
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::process");
-#endif
-#ifdef COPPER_PRINT_ENGINE_PROCESS_TOKENS
-	std::printf("[DEBUG VAR: pToken.name = %s\n", pToken.name.c_str());
-	std::printf("[DEBUG VAR: pToken.type = %u\n", (unsigned)(pToken.type));
-	std::printf("[DEBUG taskStack SIZE = %lu\n", taskStack.size());
-	if ( taskStack.size() > 0 )
-		std::printf("[DEBUG task id(%u)\n", (unsigned)(taskStack.getLast().getTask().name) );
-#endif
-	if ( taskStack.size() == 2000 ) {
-		clearStacks();
-		print(LogLevel::error, EngineMessage::StackOverflow);
-		return EngineResult::Error;
-	}
-
-	// Immediate stoppage of processing.
-	if ( pToken.type == TT_end_main || systemExitTrigger ) {
-		clearStacks();
-		signalEndofProcessing();
-		return EngineResult::Done;
-	}
-	/*
-		! RULES !
-		Every token must result in either a task or setting the last object.
-		Every task must, in its finality, set the lastObject.
-		Furthermore, NO TASK may use the lastObject until after the interpret() call
-		(in which the lastObject is set).
-	*/
-	bool looprun = true;
-	bool skipInterpret = false;
-	while ( taskStack.size() > 0 && looprun ) {
-		switch( processTask(taskStack.getLast().getTask(), pToken) ) {
-		case TaskResult::_none:
-			looprun = false;
-			break;
-		case TaskResult::_pop_loop:
-			// If a task eats a token, it needs to return cycle, not pop.
-			// If a task cannot handle a token but can terminate at that point, it should pop.
-//std::printf("[Task Result pop loop in first section] [stack=%u]\n", stack.getCurrLevel()); // Legacy debug
-			taskStack.pop();
-			continue;
-		case TaskResult::_cycle:
-			return EngineResult::Ok;
-		case TaskResult::_skip:
-			skipInterpret = true;
-			looprun = false;
-			break;
-		case TaskResult::_error:
-			clearStacks();
-			return EngineResult::Error;
-		case TaskResult::_done:
-			clearStacks();
-			signalEndofProcessing();
-			return EngineResult::Done;
-		}
-	}
-
-	if ( !skipInterpret ) {
-		switch( interpret(pToken) ) {
-		case TaskResult::_none:
-			break;
-		case TaskResult::_pop_loop:
-			return EngineResult::Error;
-		case TaskResult::_cycle:
-			return EngineResult::Ok;
-		case TaskResult::_skip:
-			// There is no correct default for this situation, but it never happens.
-			//print(LogLevel::error, "SYSTEM ERROR: interpret(token) returning interpret-skip.");
-			return EngineResult::Error;
-		case TaskResult::_error:
-			clearStacks();
-			return EngineResult::Error;
-		case TaskResult::_done:
-			clearStacks();
-			signalEndofProcessing();
-			return EngineResult::Done;
-		}
-	}
-
-	switch( processTasksOnObjects() ) {
-	case TaskResult::_none:
-		if ( systemExitTrigger ) {
-			return EngineResult::Done;
-		}
-		// A task is waiting on something. It may pop itself.
-		return EngineResult::Ok;
-	case TaskResult::_done:
-		clearStacks();
-		signalEndofProcessing();
-		return EngineResult::Done;
-	case TaskResult::_error:
-	default:
-		clearStacks();
-		return EngineResult::Error;
-	}
-	// The last object is destroyed upon Engine deletion.
-}
-
-TaskResult::Value Engine::processTasksOnObjects() {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processTasksOnObjects");
-#endif
-	while ( taskStack.size() > 0 ) {
-		switch( processTaskOnLastObject(taskStack.getLast().getTask()) ) {
-		case TaskResult::_none:
-			// A task is waiting on something. It may pop itself.
-			return TaskResult::_none;
-		case TaskResult::_pop_loop:
-			// The task needs to be popped and processing should continue
-//print(LogLevel::info, "[Task Result pop loop in third section]\n"); Legacy debug
-			taskStack.pop();
-			break; // i.e. continue with loop
-		case TaskResult::_cycle:
-			return TaskResult::_none;
-		case TaskResult::_skip:
-			// There is no correct default for this situation, but it never happens.
-			// The print() call here can be safely removed when the core VM code is finally frozen.
-			print(LogLevel::error, "SYSTEM ERROR: processTaskOnLastObject() returning interpret-skip.");
-			return TaskResult::_error;
-		case TaskResult::_error:
-			return TaskResult::_error;
-		case TaskResult::_done:
-			return TaskResult::_done;
-		}
-	}
-	// All tasks are done
-	return TaskResult::_none;
-}
-
-TaskResult::Value Engine::performObjProcessAndCycle(const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::performObjProcessAndCycle");
-#endif
-	// Exceptional case: "exit" called.
-	if ( lastToken.type == TT_exit ) {
-		systemExitTrigger = true;
-		return TaskResult::_done;
-	}
-
-	switch( processTasksOnObjects() ) {
-	case TaskResult::_none:
-		switch( process(lastToken) ) {
-		case EngineResult::Ok:
-			return TaskResult::_cycle;
-		case EngineResult::Error:
-			return TaskResult::_error;
-		case EngineResult::Done:
-			return TaskResult::_done;
-		}
-	case TaskResult::_done:
-		return TaskResult::_done;
-	case TaskResult::_error:
-	default:
-		return TaskResult::_error;
-	}
-}
-
-TaskResult::Value Engine::interpret( const Token& pToken ) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::interpret");
-#endif
-	// Tokens in this switch that result in tasks should return TaskResult::_cycle.
-	// Tokens in this switch that do not result in tasks should return TaskResult::_none and set lastObject.
-	switch( pToken.type ) {
-	case TT_malformed:
-		//print(LogLevel::error, "ERROR: Malformed token.");
-		print(LogLevel::error, EngineMessage::MalformedToken);
-		return TaskResult::_error;
-
-	case TT_unknown:
-		//print(LogLevel::error, "ERROR: Unknown token.");
-		print(LogLevel::error, EngineMessage::UnknownToken);
-		return TaskResult::_error;
-
-	//---------------
-
-	case TT_comment:
-		return TaskResult::_cycle;
-
-	//---------------
-	case TT_exit:
-		systemExitTrigger = true;
-		return TaskResult::_done;
-
-	//---------------
-	case TT_end_segment:
-		// Handled inside the task process, so it shouldn't ever show up here, but it can.
-		return TaskResult::_cycle;
-
-	//---------------
-	case TT_parambody_open:
-		// Should be absorbed by a task, so generate error message if not.
-		//print( LogLevel::error, "ERROR: Unused parameter body opening '('." );
-		print( LogLevel::error, EngineMessage::OrphanParamBodyOpener );
-		return TaskResult::_error;
-
-	case TT_parambody_close:
-		// Should be absorbed by a task, so generate error message if not.
-		//print( LogLevel::error, "ERROR: Unmatched parameter body closing ')'." );
-		print( LogLevel::error, EngineMessage::OrphanParamBodyCloser );
-		return TaskResult::_error;
-
-	//---------------
-	case TT_body_open:
-		processBodyOpen();
-		return TaskResult::_cycle;
-
-	case TT_body_close:
-		// Should be absorbed by a task, so generate error message if not.
-		//print( LogLevel::error, "ERROR: Unmatched body closing '}'." );
-		print( LogLevel::error, EngineMessage::OrphanBodyCloser );
-		clearStacks(); // Unwind stacks
-		return TaskResult::_error;
-
-	//---------------
-	case TT_objectbody_open:
-		constructFunctionFromObjBody();
-		return TaskResult::_cycle;
-
-		// Only encountered by tasks within a function whose executing is ending
-	case TT_function_end_run:
-		return TaskResult::_cycle;
-
-	//---------------
-
-	case TT_if:
-		taskStack.push_back(TaskContainer(new TaskIfStructure()));
-		return TaskResult::_cycle;
-
-	case TT_elif:
-		// Should be captured by if-structure
-		print( LogLevel::error, EngineMessage::OrphanElif );
-		return TaskResult::_error;
-
-	case TT_else:
-		// Should be captured by if-structure
-		print( LogLevel::error, EngineMessage::OrphanElse );
-		return TaskResult::_error;
-
-	case TT_loop:
-		taskStack.push_back(TaskContainer(new TaskLoopStructure()));
-		return TaskResult::_cycle;
-
-	case TT_endloop:
-		loopEndMailbox = true;
-		return TaskResult::_cycle;
-
-	case TT_skip:
-		loopSkipMailbox = true;
-		return TaskResult::_cycle;
-
-	//---------------
-	case TT_name:
-		if ( taskpushSystemFunction(pToken.name) ) {
-			return TaskResult::_cycle;
-		}
-		if ( taskpushExternalFunction(pToken.name) ) {
-			return TaskResult::_cycle;
-		}
-		taskpushUserFunction(pToken.name);
-		return TaskResult::_cycle;
-
-	//---------------
-	// Handling boolean
-
-	case TT_boolean_true:
-		constructBoolean(true);
-		return TaskResult::_none;
-
-	case TT_boolean_false:
-		constructBoolean(false);
-		return TaskResult::_none;
-
-	//---------------
-
-	case TT_number:
-		constructNumber(pToken.name);
-		return TaskResult::_none;
-
-	//---------------
-
-	case TT_string:
-		constructString(pToken.name);
-		return TaskResult::_none;
-
-	//---------------
-	default: break;
-	}
-
-	// Unhandled token
-	//print(LogLevel::error, "ERROR: Unhandled token.");
-	print(LogLevel::error, EngineMessage::TokenNotHandled);
-	return TaskResult::_error;
-}
-
-bool Engine::isWhitespace( const char c ) const {
+bool
+Engine::isWhitespace( const char c ) const {
 	// I forgot the other types of whitespace, but I need them, such as the no-separator character
 	// which could be the source of huge problems (hidden security bugs in open-source code).
 	return (c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == '\f' || c == '\v' || c == '\0');
@@ -1202,7 +1937,11 @@ bool Engine::isWhitespace( const char c ) const {
 	// I probably shouldn't, and that way unicode chunks given as int via getc() work fine.
 }
 
-bool Engine::isSpecialCharacter( const char c, TokenType& pTokenType ) {
+bool
+Engine::isSpecialCharacter(
+	const char c,
+	TokenType& pTokenType
+) {
 	switch( c ) {
 	case ',': pTokenType = TT_end_segment;				return true;
 	case '=': pTokenType = TT_assignment;				return true;
@@ -1210,8 +1949,8 @@ bool Engine::isSpecialCharacter( const char c, TokenType& pTokenType ) {
 	case '.': pTokenType = TT_member_link;				return true;
 	case '(': pTokenType = TT_parambody_open;			return true;
 	case ')': pTokenType = TT_parambody_close;			return true;
-	case '{': pTokenType = TT_body_open;				return true;
-	case '}': pTokenType = TT_body_close;				return true;
+	case '{': pTokenType = TT_execbody_open;				return true;
+	case '}': pTokenType = TT_execbody_close;			return true;
 	case '[': pTokenType = TT_objectbody_open;			return true;
 	case ']': pTokenType = TT_objectbody_close;			return true;
 	case ':': pTokenType = TT_immediate_run;			return true;
@@ -1228,11 +1967,13 @@ bool Engine::isSpecialCharacter( const char c, TokenType& pTokenType ) {
 	return false;
 }
 
-bool Engine::isEscapeCharacter(const char c) const {
+bool
+Engine::isEscapeCharacter( const char c ) const {
 	return c == CONSTANT_ESCAPE_CHARACTER_TOKEN;
 }
 
-bool Engine::isValidToken( const TokenType& token ) const {
+bool
+Engine::isValidToken( const TokenType& token ) const {
 	switch( token ) {
 	case TT_unknown:
 		//print(LogLevel::error, "ERROR: Unresolvable token found.\n");
@@ -1247,7 +1988,8 @@ bool Engine::isValidToken( const TokenType& token ) const {
 	}
 }
 
-bool Engine::isValidNameCharacter( const char c ) const {
+bool
+Engine::isValidNameCharacter( const char c ) const {
 	switch(c) {
 	case '_':
 		return true;
@@ -1277,7 +2019,8 @@ bool Engine::isValidNameCharacter( const char c ) const {
 	//return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
-bool Engine::isValidName( const String& pName ) const {
+bool
+Engine::isValidName( const String& pName ) const {
 	//if ( pName.size() > 256 )
 	//	return false;
 		// For checking Unicode if desired
@@ -1294,15 +2037,20 @@ bool Engine::isValidName( const String& pName ) const {
 	return true;
 }
 
-bool Engine::isCommentToken(const char c) const {
+bool
+Engine::isCommentToken( const char c ) const {
 	return c == CONSTANT_COMMENT_TOKEN;
 }
 
-bool Engine::isStringToken(const char c) const {
+bool
+Engine::isStringToken( const char c ) const {
 	return c == CONSTANT_STRING_TOKEN;
 }
 
-Result::Value Engine::scanComment( ByteStream& stream ) {
+Result::Value
+Engine::scanComment(
+	ByteStream& stream
+) {
 	char c = '`';
 	while ( ! stream.atEOS() ) {
 		c = stream.getNextByte();
@@ -1322,7 +2070,11 @@ Result::Value Engine::scanComment( ByteStream& stream ) {
 	return Result::Error;
 }
 
-Result::Value Engine::collectString(ByteStream& stream, CharList& collectedValue) {
+Result::Value
+Engine::collectString(
+	ByteStream& stream,
+	CharList& collectedValue
+) {
 
 	char c = '`';
 	while ( ! stream.atEOS() ) {
@@ -1357,151 +2109,53 @@ Result::Value Engine::collectString(ByteStream& stream, CharList& collectedValue
 	return Result::Error;
 }
 
-//------------------------------------
-// &&&&&&&&& Task creation &&&&&&&&&&&
+// ********* OPERATION CODE HANDLING ********
 
-void Engine::processBodyOpen() {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processBodyOpen");
-#endif
-	// If we get to this point, it means that the token wasn't gobbled up by "fn"
-	taskStack.push_back( TaskContainer(new TaskFunctionConstruct(TASK_FCS_from_bodystart)) );
+void
+Engine::opStrandAddNewOperation(
+	OpStrand*	strand,
+	Opcode*		newOp	// passed directly after creation with "new"
+) {
+	if ( isNull(strand) )
+		throw EmptyOpstrandException();
+	if ( isNull(newOp) )
+		throw NullOpcodeException();
+	strand->push_back(OpcodeContainer(newOp));
+	newOp->deref();
 }
 
-void Engine::constructFunctionFromObjBody() {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::constructFunctionFromObjBody");
-#endif
-	taskStack.push_back( TaskContainer(new TaskFunctionConstruct(TASK_FCS_param_collect)) );
+// Should inline
+void
+Engine::opStrandAddOperation(
+	OpStrand*	strand,
+	Opcode*		op
+) {
+	if ( isNull(strand) )
+		throw EmptyOpstrandException();
+	if ( isNull(op) )
+		throw NullOpcodeException();
+	strand->push_back(OpcodeContainer(op));
 }
 
-void Engine::constructBoolean(bool value) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::constructBoolean");
-#endif
-	lastObject.setWithoutRef( new ObjectBool(value) );
-}
+//--------------------------------------
+// ******** SYSTEM FUNCTION SETUP ******
 
-void Engine::constructString(const String& value) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::constructString");
-#endif
-	// Should actually check for unicode-only text.
-	// But this can also be done by purging the string.
-#ifdef COPPER_PURGE_NON_PRINTABLE_ASCII_INPUT_STRINGS
-	ObjectString* objStr = new ObjectString(value);
-	objStr->purgeNonPrintableASCII();
-	lastObject.setWithoutRef( objStr );
-#else
-	lastObject.setWithoutRef( new ObjectString(value) );
-#endif
-}
 
-void Engine::constructNumber(const String& value) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::constructNumber");
-#endif
-	NumberObjectFactory* factory;
-	if ( numberObjectFactoryPtr.obtain(factory) ) {
-		lastObject.setWithoutRef( factory->createNumber(value) );
-	} else {
-		print(LogLevel::warning, "Missing number factory.");
-		lastObject.setWithoutRef( new ObjectNumber(value) );
-	}
-}
-
-bool Engine::taskpushSystemFunction( const String& pName ) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::taskpushSystemFunction");
-#endif
-	RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
-		= builtinFunctions.getBucketData(pName);
-
-	// No task found
-	if ( bucketData == 0 )
-		return false;
-
-	SystemFunction::Value taskName = bucketData->item;
-
-	// Some system functions are swapped for tasks
-	switch(taskName) {
-	case SystemFunction::_own:
-		if ( ! ownershipChangingEnabled ) {
-			print(LogLevel::warning, EngineMessage::PointerNewOwnershipDisabled);
-			return false;
-		}
-		taskStack.push_back( TaskContainer(new TaskProcessNamed(TaskName::_own)) );
-		return true;
-
-	case SystemFunction::_is_ptr:
-		taskStack.push_back( TaskContainer(new TaskProcessNamed(TaskName::_is_ptr)) );
-		return true;
-
-	case SystemFunction::_is_owner:
-		taskStack.push_back( TaskContainer(new TaskProcessNamed(TaskName::_is_owner)) );
-		return true;
-
-	default:
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(taskName)) );
-		return true;
-	}
-}
-
-bool Engine::taskpushExternalFunction( const String& pName ) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::taskpushExternalFunction");
-#endif
-
-	RobinHoodHash<ForeignFuncContainer>::BucketData* bucketData = foreignFunctions.getBucketData(pName);
-	if ( bucketData != 0 ) {
-		taskStack.push_back( TaskContainer(new TaskFunctionFound(bucketData->item.getForeignFunction())) );
-		return true;
-	}
-	return false;
-}
-
-void Engine::taskpushUserFunction( const String& pName ) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::taskpushUserFunction");
-#endif
-	/*
-		Order:
-		1) Search the top scope.
-		2) Search the global scope (if it's not the same scope).
-		3) Add the variable to the top scope.
-	*/
-	Variable* var = REAL_NULL;
-	if ( stack.getTop().getScope().findVariable(pName, var) ) {
-		taskStack.push_back(TaskContainer(new TaskFunctionFound(var)));
-	}
-		// bottom stack fram != top stack frame
-	else if ( stack.getCurrLevel() > 1 && stack.getBottom().getScope().findVariable(pName, var) ) {
-		taskStack.push_back(TaskContainer(new TaskFunctionFound(var)));
-	} else {
-		// Using new(no throw) for creating variables is not helpful. It should throw and catch elsewhere.
-		var = stack.getTop().getScope().addVariable(pName);
-		if ( var != 0 ) {
-			taskStack.push_back(TaskContainer(new TaskFunctionFound(var)));
-		} else {
-			print(LogLevel::error, EngineMessage::TaskVarIsNull);
-		}
-	}
-}
-
-void Engine::setupSystemFunctions() {
+void
+Engine::setupSystemFunctions() {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupSystemFunctions");
 #endif
 	builtinFunctions.insert(String(CONSTANT_FUNCTION_RETURN), SystemFunction::_return);
-	builtinFunctions.insert(String("own"), SystemFunction::_own);
+	//builtinFunctions.insert(String("own"), SystemFunction::_own); // handled as SRPS
 	builtinFunctions.insert(String("not"), SystemFunction::_not);
 	builtinFunctions.insert(String("all"), SystemFunction::_all);
 	builtinFunctions.insert(String("any"), SystemFunction::_any);
 	builtinFunctions.insert(String("nall"), SystemFunction::_nall);
 	builtinFunctions.insert(String("none"), SystemFunction::_none);
 	builtinFunctions.insert(String("are_fn"), SystemFunction::_are_fn);
-	builtinFunctions.insert(String("is_ptr"), SystemFunction::_is_ptr);
-	builtinFunctions.insert(String("is_owner"), SystemFunction::_is_owner);
+	//builtinFunctions.insert(String("is_ptr"), SystemFunction::_is_ptr); // handled as SRPS
+	//builtinFunctions.insert(String("is_owner"), SystemFunction::_is_owner); // handled as SRPS
 	builtinFunctions.insert(String("are_empty"), SystemFunction::_are_empty);
 	builtinFunctions.insert(String("are_same"), SystemFunction::_are_same);
 	builtinFunctions.insert(String("member"), SystemFunction::_member);
@@ -1517,1118 +2171,2973 @@ void Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
 }
 
-
 //-------------------------------------
-// &&&&&&&&& Task processing &&&&&&&&&&
+//********** PARSING SYSTEM ***********
 
-TaskResult::Value Engine::processTask(Task& task, const Token& lastToken) {
+// The ParserContext must be passed in by whatever called this function. If none is provided, a new
+// context is made.
+ParseResult::Value
+Engine::parse(
+	ParserContext&	context,
+	bool			srcDone
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processTask");
+	print(LogLevel::debug, "[DEBUG: Engine::parse");
 #endif
-	switch( task.name ) {
-	case TaskName::_Function_Construct:
-		return processFunctionConstruct((TaskFunctionConstruct&)task, lastToken);
-	case TaskName::_Function_Found:
-		return processFunctionFound((TaskFunctionFound&)task, lastToken);
-	case TaskName::_if:
-		return processIfStatement((TaskIfStructure&)task, lastToken);
-	case TaskName::_loop:
-		return processLoop((TaskLoopStructure&)task, lastToken);
-	case TaskName::_own:
-	case TaskName::_is_ptr:
-	case TaskName::_is_owner:
-		return processNamed((TaskProcessNamed&)task, lastToken);
-	default:
-		return TaskResult::_none;
-	}
-}
+	// IMPORTANT NOTE: You cannot short-circuit this function by merely checking for if the context
+	// is finished. There may be unfinished tasks that prevent valid processing.
 
-TaskResult::Value Engine::processTaskOnLastObject(Task& task) {
+	ParseTaskIter parseIter = context.taskStack.start();
+	ParseTask::Result::Value result;
+
+	do {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processTaskOnLastObject");
+	print(LogLevel::debug, "[DEBUG: Engine::parse cycle");
 #endif
-	switch( task.name ) {
-	case TaskName::_Function_Construct:
-		return processObjForFunctionConstruct((TaskFunctionConstruct&)task);
-	case TaskName::_Function_Found:
-		return processObjForFunctionFound((TaskFunctionFound&)task);
-	case TaskName::_if:
-		return processObjForIfStatement((TaskIfStructure&)task);
-	default:
-		return TaskResult::_none;
-	}
-}
-
-TaskResult::Value Engine::processFunctionConstruct(TaskFunctionConstruct& task, const Token& lastToken) {
+		parseIter.makeLast();
+		do {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processFunctionConstruct");
+	print(LogLevel::debug, "[DEBUG: Engine::parse task cycle");
 #endif
-	switch(task.state ) {
-	case TASK_FCS_param_collect:
-		return FuncBuild_processAtParamCollect(task, lastToken);
+			if ( parseIter.has() ) {
+				// IMPORTANT NOTE: You cannot move to the first unused token here because
+				// it prevents assignment to variables from working correctly.
 
-	case TASK_FCS_param_value:
-		// Skip a token so that it can turn into an object, however
-		// for assignment, the next token type must be one of the following:
-		// a name, function start, body start
-		switch( lastToken.type ) {
-		case TT_objectbody_open:
-		case TT_body_open:
-		case TT_name:
-		case TT_boolean_true:
-		case TT_boolean_false:
-		case TT_number:
-		case TT_string:
-			return TaskResult::_none;
-		default:
-			//print(LogLevel::error, "ERROR: Bad token found when obtaining parameter value.");
-			print(LogLevel::error, EngineMessage::InvalidParamValueToken);
-			return TaskResult::_error;
+				result = processParseTask( parseIter->getTask(), context, srcDone );
+				// Do tasks first, checking for valid tokens.
+				// Tasks are expected to check for ALL the tokens they need and err if they are not available.
+				switch( result )
+				{
+				case ParseTask::Result::need_more:
+					return ParseResult::More;
+				case ParseTask::Result::task_done:
+					context.taskStack.pop();
+					parseIter.makeLast();
+					break;
+				case ParseTask::Result::interpret_token:
+					// Tasks requiring another token that won't exist will gum up the works.
+					if ( context.isFinished() ) {
+						if ( srcDone ) {
+							print(LogLevel::error, "Token source finished before parsing.");
+							return ParseResult::Error;
+						} else {
+							return ParseResult::More;
+						}
+					}
+					break;
+				case ParseTask::Result::syntax_error:
+				default:
+					context.onError();
+					return ParseResult::Error;
+				}
+			} else {
+				break;
+			}
+		} while ( result == ParseTask::Result::task_done );
+
+		switch( interpretToken( context, srcDone ) )
+		{
+		case ParseResult::More:
+			continue; // Skip to perform processing cycle (task has been added)
+		case ParseResult::Error:
+			context.onError();
+			return ParseResult::Error;
+		case ParseResult::Done:
+			// All up-front processing for this token has been done, so continue to next token.
+			break;
 		}
-		return TaskResult::_error;
 
-	case TASK_FCS_param_ptr_value:
-		return FuncBuild_processCollectPointerValue(lastToken);
+	} while ( ! context.isFinished() || parseIter.has() );
 
-	case TASK_FCS_end_param_collect:
-		return FuncBuild_processEndParamCollect(task, lastToken);
+	// Note: tasks themselves also throw an error if they don't have enough tokens,
+	// so there should be no need to check here except for debugging.
 
-	case TASK_FCS_from_bodystart:
-		return FuncBuild_processFromBodyStart(task, lastToken);
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	context.outputStrand->validate();
+	print(LogLevel::debug, "[DEBUG: Engine::parse validated output strand.");
+#endif
 
-	// Default should be an error as it should never be reached
-	default:
-		print(LogLevel::error, "SYSTEM ERROR: Default case reached in processFunctionConstruct");
-		return TaskResult::_error; // defensive programming
-	}
+	//outStrand.append(context.buildStrand); // Should be saved in the context anyways
+	return ParseResult::Done;
 }
 
-TaskResult::Value Engine::processObjForFunctionConstruct(TaskFunctionConstruct& task) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processObjForFunctionConstruct");
-#endif
-	switch( task.state ) {
-	case TASK_FCS_param_value:
-		task.function->getPersistentScope().setVariableFrom(task.paramName, lastObject.raw(), false);
-		task.state = TASK_FCS_param_collect;
-		return TaskResult::_none;
-
-	case TASK_FCS_param_ptr_value:
-		task.function->getPersistentScope().setVariableFrom(task.paramName, lastObject.raw(), true);
-		task.state = TASK_FCS_param_collect;
-		return TaskResult::_none;
-
-	// Should never reach this point
-	default:
-		// This could probably be removed once bugs are worked out.
-		print(LogLevel::error, "SYSTEM ERROR: Default case reached in processObjForFunctionConstruct");
-		return TaskResult::_error; // defensive programming
+ParseTask::Result::Value
+Engine::moveToFirstUnusedToken(
+	ParserContext&		context,
+	bool				srcDone
+) {
+	if ( ! context.moveToFirstUnusedToken() ) {
+		if ( srcDone ) {
+			print(LogLevel::error, "Unfinished parsing.");
+			return ParseTask::Result::syntax_error;
+		} else {
+			return ParseTask::Result::need_more;
+		}
 	}
+	return ParseTask::Result::task_done;
 }
 
-TaskResult::Value Engine::FuncBuild_processAtParamCollect(TaskFunctionConstruct& task, const Token& lastToken) {
+ParseResult::Value
+Engine::interpretToken(
+	ParserContext&	context,
+	bool			srcDone
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncBuild_processAtParamCollect");
+	print(LogLevel::debug, "[DEBUG: Engine::intepretToken");
 #endif
-	// Parameter collection looks for just names, but also has to be aware when those
-	// names are assigned values, which forces changing to another construction state.
-	// Furthermore, parameter collection cannot occur when the body is a nested parameter body
-	// (which is technically a processing body in such cases).
-	switch( lastToken.type ) {
+	// ATTENTION!! Before calling, be sure to commit token usage.
+	// This function call (of moveToFirstUnusedToken) ensures that interpretToken()
+	// never acts on the same token twice.
+	if ( ! context.moveToFirstUnusedToken() )
+		return ParseResult::Done;
+
+	Token currToken = context.peekAtToken();
+
+	switch( currToken.type ) {
+
+	case TT_malformed:
+		print(LogLevel::error, EngineMessage::MalformedToken);
+		return ParseResult::Error;
+
+	case TT_unknown:
+		print(LogLevel::error, EngineMessage::UnknownToken);
+		return ParseResult::Error;
+
+	//---------------
+
+	case TT_comment:
+		// This shouldn't be in the parser
+		throw (unsigned int)TT_comment;
+
+	//---------------
+	case TT_exit:
+		// Add this token
+		context.addNewOperation( new Opcode(Opcode::Exit) );
+		break;
+
+	// TODO: Also setup the end_main token.
+
+	//---------------
 	case TT_end_segment:
-		// It doesn't matter if a parameter name is not followed by an end-segment token
-		// but adding one prevents ambiguity
-		if ( task.hasOpenParam ) {
-			// Apparently the last token was not followed by an end-segment or assignment token
-			task.function->params.push_back( task.paramName );
-		}
-		task.hasOpenParam = false;
-		return TaskResult::_cycle;
-	case TT_assignment:
-		if ( task.hasOpenParam ) {
-			task.state = TASK_FCS_param_value;
-			task.hasOpenParam = false;
-		} else {
-			//print(LogLevel::warning, "Warning: Unused assignment symbol among newly constructed function parameters. (Is it after an end-segment symbol?)");
-			print(LogLevel::warning, EngineMessage::UnusedAsgnInFunctionBuildParams);
-		}
-		return TaskResult::_cycle;
-	case TT_pointer_assignment:
-		if ( task.hasOpenParam ) {
-			task.state = TASK_FCS_param_ptr_value;
-			task.hasOpenParam = false;
-		} else {
-			//print(LogLevel::warning, "Warning: Unused pointer creation symbol among newly constructed function parameters. (Is it after an end-segment symbol?)");
-			print(LogLevel::warning, EngineMessage::UnusedPtrAsgnInFunctionBuildParams);
-		}
-		return TaskResult::_cycle;
-	case TT_parambody_open: // '('
-		//print(LogLevel::error, "ERROR: Found alternate processing body among newly constructed function parameter names.");
-		print(LogLevel::error, EngineMessage::OrphanParamBodyOpener); // It may be best to give this its own unique error message.
-		return TaskResult::_error;
-	case TT_objectbody_close: // ')'
-		// Is this right?
-		if ( task.hasOpenParam ) {
-			task.function->params.push_back( task.paramName );
-		}
-		task.state = TASK_FCS_end_param_collect;
-		return TaskResult::_cycle;
-	case TT_name:
-		if ( task.hasOpenParam ) {
-			// Apparently the last token was not followed by an end-segment or assignment token
-			task.function->params.push_back( task.paramName );
-		}
-		// New token
-		task.paramName = lastToken.name;
-		task.hasOpenParam = true;
-		return TaskResult::_cycle;
-	default: break;
-	}
-
-	//print(LogLevel::error, "ERROR: Unused token found among newly constructed function parameter names.");
-	print(LogLevel::error, EngineMessage::UnusedTokenInFunctionBuildParams);
-	return TaskResult::_error;
-}
-
-TaskResult::Value Engine::FuncBuild_processCollectPointerValue(const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncBuild_processCollectPointerValue");
-#endif
-	if ( lastToken.type == TT_name ) {
-		// Note that it is only possible to save a pointer to user functions, for good reason.
-		// I want "." to have higher precedence than "~", and since I only need the function container
-		// anyways (which is already an object), I can simply complete the pointer operation after
-		// the last object has been acquired.
-		return TaskResult::_none;
-	} else {
-		//print(LogLevel::error, "ERROR: Cannot point to non-names.");
-		print(LogLevel::error, EngineMessage::PtrAssignedNonName);
-		return TaskResult::_error;
-	}
-}
-
-TaskResult::Value Engine::FuncBuild_processEndParamCollect(TaskFunctionConstruct& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncBuild_processEndParamCollect");
-#endif
-	// Language rule: The very next token in this state MUST be the execution body opening
-	if ( lastToken.type == TT_body_open ) {
-		task.openBodies = 1;
-		task.state = TASK_FCS_from_bodystart;
-		return TaskResult::_cycle;
-	}
-	// Optionally, function creation can short-circuit here
-	// a = fn()
-	lastObject.setWithoutRef(new FunctionContainer(task.function));
-	taskStack.pop();
-	return performObjProcessAndCycle(lastToken);
-}
-
-TaskResult::Value Engine::FuncBuild_processFromBodyStart(TaskFunctionConstruct& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncBuild_processFromBodyStart");
-	//std::printf("DEBUG VARS:\ntask =%u\ntask.body =%u\ntask.function =%u\n", (unsigned int)&task, (unsigned int)(task.body), (unsigned int)(task.function) );
-	//std::printf("DEBUG VAR task.name id=%u\n", (unsigned int)(task.name));
-#endif
-	// Everything in a body must be collected and added to the body
-	switch( lastToken.type ) {
-	case TT_body_open:
-		task.openBodies += 1;
-		if ( task.openBodies == (unsigned int)-1 ) {
-			//print( LogLevel::error, "ERROR: Too many nested bodies in given execution body." );
-			print( LogLevel::error, EngineMessage::ExceededBodyCountLimit);
-			return TaskResult::_error;
-		}
-		task.body->addToken(lastToken);
-		return TaskResult::_cycle;
-	case TT_body_close:
-		if ( task.openBodies == 0 ) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-			print(LogLevel::error, "SYSTEM ERROR: function construction task has no open bodies.");
-#endif
-			return TaskResult::_error;
-		}
-		task.openBodies -= 1;
-		if ( task.openBodies == 0 ) {
-			task.function->body.set(task.body);
-			lastObject.setWithoutRef(new FunctionContainer(task.function, generateFunctionID()));
-			taskStack.pop();
-			return TaskResult::_skip;
-		} // else
-		task.body->addToken(lastToken);
-		return TaskResult::_cycle;
-	default:
-		task.body->addToken(lastToken);
-		return TaskResult::_cycle;
-	}
-}
-
-unsigned int Engine::generateFunctionID() {
-	return ++functionID;
-}
-
-TaskResult::Value Engine::processFunctionFound(TaskFunctionFound& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processFunctionFound");
-#endif
-	// Note that this plays tag-team with the other function
-
-	// Remember that when attempting to use a pointer, if a function no longer exists, it must
-	// be recreated, UNIQUE to the pointer (not simply saving the old function container).
-	// Otherwise, you get stuff tied together.
-
-	// Perform standard actions first, only resorting to differentiating between types of functions
-	// on the last step
-	switch( task.state ) {
-	case TASK_FF_start:
-		return FuncFound_processFromStart(task, lastToken);
-	case TASK_FF_assignment:
-		return FuncFound_processAssignment(lastToken);
-	case TASK_FF_pointer_assignment:
-		return FuncFound_processPointerAssignment(lastToken);
-	case TASK_FF_find_member:
-		return FuncFound_processFindMember(task, lastToken);
-	case TASK_FF_collect_params:
-		return FuncFound_processCollectParams(task, lastToken);
-	default:
-		print(LogLevel::error, "SYSTEM ERROR: Default case reached in FuncFound_processObjForFunctionFound");
-		return TaskResult::_error;
-	}
-	//return TaskResult::_error; // All cases should be handled. If not, compiler should error.
-}
-
-TaskResult::Value Engine::processObjForFunctionFound(TaskFunctionFound& task) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processObjForFunctionFound");
-#endif
-	switch( task.state ) {
-	case  TASK_FF_start:
-		// Technically, this is probably an error.
+		// Skip doing anything with this token, but causes errors when in the wrong place
 		break;
-	case TASK_FF_assignment:
-		// Copy assignment
-		return FunctionFound_processAssignmentObj(task);
-	case TASK_FF_pointer_assignment:
-		return FunctionFound_processPointerAssignmentObj(task);
-	case TASK_FF_find_member:
-		// Technically, this is probably an error.
-		break;
-	case TASK_FF_collect_params:
-		task.addParam( lastObject.raw() );
-		return TaskResult::_none;
-	}
-	return TaskResult::_error;
-}
 
-TaskResult::Value Engine::FuncFound_processFromStart(TaskFunctionFound& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processFromStart");
-#endif
-	switch(lastToken.type) {
-	case TT_assignment:
-		task.state = TASK_FF_assignment;
-		return TaskResult::_cycle;
-	case TT_pointer_assignment:
-		task.state = TASK_FF_pointer_assignment;
-		return TaskResult::_cycle;
-	case TT_member_link:
-		task.state = TASK_FF_find_member;
-		return TaskResult::_cycle;
+	//---------------
 	case TT_parambody_open:
-		task.state = TASK_FF_collect_params;
-		task.openParamBodies = 1;
-		return TaskResult::_cycle;
-	case TT_immediate_run:
-		task.state = TASK_FF_collect_params;
-		return FuncFound_processRun(task);
-	default:
-		if ( task.type == TASK_FFTYPE_variable ) {
-			lastObject.set( task.varPtr.raw()->getRawContainer() );
-		} else {
-			lastObject.setWithoutRef(new FunctionContainer());
+		// Should be absorbed by a task, so generate error message if not.
+		print( LogLevel::error, EngineMessage::OrphanParamBodyOpener );
+		return ParseResult::Error;
+
+	case TT_parambody_close:
+		// Should be absorbed by a task, so generate error message if not.
+		print( LogLevel::error, EngineMessage::OrphanParamBodyCloser );
+		return ParseResult::Error;
+
+	//---------------
+		// Note: The system could be modified to make "fn" optional again.
+
+	case TT_execbody_open:
+		// Let the parse task begin by expecting the current token is the open-exec-body-token
+		addNewParseTask(
+			context.taskStack,
+			new FuncBuildParseTask( FuncBuildParseTask::State::FromExecBody )
+		);
+		context.addNewOperation( new FuncBuildOpcode() );
+		return ParseResult::More;
+
+	case TT_execbody_close:
+		print( LogLevel::error, EngineMessage::OrphanBodyCloser );
+		return ParseResult::Error;
+
+	//---------------
+	case TT_objectbody_open:
+		// Let the parse task begin by expecting the current token is the open-object-body token
+		addNewParseTask(
+			context.taskStack,
+			new FuncBuildParseTask( FuncBuildParseTask::State::FromObjectBody )
+		);
+		context.addNewOperation( new FuncBuildOpcode() );
+		return ParseResult::More;
+
+	case TT_objectbody_close:
+		print( LogLevel::error, EngineMessage::OrphanObjectBodyCloser );
+		return ParseResult::Error;
+
+	//---------------
+
+	case TT_if:
+		// If-statements always begin with a terminal
+		context.addNewOperation( new Opcode(Opcode::Terminal) );
+		addNewParseTask(
+			context.taskStack,
+			new IfStructureParseTask( context.outputStrand )
+		);
+		context.commitTokenUsage(); // Keep the "if"
+		return ParseResult::More;
+
+	case TT_elif:
+		// Should have been absorbed
+		print( LogLevel::error, EngineMessage::OrphanElif );
+		return ParseResult::Error;
+
+	case TT_else:
+		// Should have been absorbed
+		print( LogLevel::error, EngineMessage::OrphanElse );
+		return ParseResult::Error;
+
+	//---------------
+
+	case TT_loop:
+		context.addNewOperation( new Opcode(Opcode::Terminal) ); // Start of the loop
+		addNewParseTask(
+			context.taskStack,
+			new LoopStructureParseTask( context.outputStrand )
+		);
+		return ParseResult::More;
+
+	case TT_endloop:
+		// Must tie in with the loop's starting terminal by searching back through the tasks
+		// to find the loop's initial one.
+		// Then this becomes a goto loop end.
+		return ParseLoop_AddEndLoop(context);
+
+	case TT_skip:
+		// Must tie in with the loop's starting terminal by searching back through the tasks
+		// to find the loop's initial one.
+		// Then this becomes a goto loop start.
+		return ParseLoop_AddLoopSkip(context);
+
+	//---------------
+	case TT_name:
+		// Certain names can't be treated like regular functions because they require accessing
+		// the variable directly. Furthermore, their calls can be optimized into a single opcode
+		// by parsing them as unique tasks.
+
+		// Special names
+		if ( context.peekAtToken().name.equals("own") ) {
+			addNewParseTask(
+				context.taskStack,
+				new SRPSParseTask(Opcode::Own)
+			);
+			return ParseResult::More;
 		}
+		// else
+		if ( context.peekAtToken().name.equals("is_owner") ) {
+			addNewParseTask(
+				context.taskStack,
+				new SRPSParseTask(Opcode::Is_owner)
+			);
+			return ParseResult::More;
+		}
+		// else
+		if ( context.peekAtToken().name.equals("is_ptr") ) {
+			addNewParseTask(
+				context.taskStack,
+				new SRPSParseTask(Opcode::Is_pointer)
+			);
+			return ParseResult::More;
+		}
+		// else
+		// Regular names. Request more processing.
+		addNewParseTask(
+			context.taskStack,
+			new FuncFoundParseTask( currToken.name )
+		);
+		return ParseResult::More;
+
+	//---------------
+	// Handling data
+
+	case TT_boolean_true:
+		context.addNewOperation(
+			new Opcode(Opcode::CreateBoolTrue)
+		);
+		break;
+
+	case TT_boolean_false:
+		context.addNewOperation(
+			new Opcode(Opcode::CreateBoolFalse)
+		);
+		break;
+
+	//---------------
+
+	case TT_number:
+		context.addNewOperation(
+			new StringOpcode(Opcode::CreateNumber, currToken.name)
+		);
+		break;
+
+	//---------------
+
+	case TT_string:
 /*
-	This is a tough spot. The system has a token that must be used, but if a variable is found that is
-	not followed by parentheses, it is supposed to create an object to be processed (supposedly).
-	For it to be processed as an object, the following should be performed:
-	taskStack.pop()
-	return TaskResult::_skip;
-
-	For skipping this and letting processing continue as though nothing happened, call:
-	return TaskResult::_pop_loop;
-
-	Since both routes are required for language functionality, these are opposed.
-	To compromise for the problem, we simulate the finishing and restarting of a cycle.
-	This goes against the policy of limiting the stack, but there isn't much choice at the moment.
+		// Originally, there was a purging mechanism, which should also be applied here.
+#ifdef COPPER_PURGE_NON_PRINTABLE_ASCII_INPUT_STRINGS
+		ObjectString* objStr = new ObjectString(value);
+		objStr->purgeNonPrintableASCII();
+		lastObject.setWithoutRef( objStr );
+#else
+		lastObject.setWithoutRef( new ObjectString(value) );
+#endif
 */
-		// Must pop this task before proceeding
-		taskStack.pop();
-		return performObjProcessAndCycle(lastToken);
+		context.addNewOperation(
+			new StringOpcode(Opcode::CreateString, currToken.name)
+		);
+		break;
+
+	//---------------
+	default:
+		// Unhandled token
+		print(LogLevel::error, EngineMessage::TokenNotHandled);
+		return ParseResult::Error;
+	}
+
+	// Indicate the tokens were used
+	context.commitTokenUsage();
+
+	return ParseResult::Done;
+}
+
+ParseTask::Result::Value
+Engine::processParseTask(
+	ParseTask*		task,
+	ParserContext&	context,
+	bool			srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::processParseTask");
+#endif
+	// Perform actions based on the current task
+	switch( task->type ) {
+	case ParseTask::FuncBuild:
+		return parseFuncBuildTask( (FuncBuildParseTask*)task, context, srcDone );
+
+	case ParseTask::FuncFound:
+		return parseFuncFoundTask( (FuncFoundParseTask*)task, context, srcDone );
+
+	case ParseTask::If:
+		return parseIfStructure( (IfStructureParseTask*)task, context, srcDone );
+
+	case ParseTask::Loop:
+		return parseLoopStructure( (LoopStructureParseTask*)task, context, srcDone );
+
+	case ParseTask::SRPS: // Single Raw Parameter Structure "own", "is_owner", "is_ptr"
+		return parseSRPS( (SRPSParseTask*)task, context, srcDone );
+
+	// to get -Wall to stop griping:
+	default:
+		// Should probably throw, but also should never happen
+		return ParseTask::Result::syntax_error;
 	}
 }
 
-TaskResult::Value Engine::FuncFound_processAssignment(const Token& lastToken) {
+ParseTask::Result::Value
+Engine::parseFuncBuildTask(
+	FuncBuildParseTask*	task,
+	ParserContext&		context,
+	bool				srcDone
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processAssignment");
+	print(LogLevel::debug, "[DEBUG: Engine::parseFuncBuildTask");
 #endif
-	switch( lastToken.type ) {
-	case TT_body_open:
+
+	// All the tasks here require the next token to be unused
+	ParseTask::Result::Value r = moveToFirstUnusedToken(context, srcDone);
+	if ( r != ParseTask::Result::task_done )
+		return r;
+
+	// if ( task->state == FuncBuildParseTask::State::FromFn ) {
+	//	// Look for brackets. If none found, add function-end opcode and return task_done
+	//	// If object body is found, call ParseFunctionBuild_FromObjectBody().
+	//	// If execution body is found, call ParseFunctionBuild_FromExecBody().
+	// }
+
+	switch( task->state )
+	{
+	case FuncBuildParseTask::State::FromObjectBody:
+		return ParseFunctionBuild_FromObjectBody(task, context, srcDone);
+
+	case FuncBuildParseTask::State::CollectParams:
+		return ParseFunctionBuild_CollectParameters(task, context, srcDone);
+
+	case FuncBuildParseTask::State::AwaitAssignment:
+		context.addNewOperation(
+			new StringOpcode( Opcode::FuncBuild_assignToVar, task->paramName )
+		);
+		task->state = FuncBuildParseTask::State::CollectParams;
+		return ParseFunctionBuild_CollectParameters(task, context, srcDone);
+
+	case FuncBuildParseTask::State::AwaitPointerAssignment:
+		context.addNewOperation(
+			new StringOpcode( Opcode::FuncBuild_pointerAssignToVar, task->paramName )
+		);
+		task->state = FuncBuildParseTask::State::CollectParams;
+		return ParseFunctionBuild_CollectParameters(task, context, srcDone);
+
+	case FuncBuildParseTask::State::FromExecBody:
+		return ParseFunctionBuild_FromExecBody(task, context, srcDone);
+	}
+
+	// REMEMBER TO EAT TOKENS!
+
+	// When waiting on data, this needs to check to make sure that the last object satisfies
+	// the requirements.
+	// Remember, pointer assignment requires a function-found operation to be in the opcodes next.
+}
+
+ParseTask::Result::Value
+Engine::ParseFunctionBuild_FromObjectBody(
+	FuncBuildParseTask*	task,
+	ParserContext&		context,
+	bool				srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseFunctionBuild_FromObjectBody");
+#endif
+	// The current token should be an object body opener. We can check to verify.
+#ifdef COPPER_STRICT_CHECKS
+	if ( context.peekAtToken().type != TT_objectbody_open )
+		throw ParserTokenException( context.peekAtToken() );
+#endif
+
+	if ( ! context.moveToNextToken() ) {
+		if ( srcDone ) {
+			print(LogLevel::error, "Unfinished object body.");
+			return ParseTask::Result::syntax_error;
+		} else {
+			return ParseTask::Result::need_more;
+		}
+	}
+
+	// Check for the other object-body close token.
+	// If the tokens run out before it is found, request more.
+	// Otherwise, error.
+	unsigned int openBrackets = 1;
+
+	do {
+		switch( context.peekAtToken().type ) {
+
+		case TT_objectbody_open:
+			++openBrackets;
+			break;
+
+		case TT_objectbody_close:
+			--openBrackets;
+			if ( openBrackets == 0 ) {
+				// All done
+				context.moveToFirstUnusedToken();
+#ifdef COPPER_STRICT_CHECKS
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+std::printf("[DEBUG: Engine::ParseFunctionBuild_FromObjectBody -> CollectParams, token.type == %u\n", (unsigned int)context.peekAtToken().type);
+#endif
+				if ( context.peekAtToken().type != TT_objectbody_open )
+					throw ParserTokenException( context.peekAtToken() );
+#endif
+				context.commitTokenUsage(); // Keep the opening token
+				context.moveToNextToken();
+				task->state = FuncBuildParseTask::State::CollectParams;
+				// As this function only verifies the last object body closing token is present,
+				// it ignores the tokens in between.
+				return ParseFunctionBuild_CollectParameters(task, context, srcDone);
+			}
+			break;
+
+		default:
+			break;
+		}
+	} while ( context.moveToNextToken() );
+
+	if ( srcDone ) {
+		print(LogLevel::error, "Unfinished object body.");
+		return ParseTask::Result::syntax_error;
+	} else {
+		return ParseTask::Result::need_more;
+	}
+}
+
+ParseTask::Result::Value
+Engine::ParseFunctionBuild_CollectParameters(
+	FuncBuildParseTask*	task,
+	ParserContext&		context,
+	bool				srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseFunctionBuild_CollectParameters");
+#endif
+	//FuncFoundParseTask* fft;
+	// Only names are valid parameters within function parameter bodies / object bodies.
+	// Object bodies and function bodies are scanned over when encountered.
+	// The object body close token should be the only stray token encountered.
+
+	// Current parsing state: After the open-object-body token.
+
+	// Ignore end-segment tokens
+	if ( context.peekAtToken().type == TT_end_segment ) {
+		while( context.peekAtToken().type == TT_end_segment ) {
+			context.commitTokenUsage();
+			if ( !context.moveToNextToken() ) // Unnecessary if-check, but moveToNextToken is necessary.
+				return ParseTask::Result::need_more;
+		}
+	}
+
+	while( context.peekAtToken().type == TT_name ) {
+		task->paramName = context.peekAtToken().name;
+		// Check for valid tokens
+		context.commitTokenUsage();
+		context.moveToNextToken();
+
+		switch ( context.peekAtToken().type ) {
+		case TT_assignment:
+			// Start with the token after the assignment token
+			context.commitTokenUsage();
+			context.moveToNextToken();
+
+			// Valid tokens: (Basically, anything starting an expression and resulting in an object)
+			switch( context.peekAtToken().type ) {
+			case TT_objectbody_open:
+			case TT_execbody_open:
+			case TT_name:
+			case TT_boolean_true:
+			case TT_boolean_false:
+			case TT_number:
+			case TT_string:
+				task->state = FuncBuildParseTask::State::AwaitAssignment;
+				return ParseTask::Result::interpret_token;
+
+			case TT_objectbody_close:
+				print(LogLevel::error, "Unfinished parameter assignment in object body.");
+				return ParseTask::Result::syntax_error;
+			default:
+				print(LogLevel::error, "Stray token encountered while collecting names.");
+				return ParseTask::Result::syntax_error;
+			}
+
+		case TT_pointer_assignment:
+			// Start with the token after the assignment token
+			context.commitTokenUsage();
+			context.moveToNextToken();
+
+			// Valid tokens: names, object bodies, and function bodies
+			switch( context.peekAtToken().type ) {
+			case TT_name:
+				task->state = FuncBuildParseTask::State::AwaitPointerAssignment;
+				return ParseTask::Result::interpret_token;
+
+				// Collect function-found data here rather than waiting.
+//					fft = new FuncFoundParseTask();
+//					switch( parseFuncFound(fft, context, srcDone) ) {
+//					case ParseTask::Result::task_done:
+//						createPointerAssignmentOpcode(
+//							context,
+//							paramName,
+//							*(fft->getAddressData())
+//						);
+//						break;
+//					default:
+//						// All the tokens should be available, everything else is considered syntax error
+//						return ParseTask::Result::error;
+//					}
+
+			case TT_objectbody_open:
+			case TT_execbody_open:
+				// a~[], a~[]{}, a~{} not implemented.
+				// They could be resolved correctly if I implemented such parsing,
+				// so they should be permitted but discouraged.
+				print(LogLevel::error, "Stray token encountered while collecting names.");
+				return ParseTask::Result::syntax_error;
+
+			case TT_objectbody_close:
+				print(LogLevel::error, "Unfinished parameter pointer assignment in object body.");
+				return ParseTask::Result::syntax_error;
+			default:
+				print(LogLevel::error, "Stray token encountered while collecting names.");
+				return ParseTask::Result::syntax_error;
+			}
+			break;
+
+		case TT_name:
+		case TT_objectbody_close:
+		case TT_end_segment:
+			// Regular parameters
+			context.addNewOperation(
+				new StringOpcode( Opcode::FuncBuild_createRegularParam, task->paramName )
+			);
+			break;
+
+		default:
+			print(LogLevel::error, "Stray token encountered while collecting names.");
+			return ParseTask::Result::syntax_error;
+		}
+
+		// Ignore end-of-segment tokens
+		if ( context.peekAtToken().type == TT_end_segment ) {
+			while ( context.peekAtToken().type == TT_end_segment ) {
+				context.commitTokenUsage();
+				context.moveToNextToken();
+			}
+		}
+	}
+
+	if ( context.peekAtToken().type == TT_objectbody_close ) {
+		// Check if there is another token, which may be the execution body
+		if ( context.moveToNextToken() && context.peekAtToken().type == TT_execbody_open ) {
+			context.moveToFirstUnusedToken();
+#ifdef COPPER_STRICT_CHECKS
+std::printf("[DEBUG: Engine::ParseFunctionBuild_CollectParams -> FromExecBody, token.type == %u\n", (unsigned int)context.peekAtToken().type);
+
+			if ( context.peekAtToken().type != TT_objectbody_close )
+				throw ParserTokenException( context.peekAtToken() );
+#endif
+			context.commitTokenUsage(); // Keep object-body-close token
+			task->state = FuncBuildParseTask::State::FromExecBody;
+			context.moveToNextToken(); // Move back to execbody open token
+			return ParseFunctionBuild_FromExecBody(task, context, srcDone);
+		} else {
+			// No execution body, so end here
+			context.addNewOperation( new Opcode( Opcode::FuncBuild_end ) );
+			context.commitTokenUsage(); // Keep the object-body close
+			return ParseTask::Result::task_done;
+		}
+	}
+
+	// else
+	// Error
+	print(LogLevel::error, "Invalid token found! Object bodies may have only named parameters.");
+	return ParseTask::Result::syntax_error;
+}
+
+ParseTask::Result::Value
+Engine::ParseFunctionBuild_FromExecBody(
+	FuncBuildParseTask*	task,
+	ParserContext&		context,
+	bool				srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseFunctionBuild_FromExecBody");
+#endif
+	// The current token should be an execution body opener. We can check to verify.
+#ifdef COPPER_STRICT_CHECKS
+	if ( context.peekAtToken().type != TT_execbody_open )
+		throw ParserTokenException( context.peekAtToken() );
+#endif
+	// Check for the body close token.
+	// If the tokens run out before it is found, request more and restart.
+	// Otherwise, error.
+
+	// For counting brackets:
+	unsigned int openBrackets = 1;
+	//BodyOpcode* bodyOpcode = new BodyOpcode();
+
+	do {
+		// Start inside the execbody open token
+		if ( ! context.moveToNextToken() ) {
+			if ( srcDone ) {
+				print(LogLevel::error, "Function execution body not finished before token stream ended.");
+				return ParseTask::Result::syntax_error;
+			}
+			return ParseTask::Result::need_more;
+		}
+
+		switch( context.peekAtToken().type )
+		{
+		case TT_execbody_open:
+			++openBrackets;
+			break;
+
+		case TT_execbody_close:
+			--openBrackets;
+			break;
+
+		default: break;
+		}
+
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+		std::printf("[DEBUG: Engine::ParseFunctionBuild_FromExecBody - openBrackets = %u\n", openBrackets);
+#endif
+
+	} while ( openBrackets > 0 );	
+
+	// Everything worked out
+	BodyOpcode* bodyOpcode = new BodyOpcode();
+	context.moveToFirstUnusedToken();
+#ifdef COPPER_STRICT_CHECKS
+	if ( context.peekAtToken().type != TT_execbody_open )
+		throw ParserTokenException( context.peekAtToken() );
+#endif
+	openBrackets = 1;
+	do {
+		context.moveToNextToken(); // Start inside the body
+		switch( context.peekAtToken().type )
+		{
+		case TT_execbody_open:
+			++openBrackets;
+			break;
+
+		case TT_execbody_close:
+			--openBrackets;
+			break;
+
+		default: break;
+		}
+
+		if ( openBrackets > 0 ) {
+			// Add token to body
+			bodyOpcode->addToken(context.peekAtToken());
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+			std::printf("[DEBUG: Engine::ParseFunctionBuild_FromExecBody - added body token(%s, %u)\n",
+				context.peekAtToken().name.c_str(), (unsigned int)(context.peekAtToken().type) );
+#endif
+		}
+
+	} while ( openBrackets > 0 );	
+
+	context.commitTokenUsage(); // Eat all these tokens
+	context.addNewOperation( bodyOpcode );
+	context.addNewOperation( new Opcode( Opcode::FuncBuild_end ) );
+	return ParseTask::Result::task_done;
+}
+
+
+
+//Note to self:
+//	FunctionFound should error if it does not have enough tokens (srcDone == true).
+//	Note: This is the same with assignment, which is REQUIRED to check for the value being
+//	assigned to it, including the entirety of the object-function.
+//	Object functions that end as just objects are acceptable, as well as function bodies without
+//	object/parameter heads.
+
+ParseTask::Result::Value
+Engine::parseFuncFoundTask(
+	FuncFoundParseTask*	task,
+	ParserContext&		context,
+	bool				srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::parseFuncFoundTask");
+#endif
+	ParseTask::Result::Value r;
+
+	switch( task->state ) {
+	case FuncFoundParseTask::Start:
+		// First token is a name, the start of a variable's address
+		r = moveToFirstUnusedToken(context, srcDone);
+		if ( r != ParseTask::Result::task_done )
+			return r;
+
+		// Skip the name and get the next token.
+		// We know the name is the current token because we immediately come here after interpretToken()
+		if ( ! context.moveToNextToken() ) {
+			if ( srcDone ) {
+				task->code->varAddress.push_back( context.peekAtToken().name );
+				context.addOperation( task->code );
+				return ParseTask::Result::task_done;
+			} else {
+				return ParseTask::Result::need_more;
+			}
+		}
+
+		// It is possible that this is a chain of member names, connected by the member link.
+		while( context.peekAtToken().type == TT_member_link ) {
+			// Get the next name and restart
+			if ( context.moveToNextToken() ) {
+				if ( context.peekAtToken().type == TT_name ) {
+					task->code->varAddress.push_back(context.peekAtToken().name);
+					// Next token should be member-link, assignment, pointer-assignment, or parambody-open
+					if ( context.moveToNextToken() ) {
+						continue;
+					} else {
+						// However, this may be a function call or assignment. There is no way of knowing what
+						// comes next, so it is imperative that we find out.
+						return ParseTask::Result::need_more;
+					}
+				} else {
+					print(LogLevel::error, "Member access followed by invalid token.");
+					return ParseTask::Result::syntax_error;
+				}
+			} else {
+				if ( srcDone ) {
+					print(LogLevel::error, "Member access incomplete.");
+					return ParseTask::Result::syntax_error;
+				} else {
+					return ParseTask::Result::need_more;
+				}
+			}
+		}
+
+		switch( context.peekAtToken().type ) {
+		case TT_assignment:
+			task->state = FuncFoundParseTask::ValidateAssignment;
+			context.commitTokenUsage(); // Keep the assignment symbol
+			if ( context.moveToNextToken() ) {
+				return ParseFuncFound_ValidateAssignment(task, context, srcDone);
+			} else {
+				if ( srcDone ) {
+					print(LogLevel::error, "Variable assignment incomplete.");
+					return ParseTask::Result::syntax_error;
+				} else {
+					return ParseTask::Result::need_more;
+				}
+			}
+
+		case TT_pointer_assignment:
+			task->state = FuncFoundParseTask::ValidatePointerAssignment;
+			context.commitTokenUsage(); // Keep the assignment symbol
+			if ( context.moveToNextToken() ) {
+				return ParseFuncFound_ValidatePointerAssignment(task, context, srcDone);
+			} else {
+				if ( srcDone ) {
+					print(LogLevel::error, "Variable pointer assignment incomplete.");
+					return ParseTask::Result::syntax_error;
+				} else {
+					return ParseTask::Result::need_more;
+				}
+			}
+
+		//case TT_member_link: // Handled above
+
+		case TT_parambody_open:
+			context.commitTokenUsage(); // Keep the parameter body open token
+			task->state = FuncFoundParseTask::VerifyParams;
+			task->code->setType( Opcode::FuncFound_call );
+			context.addOperation( task->code );
+			if ( context.moveToNextToken() ) {
+				return ParseFuncFound_VerifyParams(task, context, srcDone);
+			} else {
+				return ParseTask::Result::need_more;
+			}
+
+		case TT_immediate_run:
+			context.commitTokenUsage();
+			task->code->setType( Opcode::FuncFound_call );
+			context.addOperation( task->code );
+			context.addNewOperation( new Opcode( Opcode::FuncFound_finishCall ) );
+			context.addNewOperation( new Opcode( Opcode::Terminal ) ); // For incrementing to after the function call
+			return ParseTask::Result::task_done;
+
+		// case TT_name:
+		// NOTE: We can't handle other names starting new FuncFound tasks here because
+		// function-building might be using them for parameter names.
+
+		default:
+			// At the very least, we have a member-access call
+			context.addOperation( task->code );
+			// Don't eat this token
+			context.moveToPreviousToken();
+			context.commitTokenUsage();
+			return ParseTask::Result::task_done;
+		}
+
+	case FuncFoundParseTask::ValidateAssignment:
+		r = moveToFirstUnusedToken(context, srcDone);
+		if ( r != ParseTask::Result::task_done )
+			return r;
+		return ParseFuncFound_ValidateAssignment(task, context, srcDone);
+
+	case FuncFoundParseTask::ValidatePointerAssignment:
+		r = moveToFirstUnusedToken(context, srcDone);
+		if ( r != ParseTask::Result::task_done )
+			return r;
+		return ParseFuncFound_ValidatePointerAssignment(task, context, srcDone);
+
+	case FuncFoundParseTask::CompleteAssignment:
+		task->code->setType( Opcode::FuncFound_assignment );
+		context.addOperation( task->code );
+		return ParseTask::Result::task_done;
+
+	case FuncFoundParseTask::CompletePointerAssignment:
+		task->code->setType( Opcode::FuncFound_pointerAssignment );
+		context.addOperation( task->code );
+		return ParseTask::Result::task_done;
+
+	case FuncFoundParseTask::VerifyParams:
+		r = moveToFirstUnusedToken(context, srcDone);
+		if ( r != ParseTask::Result::task_done )
+			return r;
+		//task->code->setType( Opcode::FuncFound_call );
+		return ParseFuncFound_VerifyParams(task, context, srcDone);
+
+	case FuncFoundParseTask::CollectParams:
+		r = moveToFirstUnusedToken(context, srcDone);
+		if ( r != ParseTask::Result::task_done )
+			return r;
+		// Need to collect parameters until the parameter body closing is found.
+		// This means keeping track of brackets.
+		return ParseFuncFound_CollectParams(task, context, srcDone);
+	}
+}
+
+ParseTask::Result::Value
+Engine::ParseFuncFound_ValidateAssignment(
+	FuncFoundParseTask*	task,
+	ParserContext&		context,
+	bool				srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseFuncFound_ValidateAssignment");
+#endif
+	// This task really needs to cause the VM to wait until the last object is set before it can proceed.
+
+	// Check tokens for valid assignable objects.
+	switch( context.peekAtToken().type ) {
+	case TT_objectbody_open:
+	case TT_execbody_open:
+		// ^ TT_objectbody_open and TT_execbody_open don't trigger completeness verification because
+		// the function building task itself will return an error if there are not enough tokens.
+	case TT_name:
+	case TT_boolean_true:
+	case TT_boolean_false:
+	case TT_number:
+	case TT_string:
+		task->state = FuncFoundParseTask::CompleteAssignment;
+		return ParseTask::Result::interpret_token;
+
+	default:
+		print(LogLevel::error, "Invalid token following assignment.");
+		return ParseTask::Result::syntax_error;
+	}
+}
+
+ParseTask::Result::Value
+Engine::ParseFuncFound_ValidatePointerAssignment(
+	FuncFoundParseTask*	task,
+	ParserContext&		context,
+	bool				srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseFuncFound_ValidatePointerAssignment");
+#endif
+	// This task really needs to cause the VM to wait until the last object is set before it can proceed.
+
+	switch( context.peekAtToken().type ) {
+	//case TT_objectbody_open:
+	//case TT_execbody_open:
+		// ^ Should be handled but aren't allowed yet for this VM. (See also function-build task.)
+	case TT_name:
+		task->state = FuncFoundParseTask::CompletePointerAssignment;
+		return ParseTask::Result::interpret_token;
+
+	default:
+		print(LogLevel::error, "Invalid token following pointer assignment.");
+		return ParseTask::Result::syntax_error;
+	}
+}
+
+ParseTask::Result::Value
+Engine::ParseFuncFound_VerifyParams(
+	FuncFoundParseTask*	task,
+	ParserContext&		context,
+	bool				srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseFuncFound_VerifyParams");
+	std::printf("[ currToken.name = %s\n", context.peekAtToken().name.c_str());
+#endif
+	// Only for scanning
+	unsigned int openBodies = 1;
+
+	do {
+		switch( context.peekAtToken().type ) {
+		case TT_parambody_open:
+			if ( openBodies == PARSER_OPENBODY_MAX_COUNT ) {
+				print( LogLevel::error, EngineMessage::ExceededParamBodyCountLimit );
+				return ParseTask::Result::syntax_error;
+			}
+			openBodies++;
+			break;
+		case TT_parambody_close:
+			openBodies--;
+			if ( openBodies == 0 ) {
+				task->state = FuncFoundParseTask::CollectParams;
+				task->openBodies = 1;
+				context.moveToFirstUnusedToken(); // Start from the beginning
+				return ParseFuncFound_CollectParams(task, context, srcDone);
+			}
+			break;
+		default: // Ignore
+			break;
+		}
+	} while ( context.moveToNextToken() );
+
+	//( openBodies > 0 )
+	if ( srcDone ) {
+		print(LogLevel::error, "Function call parameter collection incomplete.");
+		return ParseTask::Result::syntax_error;
+	} else {
+		return ParseTask::Result::need_more;
+	}
+}
+
+ParseTask::Result::Value
+Engine::ParseFuncFound_CollectParams(
+	FuncFoundParseTask*	task,
+	ParserContext&		context,
+	bool				srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseFuncFound_CollectParams");
+	std::printf("[ currToken.name = %s\n", context.peekAtToken().name.c_str());
+#endif
+	// Current parsing state: After the first parameter-body-opener token.
+
+	if ( task->waitingOnAssignment ) {
+		context.addNewOperation(
+			new Opcode( Opcode::FuncFound_setParam )
+		);
+		task->waitingOnAssignment = false;
+	}
+
+	// Ignore end-segment tokens
+	while ( context.peekAtToken().type == TT_end_segment ) {
+		context.commitTokenUsage();
+		if ( ! context.moveToNextToken() ) {
+			if (srcDone) {
+				print(LogLevel::error, "Function call parameter parsing incomplete.");
+				return ParseTask::Result::syntax_error;
+			} else {
+				return ParseTask::Result::need_more;
+			}
+		}
+	}
+
+	switch( context.peekAtToken().type ) {
+	case TT_parambody_open:
+		task->openBodies++;
+		return ParseTask::Result::interpret_token;
+
+	case TT_parambody_close:
+		task->openBodies--;
+		if ( task->openBodies == 0 ) {
+			context.commitTokenUsage();
+			context.addNewOperation( new Opcode( Opcode::FuncFound_finishCall ) );
+			context.addNewOperation( new Opcode( Opcode::Terminal ) ); // for incrementing to after the call
+			return ParseTask::Result::task_done;
+		}
+		return ParseTask::Result::interpret_token;
+
 	case TT_objectbody_open:
 	case TT_name:
 	case TT_boolean_true:
 	case TT_boolean_false:
-	case TT_number: // Other numbers may be needed
+	case TT_number:
 	case TT_string:
-	case TT_binary:
-		return TaskResult::_none;
-	default: break;
-	}
-	//print( LogLevel::error, "ERROR: Invalid assignment.");
-	print( LogLevel::error, EngineMessage::InvalidAsgn );
-	//printf("[DEBUG: token id =%u\n", (unsigned int)lastToken.type);
-	return TaskResult::_error;
-}
+		task->waitingOnAssignment = true;
+		return ParseTask::Result::interpret_token;
 
-TaskResult::Value Engine::FuncFound_processPointerAssignment(const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processPointerAssignment");
-#endif
-	switch( lastToken.type ) {
-	case TT_name: return TaskResult::_none;
-	default: break;
-	}
-	//print( LogLevel::error, "ERROR: Invalid pointer assignment.");
-	print( LogLevel::error, EngineMessage::InvalidPtrAsgn );
-	return TaskResult::_error;
-}
-
-TaskResult::Value Engine::FuncFound_processFindMember(TaskFunctionFound& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processFindMember");
-#endif
-	if ( lastToken.type != TT_name ) {
-		//print(LogLevel::error, "ERROR: Expected name after member-accessor token. Found other.");
-		print(LogLevel::error, EngineMessage::InvalidTokenAfterMemberAccessor);
-		return TaskResult::_error;
-	}
-	// Search the persistent scope of the object, then call function found on it
-	Variable* var;
-	Variable* member;
-	Function* f;
-
-	// Oops: Needs to check for the type. CSide functions can't open a scope.
-	switch(task.type)
-	{
-	case TASK_FFTYPE_variable:
-		if ( task.varPtr.obtain(var) ) {
-			f = var->getFunction(logger);
-			f->getPersistentScope().getVariable(lastToken.name, member);
-			// Rather than replacing the TaskFunctionFound object, reuse it
-			task.state = TASK_FF_start;
-			task.superPtr.set(var);
-			task.varPtr.set(member);
-			return TaskResult::_cycle;
-		} else {
-			//print(LogLevel::error, "ERROR: Something has destroyed the current task variable.");
-			print(LogLevel::error, EngineMessage::TaskVarIsNull);
-			lastObject.setWithoutRef(new FunctionContainer());
-			return TaskResult::_error;
-		}
-	case TASK_FFTYPE_cside:
-		print(LogLevel::error, EngineMessage::OpeningSystemFuncScope);
-		return TaskResult::_error;
-
-	case TASK_FFTYPE_ext_cside:
-		// What could happen here is that the foreign function could have its own scope.
-		// This could be obtained via bool getScope(Scope*)
-		// This subscope could contain other functions.
-		// At the moment, however, there isn't much point to this.
-		print(LogLevel::error, EngineMessage::OpeningExtensionFuncScope);
-		return TaskResult::_error;
-
-	default: break;
-	}
-	return TaskResult::_error;
-}
-
-TaskResult::Value Engine::FuncFound_processCollectParams(TaskFunctionFound& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processCollectParams");
-#endif
-	switch( lastToken.type ) {
-	case TT_parambody_open:
-		task.openParamBodies += 1;
-		if ( task.openParamBodies == (unsigned int)-1 ) {
-			//print( LogLevel::error, "ERROR: Too many open parameter bodies within parameter collection." );
-			print( LogLevel::error, EngineMessage::ExceededParamBodyCountLimit );
-			return TaskResult::_error;
-		}
-		return TaskResult::_none;
-	case TT_parambody_close:
-		task.openParamBodies -= 1;
-		if ( task.openParamBodies == 0 ) {
-			return FuncFound_processRun(task);
-		}
-		return TaskResult::_none;
 	default:
-		return TaskResult::_none;
+		print(LogLevel::error, "Invalid token in function call parameter parsing.");
+		return ParseTask::Result::syntax_error;
 	}
-	// Parameters are collected as a list in the object collection
 }
 
-TaskResult::Value Engine::FuncFound_processRun(TaskFunctionFound& task) {
+/*
+Basic If-structure:
+- Terminal
+- _ // condition
+- ConditionalGoto [2nd terminal]
+- _ // body
+- Goto [last terminal]
+- Terminal
+
+Basic If-structure with else:
+- Terminal
+- _ // condition
+- ConditionalGoto [2nd terminal]
+- _ // body
+- Goto [last terminal] // end of if-statement
+- Terminal // else
+- _ // body
+- Terminal
+
+Basic If-structure with elif:
+- Terminal
+- _ // condition
+- ConditionalGoto [2nd terminal]
+- _ // body
+- Goto [last terminal] // end of if-statement
+- Terminal // elif
+- _ // condition
+- ConditionalGoto [3rd terminal]
+- _ // body
+- Goto [last terminal] // end of elif
+- Terminal // else
+- _ // body
+- Terminal
+*/
+
+ParseTask::Result::Value
+Engine::parseIfStructure(
+	IfStructureParseTask*	task,
+	ParserContext&			context,
+	bool					srcDone
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processRun");
+	print(LogLevel::debug, "[DEBUG: Engine::parseIfStructure");
+	std::printf("[DEBUG: Engine::parseIfStructure state = %u\n", (unsigned)(task->state));
 #endif
-	//task.state = TASK_FF_running; // Flag for the return function to seek.
-	functionReturnMailbox = false;
-	// Protect from polution and allow for functions to have a default return.
-	lastObject.setWithoutRef(new FunctionContainer());
 
-	TaskResult::Value result;
-	switch(task.type) {
-	case TASK_FFTYPE_variable:
-		result = FuncFound_processRunVariable(task);
-		taskStack.pop();
-		return result;
+	// If the stream ends, the if-statement can quit.
 
-	case TASK_FFTYPE_cside:
-		result = FuncFound_processRunSysFunction(task);
-		taskStack.pop();
-		return result;
+	ParseTask::Result::Value r = moveToFirstUnusedToken(context, srcDone);
+	if ( r != ParseTask::Result::task_done ) {
+		return r;
+	}
 
-	case TASK_FFTYPE_ext_cside:
-		if ( notNull(task.extFuncPtr) ) {
-			if ( ! task.extFuncPtr->call(task.getParamsList(), lastObject) ) {
-				lastObject.setWithoutRef(new FunctionContainer());
+	switch( task->state ) {
+
+	case IfStructureParseTask::Start:
+		return ParseIfStructure_InitScan(task, context, srcDone);
+
+	case IfStructureParseTask::CreateCondition:
+		return ParseIfStructure_CreateCondition(task, context, srcDone);
+
+	case IfStructureParseTask::CreateBody:
+		return ParseIfStructure_CreateBody(task, context, srcDone);
+
+	case IfStructureParseTask::PostBody:
+		// This section performs appending of last opcodes to strand
+		return ParseIfStructure_PostBody(task, context, srcDone);
+	}
+
+	// Before popping, this task must add a final terminal that all the remaining goto's can point to.
+	// You will need to set all of these codes before returning task_done.
+}
+
+// Checks to make sure the condition body is enclosed by parambody tokens
+// and the execution body is enclosed by execbody tokens
+ParseTask::Result::Value
+Engine::ParseIfStructure_InitScan(
+	IfStructureParseTask*	task,
+	ParserContext&			context,
+	bool					srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseIfStructure_InitScan");
+#endif
+	// Current parser state: "if" (or "elif") has been found, but nothing else that should follow has been yet.
+	// Search for the condition body AND the execution body
+
+	// Get the opening of the condition body, which should be the current token
+	if ( context.peekAtToken().type != TT_parambody_open ) {
+		print(LogLevel::error, "If-structure must have parameter body.");
+		return ParseTask::Result::syntax_error;
+	}
+
+	unsigned int openBodies = 1;
+	bool firstParamFound = false;
+
+	while ( context.moveToNextToken() ) {
+		if ( !firstParamFound ) {
+			// First token MUST be something that will set the condition.
+			// Otherwise, we have a leak where an empty if-statement will use data
+			// outside the conditional region as its condition.
+			switch( context.peekAtToken().type ) {
+			case TT_boolean_true:
+			case TT_boolean_false:
+			case TT_name:
+				break;
+			default:
+				print(LogLevel::error, "If-structure conditional must start with boolean value or name.");
+				return ParseTask::Result::syntax_error;
 			}
-			taskStack.pop();
-			return TaskResult::_skip;
+			firstParamFound = true;
+		}
+
+		switch( context.peekAtToken().type ) {
+		case TT_parambody_open:
+			if ( openBodies == PARSER_OPENBODY_MAX_COUNT ) {
+				print( LogLevel::error, EngineMessage::ExceededParamBodyCountLimit );
+				return ParseTask::Result::syntax_error;
+			}
+			++openBodies;
+			break;
+
+		case TT_parambody_close:
+			--openBodies;
+			if ( openBodies == 0 ) {
+				// All done with condition
+				return ParseIfStructure_ScanExecBody(task, context, srcDone);
+			}
+			break;
+
+		default:
+			break;
+		}
+	}
+	if ( srcDone ) {
+		print(LogLevel::error, "Incomplete if-structure condition.");
+		return ParseTask::Result::syntax_error;
+	} else {
+		return ParseTask::Result::need_more;
+	}
+}
+
+// Checks to make sure the execution body is enclosed by execbody tokens
+ParseTask::Result::Value
+Engine::ParseIfStructure_ScanExecBody(
+	IfStructureParseTask*	task,
+	ParserContext&			context,
+	bool					srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseIfStructure_ScanExecBody");
+#endif
+	// Current parser state: Condition body has been verified as complete (unless this is an "else"),
+	// and now the execution body completeness needs to be verified
+	// and no tokens within either body (condition or execution) have been processed.
+	// NOTE: TOKENS USAGE HAS NOT BEEN COMMITTED
+	unsigned int openBodies = 1;
+
+	// Move from ")"/"else" to "{"
+	if ( !context.moveToNextToken() ) {
+		if ( srcDone ) {
+			print(LogLevel::error, "Incomplete if-structure body.");
+			return ParseTask::Result::syntax_error;
 		} else {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-			print(LogLevel::debug, "[C++ ERROR: Missing external function in FuncFound_processRun.");
-#endif
-			return TaskResult::_error;
+			return ParseTask::Result::need_more;
 		}
-
-	default: break;
 	}
-	return TaskResult::_error;
+	if ( context.peekAtToken().type != TT_execbody_open ) {
+		print(LogLevel::error, "Illegal token following if-structure condition or start of else-section.");
+		return ParseTask::Result::syntax_error;
+	}
+
+	while ( context.moveToNextToken() ) {
+		switch( context.peekAtToken().type ) {
+		case TT_execbody_open:
+			if ( openBodies == PARSER_OPENBODY_MAX_COUNT ) {
+				print( LogLevel::error, EngineMessage::ExceededBodyCountLimit );
+				return ParseTask::Result::syntax_error;
+			}
+			++openBodies;
+			break;
+
+		case TT_execbody_close:
+			--openBodies;
+			if ( openBodies == 0 ) {
+				// All done with body
+
+				// Else takes a different route
+				if ( task->atElse )
+					return ParseTask::Result::interpret_token;
+
+				// Finally, the state can be changed and the first parameter body token can be viewed
+				// Skip the if-structure "if" and the open-parameter-body token (both known to be unused)
+				context.moveToFirstUnusedToken();	// "(" following the "if"
+				context.commitTokenUsage();
+				context.moveToNextToken();			// Token after "("
+				task->openBodies = 1;
+				task->state = IfStructureParseTask::CreateCondition;
+				return ParseIfStructure_CreateCondition(task, context, srcDone);
+			}
+			break;
+
+		default:
+			break;
+		}
+	}
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	Token t = context.peekAtToken();
+	std::printf("[DEBUG: Engine::ParseIfStructure_ScanExecBody: Incomplete body, ending in token: %s, %u\n", t.name.c_str(), t.type);
+#endif
+	if ( srcDone ) {
+		print(LogLevel::error, "Incomplete if-structure body.");
+		return ParseTask::Result::syntax_error;
+	} else {
+		return ParseTask::Result::need_more;
+	}
 }
 
-TaskResult::Value Engine::FuncFound_processRunVariable(TaskFunctionFound& task) {
+// Lets a token generate an object and readies a conditional jump in case of false
+ParseTask::Result::Value
+Engine::ParseIfStructure_CreateCondition(
+	IfStructureParseTask*	task,
+	ParserContext&			context,
+	bool					srcDone
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processRunVariable");
+	print(LogLevel::debug, "[DEBUG: Engine::ParseIfStructure_CreateCondition");
 #endif
-	Function* func = task.varPtr.raw()->getFunction(logger);
-	if ( func->constantReturn ) {
-		lastObject.set( func->result.raw() ); // Copy is created when saved to variable
-		return TaskResult::_skip;
-	}
-	// Save the container ID so it isn't destroyed with the stack
-	unsigned int funcID = task.varPtr.raw()->getRawContainer()->getID();
+	// State: Both conditional and execution bodies have been verified as complete.
+	// The first parambody_open token has been skipped.
+	// The first unused token has been moved to.
+	GotoOpcode* code;
 
-	Variable* super; // Parent scope pointer
+	// Keep an eye out for parameter body openers and closers, tracking them in the task
+	switch( context.peekAtToken().type ) {
+	case TT_parambody_open: // Funny, this is actually an error, but interpretToken() handles it.
+		task->openBodies++;
+		break;
 
-	// Add temporary stack context
-	stack.push();
-	if ( task.superPtr.obtain(super) ) {
-		// Add super (parent) pointer reference to the temporary scope
-		stack.getTop().getScope().setVariable(CONSTANT_FUNCTION_SUPER, super, true);
-	}
-	// Add self-reference to the temporary scope
-	stack.getTop().getScope().setVariable(CONSTANT_FUNCTION_SELF, task.varPtr.raw(), true);
-	// Add parameters to temporary scope
-	unsigned int pi=0;
-	List<Object*>::Iter tpi = task.createParamsIterator();
-	if ( task.getParamCount() > 0 ) {
-		for (; pi < func->params.size(); ++pi, ++tpi ) {
-			if ( pi >= task.getParamCount() ) {
-				//print( LogLevel::warning, "Warning: Missing parameter on function call. Defaulting to {}" );
-				print( LogLevel::warning, EngineMessage::MissingFunctionCallParam );
-				// Default remaining parameters to empty function.
-				stack.getTop().getScope().addVariable(func->params[pi]);
-				continue;
-			}
-			// Match parameters with parameter list items
-			stack.getTop().getScope().setVariableFrom(func->params[pi], *tpi, true);
+	case TT_parambody_close:
+		task->openBodies--;
+		if ( task->openBodies == 0 ) {
+			code = new GotoOpcode(Opcode::ConditionalGoto);
+			context.addNewOperation( code );
+			// Since the code's jump has not been set yet, add it to the queue for setting
+			task->queueNewConditionalJump(code); // Jumps to the next section of the if-structure
+			// Capture this and the next token
+			context.moveToNextToken(); // Should be the execution body opener
+#ifdef COPPER_STRICT_CHECKS
+			if ( context.peekAtToken().type != TT_execbody_open )
+				throw ParserTokenException( context.peekAtToken() );
+#endif
+			// Keep both of these
+			context.commitTokenUsage();
+			context.moveToFirstUnusedToken();
+			task->openBodies = 1;
+			// Change state (needed for when parsing must pause to wait for more tokens)
+			task->state = IfStructureParseTask::CreateBody;
+			return ParseIfStructure_CreateBody(task, context, srcDone);
 		}
+		break;
+
+	default:
+		break;
 	}
-	if ( func->body.raw() == REAL_NULL ) {
+	return ParseTask::Result::interpret_token;
+}
+
+ParseTask::Result::Value
+Engine::ParseIfStructure_CreateBody(
+	IfStructureParseTask*	task,
+	ParserContext&			context,
+	bool					srcDone
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::debug, "[C++ ERROR: Function body-to-be-run is null.");
+	print(LogLevel::debug, "[DEBUG: Engine::ParseIfStructure_CreateBody");
 #endif
-		return TaskResult::_error;
-	}
-	// Run body
-	RefPtr<Body> bodyGuard;
-	bodyGuard.set(func->body.raw());
-	List<Token>::ConstIter bodyIter = func->body.raw()->getIterator();
-	unsigned int tokenIdx = 1; // for user-debugging
-	if ( bodyIter.has() ) {
-		do {
-			switch( process(*bodyIter) ) {
-			case EngineResult::Error:
-				// Task stack and Stack are now invalid, so use previously saved info ONLY
-				if ( stackTracePrintingEnabled )
-					printFunctionError( funcID, tokenIdx, *bodyIter );
-				return TaskResult::_error;
-			// Only called via Engine::runFunction()
-			case EngineResult::Done:
-				//systemExitTrigger = true; // is this needed?
-				return TaskResult::_done;
-			default: break;
+	// State: One execution token has been grabbed and the existence of its match/pair has been verified
+	GotoOpcode* code;
+
+	switch( context.peekAtToken().type ) {
+	case TT_execbody_open:
+		task->openBodies++;
+		break;
+
+	case TT_execbody_close:
+		task->openBodies--;
+		if ( task->openBodies == 0 ) {
+			context.commitTokenUsage(); // Use this body-closing token
+			// Create an opcode at the end of the body for jumping to the end of the if-structure
+			code = new GotoOpcode(Opcode::Goto);
+			context.addNewOperation( code );
+			task->queueNewFinalJumpCode(code);
+
+			if ( task->atElse ) {
+				task->finalizeGotos( context );
+				return ParseTask::Result::task_done;
 			}
-			if ( functionReturnMailbox ) {
-				functionReturnMailbox = false;
+
+			// Add terminal and set conditional-goto
+			task->finalizeConditionalGoto( context );
+
+			// Skip to the next token
+			// If there is no next token, end here.
+			if ( ! context.moveToNextToken() ) {
+				if ( srcDone ) {
+					// End of if-structure
+					// Add final terminal and sets gotos
+					task->finalizeGotos( context );
+					return ParseTask::Result::task_done;
+				} else {
+					task->state = IfStructureParseTask::PostBody;
+					return ParseTask::Result::need_more;
+				}
+			}
+			task->state = IfStructureParseTask::PostBody;
+			return ParseIfStructure_PostBody(task, context, srcDone);
+		}
+		break;
+
+	default:
+		break;
+	}
+	return ParseTask::Result::interpret_token;
+}
+
+ParseTask::Result::Value
+Engine::ParseIfStructure_PostBody(
+	IfStructureParseTask*	task,
+	ParserContext&			context,
+	bool					srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseIfStructure_PostBody");
+#endif
+	// State: Searching for "elif" and "else" after the execbody close
+
+	switch( context.peekAtToken().type ) {
+	case TT_elif:
+		// Keep the "elif"
+		context.commitTokenUsage();
+		task->state = IfStructureParseTask::Start;
+		if ( ! context.moveToNextToken() ) {
+			if ( srcDone ) {
+				print(LogLevel::error, "Elif structure is incomplete.");
+			} else {
+				return ParseTask::Result::need_more;
+			}
+		}
+		return ParseIfStructure_InitScan(task, context, srcDone);
+		
+	case TT_else:
+		task->atElse = true;
+		switch( ParseIfStructure_ScanExecBody(task, context, srcDone) ) {
+		case ParseTask::Result::interpret_token:
+			// Commit token collection
+			context.moveToFirstUnusedToken();	// "else"
+			context.moveToNextToken();			// "{"
+			context.commitTokenUsage();
+			task->openBodies = 1;
+
+			//context.addNewOperation( new Opcode(Opcode::Terminal) );
+			// Change the task to the correct one
+			task->state = IfStructureParseTask::CreateBody;
+			return ParseTask::Result::interpret_token;
+
+		case ParseTask::Result::need_more:
+			return ParseTask::Result::need_more;
+
+		case ParseTask::Result::syntax_error:
+		default:
+			return ParseTask::Result::syntax_error;
+		}
+
+	default:
+		task->finalizeGotos( context );
+		return ParseTask::Result::task_done;
+	}
+}
+
+ParseTask::Result::Value
+Engine::parseLoopStructure(
+	LoopStructureParseTask*	task,
+	ParserContext&			context,
+	bool					srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::parseLoopStructure");
+#endif
+	unsigned int openBodies = 1;
+	ParseTask::Result::Value moveToTokenResult;
+
+	switch( task->state ) {
+
+	case LoopStructureParseTask::Start:
+		// First token is the loop
+#ifdef COPPER_STRICT_CHECKS
+		if ( context.peekAtToken().type != TT_loop )
+			throw ParserTokenException( context.peekAtToken() );
+#endif
+		// All loops must begin with "loop" + execution body token opener and end with the body closer
+		// Check for the starting body token:
+		if ( !context.moveToNextToken() && srcDone ) {
+			print(LogLevel::error, "Loop-structure not complete before stream end.");
+			return ParseTask::Result::syntax_error;
+		}
+		if ( context.peekAtToken().type != TT_execbody_open ) {
+			print(LogLevel::error, "Loop-structure encountered bad token before body.");
+			return ParseTask::Result::syntax_error;
+		}
+		// Loop head found
+		context.commitTokenUsage();
+		// Note: Loop start terminal was added when the "loop" token was found.
+		task->state = LoopStructureParseTask::CollectBody;
+
+	case LoopStructureParseTask::CollectBody:
+
+		moveToTokenResult = moveToFirstUnusedToken(context, true);
+		if ( moveToTokenResult != ParseTask::Result::task_done )
+			return moveToTokenResult;
+
+		//if ( !context.moveToNextToken() && srcDone ) {
+		//	print(LogLevel::error, "Loop-structure body not complete before stream end.");
+		//	return ParseTask::Result::syntax_error;
+		//}
+
+		// Perform initial scan to make sure all execution body tokens are paired
+		do {
+			switch( context.peekAtToken().type ) {
+			case TT_execbody_open:
+				if ( task->openBodies == PARSER_OPENBODY_MAX_COUNT ) {
+					print(LogLevel::error, EngineMessage::ExceededBodyCountLimit );
+					return ParseTask::Result::syntax_error;
+				}
+				openBodies++;
+				break;
+
+			case TT_execbody_close:
+				openBodies--;
+				if ( openBodies == 0 ) {
+					// Allow creation of processes within the body of the loop
+					task->openBodies = 1;
+					task->state = LoopStructureParseTask::AwaitFinish;
+					return ParseLoop_AwaitFinish(task, context);
+				}
+				break;
+
+			default:
 				break;
 			}
-			tokenIdx++; // for user-debugging
-		} while ( ++bodyIter );
+		} while ( context.moveToNextToken() );
+
+		if ( srcDone ) {
+			print(LogLevel::error, "Loop structure is incomplete.");
+			return ParseTask::Result::syntax_error;
+		} else {
+			return ParseTask::Result::need_more;
+		}
+
+	case LoopStructureParseTask::AwaitFinish:
+		return ParseLoop_AwaitFinish(task, context);
+
+	default:
+		print(LogLevel::error, "Loop structure parsing reached invalid state.");
+		return ParseTask::Result::syntax_error;
 	}
-	// This task is still on the task stack, and a number of tasks may not have finished.
-	// To handle these, processing is continued by passing a special token (TT_function_end_run)
-	// so that tasks can properly clean themselves up.
-	const Token endRunToken(TT_function_end_run);
-	while ( ! taskStack.getLast().areSameTask(&task) ) {
-		switch( process(endRunToken) ) {
-		case EngineResult::Error:
-			// Task stack and Stack are now invalid, so use previously saved info ONLY
-			if ( stackTracePrintingEnabled )
-				printFunctionError( funcID, tokenIdx, endRunToken );
-			return TaskResult::_error;
-		case EngineResult::Done:
-			return TaskResult::_done;
-		default: break;
+}
+
+ParseTask::Result::Value
+Engine::ParseLoop_AwaitFinish(
+	LoopStructureParseTask*	task,
+	ParserContext&			context
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseLoop_AwaitFinish");
+#endif
+	GotoOpcode* code = REAL_NULL;
+
+	ParseTask::Result::Value r = moveToFirstUnusedToken(context, false);
+	if ( r != ParseTask::Result::task_done )
+		return r;
+
+	switch( context.peekAtToken().type ) {
+	case TT_execbody_open:
+		task->openBodies++;
+		break;
+
+	case TT_execbody_close:
+		task->openBodies--;
+		if ( task->openBodies == 0 ) {
+			// Take this last body token
+			context.commitTokenUsage();
+			// Add the re-loop goto
+			code = new GotoOpcode(Opcode::Goto);
+			task->setGotoOpcodeToLoopStart(code);
+			context.addNewOperation(code);
+
+			// Add the loop completion terminal
+			context.addNewOperation( new Opcode(Opcode::Terminal) );
+			task->finalizeGotos( context.outputStrand );
+			return ParseTask::Result::task_done;
+		}
+		break;
+
+	default:
+		break;
+	}
+	return ParseTask::Result::interpret_token;
+}
+
+ParseResult::Value
+Engine::ParseLoop_AddEndLoop(
+	ParserContext&			context
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseLoop_AddEndLoop");
+#endif
+#ifdef COPPER_STRICT_CHECKS
+	if ( context.peekAtToken().type != TT_endloop )
+		throw ParserTokenException( context.peekAtToken() );
+#endif
+	context.commitTokenUsage(); // Use this token
+	// Must search for the top-most loop task in the parser task stack
+	GotoOpcode* code = REAL_NULL;
+	ParseTaskIter taskIter = context.taskStack.end();
+	ParseTask* task;
+	do {
+		task = taskIter->getTask();
+		if ( task->type == ParseTask::Loop ) {
+			code = new GotoOpcode(Opcode::Goto);
+			((LoopStructureParseTask*)task)->queueFinalGoto(code);
+			context.addNewOperation(code);
+			// Unfortunately, adding the code as a new operation would delink it from the
+			// final goto queue if Opcodes are copied in the main constructor of OpcodeContainer.
+			// Hence, OpcodeContainer must use references.
+			return ParseResult::Done;
+		}
+	} while ( taskIter.prev() );
+	print(LogLevel::error, "Loop-stop token found outside a loop.");
+	return ParseResult::Error;
+}
+
+ParseResult::Value
+Engine::ParseLoop_AddLoopSkip(
+	ParserContext&			context
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::ParseLoop_AddLoopSkip");
+#endif
+#ifdef COPPER_STRICT_CHECKS
+	if ( context.peekAtToken().type != TT_skip )
+		throw ParserTokenException( context.peekAtToken() );
+#endif
+	context.commitTokenUsage(); // Use this token
+	// Must search for the top-most loop task in the parser task stack
+	GotoOpcode* code;
+	ParseTaskIter taskIter = context.taskStack.end();
+	ParseTask* task;
+	do {
+		task = taskIter->getTask();
+		if ( task->type == ParseTask::Loop ) {
+			code = new GotoOpcode(Opcode::Goto);
+			((LoopStructureParseTask*)task)->setGotoOpcodeToLoopStart(code);
+			context.addNewOperation(code);
+			return ParseResult::Done;
+		}
+	} while ( taskIter.prev() );
+	print(LogLevel::error, "Loop-stop token found outside a loop.");
+	return ParseResult::Error;
+}
+
+ParseTask::Result::Value
+Engine::parseSRPS(
+	SRPSParseTask*			task,
+	ParserContext&			context,
+	bool					srcDone
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::parseSRPS");
+#endif
+	// Current parsing state: starting (name) token found, but nothing else
+
+	// Scan for parameter body first
+	if ( !context.moveToNextToken() ) {
+		if ( srcDone ) {
+			print(LogLevel::error, "SRPS (own/is_owner/is_ptr) is missing parameter body.");
+			return ParseTask::Result::syntax_error;
+		} else {
+			return ParseTask::Result::need_more;
+		}
+	}
+	// Next: scan for closing of parameter body
+	unsigned int openBodies = 1;
+	while ( openBodies != 0 ) {
+		if ( !context.moveToNextToken()) {
+			if ( srcDone ) {
+				print(LogLevel::error, "SRPS (own/is_owner/is_ptr) is missing parameter body.");
+				return ParseTask::Result::syntax_error;
+			} else {
+				return ParseTask::Result::need_more;
+			}
+		}
+		switch( context.peekAtToken().type ) {
+		case TT_parambody_open:
+			if ( openBodies == PARSER_OPENBODY_MAX_COUNT ) {
+				print(LogLevel::error, EngineMessage::ExceededBodyCountLimit );
+				return ParseTask::Result::syntax_error;
+			}
+			openBodies++;
+			break;
+
+		case TT_parambody_close:
+			openBodies--;
+			break;
+
+		default:
+			break;
+		}
+	}
+	// Now that the parameter body has been verified, iteration through it can proceed without pause
+	context.moveToFirstUnusedToken();
+	// Skip the parambody_open token
+	context.moveToNextToken();
+	// The next token should be name for the variable address
+	if ( context.peekAtToken().type != TT_name ) {
+		print(LogLevel::error, "SRPS (own/is_owner/is_ptr) contains invalid token for parameter.");
+		return ParseTask::Result::syntax_error;
+	}
+
+	// It'd be faster if I saved directly to the opcode instead
+	//VarAddress varAddress;
+	AddressOpcode* addressCode = new AddressOpcode( task->codeType );
+
+	while ( context.peekAtToken().type == TT_name ) {
+		addressCode->varAddress.push_back( context.peekAtToken().name );
+		context.moveToNextToken();
+		switch( context.peekAtToken().type ) {
+		case TT_parambody_close:
+			break;
+
+		case TT_member_link:
+			context.moveToNextToken();
+			continue;
+
+		default:
+			print(LogLevel::error, "SRPS (own/is_owner/is_ptr) contains invalid token for parameter.");
+			delete addressCode;
+			return ParseTask::Result::syntax_error;
 		}
 	}
 
-	stack.pop();
-	return TaskResult::_skip;
+	context.commitTokenUsage();
+	context.addNewOperation( addressCode );
+	return ParseTask::Result::task_done;
 }
 
-// Convenience method
-EngineResult::Value Engine::runFunction( FunctionContainer* pFunction, const List<Object*>& pParams ) {
+
+//============ Engine: operation execution code ==========
+
+void
+Engine::addNewTaskToStack(
+	Task* t
+) {
+	//if ( isNull(t) )
+	//	throw NullTaskException();
+	taskStack.push_back(TaskContainer(t));
+	// TaskContainer does NOT reference count in its default constructor.
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::runFunction");
+	std::printf("[DEBUG TaskStack.size = %lu\n", taskStack.size());
 #endif
-	Function* func;
-	if ( isNull(pFunction) ) {
+}
+
+Task*
+Engine::getLastTask() {
+	if ( ! taskStack.has() )
+		throw EmptyTaskStackException();
+	return &(taskStack.getLast().getTask());
+}
+
+void
+Engine::popLastTask() {
+	taskStack.pop();
+}
+
+void
+Engine::addOpStrandToStack(
+	OpStrand*	strand
+) {
+	if ( isNull(strand) )
+		throw EmptyOpstrandException();
+	opcodeStrandStack.push_back( OpStrandContainer(strand) );
+}
+
+
+
+EngineResult::Value
+Engine::execute() {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::debug, "[C++ ERROR: Function-container-to-be-run is null.");
+	print(LogLevel::debug, "[DEBUG: Engine::execute");
 #endif
-		lastObject.setWithoutRef(new FunctionContainer());
-		return EngineResult::Error;
-	}
-	if ( ! pFunction->getFunction(func) ) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::debug, "[C++ ERROR: Function-to-be-run is null.");
-#endif
-		lastObject.setWithoutRef(new FunctionContainer());
-		return EngineResult::Error;
-	}
-	if ( func->constantReturn ) {
-		lastObject.set( func->result.raw() ); // Copy is created when saved to variable
+
+	// Note: When adding a list of operations, also set currOp.
+	OpStrandStackIter opcodeStrandStackIter = opcodeStrandStack.end();
+	if ( ! opcodeStrandStackIter.has() )
 		return EngineResult::Ok;
-	}
-	// Add temporary stack context
-	stack.push();
-#ifdef COPPER_ENABLE_CALLBACK_THIS_POINTER
-	// Add self-reference to the temporary scope
-	stack.getTop().getScope().setVariableFrom(CONSTANT_FUNCTION_SELF, pFunction, true);
-#endif
-	// Add parameters to temporary scope
-	unsigned int pi=0;
-	List<Object*>::ConstIter paramsIter = pParams.constStart();
-	if ( pParams.size() > 0 ) {
-		for (; pi < func->params.size(); ++pi, ++paramsIter ) {
-			if ( pi >= pParams.size() ) {
-				print( LogLevel::warning, EngineMessage::MissingFunctionCallParam );
-				stack.getTop().getScope().addVariable(func->params[pi]);
-				continue;
-			}
-			// Match parameters with parameter list items
-			stack.getTop().getScope().setVariableFrom(func->params[pi], *paramsIter, true);
-		}
-	}
-	if ( func->body.raw() == REAL_NULL ) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::debug, "[C++ ERROR: Function body-to-be-run is null.");
-#endif
-		return EngineResult::Error;
-	}
-	// For enabling the proper removal of tasks created within this function.
-	uint taskStackStartSize = taskStack.size();
 
-	// Run body
-	RefPtr<Body> bodyGuard;
-	bodyGuard.set(func->body.raw());
-	List<Token>::ConstIter bodyIter = func->body.raw()->getIterator();
-	unsigned int tokenIdx = 1; // for user-debugging
-	if ( bodyIter.has() ) {
+	//opcodeStrandStack.start()->getCurrStrand()->validate();
+
+	// This could cause problems as the same opcode might be run twice if the execution is paused
+	// or stopped due to lack of tokens:
+	OpStrandIter* currOp;
+	// To counter this, a Terminal opcode is appended to the end of the global strand.
+
+	bool hasNextToken;
+	do {
+		currOp = &(opcodeStrandStackIter->getCurrOp());
+
+		if ( currOp->has() ) {
+			// Otherwise, process
+			do {
+				hasNextToken = true;
+				// Should check for the end_main opcode, which ends everything
+
+				switch( operate( opcodeStrandStackIter, *currOp ) ) {
+				case ExecutionResult::Ok:
+					break;
+
+				case ExecutionResult::Error:
+					return EngineResult::Error;
+
+				case ExecutionResult::Done:
+					clearStacks();
+					signalEndofProcessing();
+					return EngineResult::Done;
+
+				case ExecutionResult::Reset:
+					currOp = &(opcodeStrandStackIter->getCurrOp());
+					currOp->reset();
+					continue;
+
+				default:
+					// Should throw
+					break;
+				}
+
+				hasNextToken = currOp->next();
+			} while ( hasNextToken );
+		}
+
+		// A user function may have been called at the end of another function,
+		// which results in the current operation iterator being at the end of the strand
+		// when execute returns to it. This would cause the last opcode to execute again,
+		// which is wrong. To avoid this, we continue to pop the stack until the global
+		// strand level. The global strand must not be popped, so we just add a terminal
+		// and go to that.
 		do {
-			switch( process(*bodyIter) ) {
-			case EngineResult::Error:
-				// Task stack and Stack are now invalid, so use previously saved info ONLY
-				if ( stackTracePrintingEnabled )
-					printFunctionError( 0, tokenIdx, *bodyIter );
-				return EngineResult::Error;
-			// Only called via Engine::runFunction()
-			case EngineResult::Done:
-				// systemExitTrigger = true; // might be needed
-				return EngineResult::Done;
-			default: break;
-			}
-			if ( functionReturnMailbox ) {
-				functionReturnMailbox = false;
+			if ( opcodeStrandStackIter.atStart() ) {
+				// At the global opcodes level, so don't pop. Instead, just add a terminal.
+				// This is also for preventing all other operations from being repeated.
+				globalParserContext.addNewOperation( new Opcode(Opcode::Terminal) );
+				currOp->next(); //... and go to it.
 				break;
 			}
-			tokenIdx++; // for user-debugging
-		} while ( ++bodyIter );
-	}
-	// This task is not on the task stack, but it's possible that several of its sub-tasks
-	// are and have not been completed, such as variable assignment: { this.a = a }
-	// To handle these, processing is continued by passing a special token (TT_function_end_run)
-	// so that tasks can properly clean themselves up.
-	const Token endRunToken(TT_function_end_run);
-	while ( taskStack.size() != taskStackStartSize ) {
-		switch( process(endRunToken) ) {
-		case EngineResult::Error:
-			// Task stack and Stack are now invalid, so use previously saved info ONLY
-			if ( stackTracePrintingEnabled )
-				printFunctionError( 0, tokenIdx, endRunToken );
-			return EngineResult::Error;
-		case EngineResult::Done:
-			return EngineResult::Done;
-		default: break;
-		}
-	}
 
-	stack.pop();
+			// Not at the global opcodes strand, so it's safe to pop the strand
+			// Functions should pop variable/scope stack contexts.
+			stack.pop();
+			opcodeStrandStack.pop();
+			opcodeStrandStackIter.makeLast();
+			currOp = &(opcodeStrandStackIter->getCurrOp());
+
+		} while ( opcodeStrandStackIter->getCurrOp().atEnd() );
+
+	} while ( ! opcodeStrandStackIter.atStart() || ! currOp->atEnd() );
+
+	//std::printf("[Debug: Engine::execute final currOp index = %lu, type = %u\n",
+	//	opcodeStrandStackIter->getCurrStrand()->indexOf(*currOp),
+	//	(unsigned int)((*currOp)->getOp()->getType())
+	//);
+
+	//printGlobalStrand();
+
+	// Clear all first-level opcodes that have been run up to this point
+	opcodeStrandStack.start()->removeAllUpToCurrentCode();
+
 	return EngineResult::Ok;
 }
 
-TaskResult::Value Engine::FuncFound_processRunSysFunction(TaskFunctionFound& task) {
+ExecutionResult::Value
+Engine::operate(
+	OpStrandStackIter&	opStrandStackIter,
+	OpStrandIter&		opIter // was using Opcode&
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FuncFound_processRunSysFunction");
+	print(LogLevel::debug, "[DEBUG: Engine::operate");
+#endif
+	const Opcode* opcode = opIter->getOp();
+	Task* task;
+	Variable* variable;
+
+	switch( opcode->getType() ) {
+	case Opcode::Exit:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode Exit");
+#endif
+		return ExecutionResult::Done;
+
+	//------- Opcodes for building an object-function
+
+	case Opcode::FuncBuild_start:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_start");
+#endif
+		// Should create the function and scope
+		addNewTaskToStack( opcode->getTask() );
+		break;
+
+	case Opcode::FuncBuild_createRegularParam:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_createRegularParam");
+#endif
+		task = getLastTask();
+		if ( task->name == TaskName::FuncBuild ) {
+			((FuncBuildTask*)task)->function->addParam( opcode->getNameData() );
+		} else {
+			throw BadOpcodeException(Opcode::FuncBuild_createRegularParam);
+		}
+		break;
+
+	case Opcode::FuncBuild_assignToVar:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_assignToVar");
+#endif
+		task = getLastTask();
+		if ( task->name == TaskName::FuncBuild ) {
+			((FuncBuildTask*)task)->function->getPersistentScope().setVariableFrom(
+				opcode->getNameData(),
+				lastObject.raw(),
+				false
+			);
+		} else {
+			throw BadOpcodeException(Opcode::FuncBuild_assignToVar);
+		}
+		break;
+
+	case Opcode::FuncBuild_pointerAssignToVar:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_pointerAssignToVar");
+#endif
+		task = getLastTask();
+		if ( task->name == TaskName::FuncBuild ) {
+			((FuncBuildTask*)task)->function->getPersistentScope().setVariableFrom(
+				opcode->getNameData(),
+				lastObject.raw(),
+				true
+			);
+		} else {
+			throw BadOpcodeException(Opcode::FuncBuild_pointerAssignToVar);
+		}
+		break;
+
+	case Opcode::FuncBuild_execBody:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_execBody");
+#endif
+		task = getLastTask();
+		if ( task->name == TaskName::FuncBuild ) {
+			// Should check for function existence, but if there is no function, there is an internal failure
+			((FuncBuildTask*)task)->function->body.set( opcode->getBody() );
+		} else {
+			throw BadOpcodeException(Opcode::FuncBuild_execBody);
+		}
+		break;
+
+	case Opcode::FuncBuild_end:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_end");
+#endif
+		task = getLastTask();
+		if ( task->name == TaskName::FuncBuild ) {
+			lastObject.setWithoutRef(
+				new FunctionContainer( ((FuncBuildTask*)task)->function )
+			);
+			popLastTask();
+		} else {
+			throw BadOpcodeException(Opcode::FuncBuild_end);
+		}
+		break;
+
+	//-------- Opcodes for when an address has been found
+
+	case Opcode::FuncFound_access:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_access");
+#endif
+		variable = resolveVariableAddress( *(opcode->getAddressData()) );
+		if ( notNull(variable) ) {
+			lastObject.set( variable->getRawContainer() );
+		} else {
+			lastObject.setWithoutRef( new FunctionContainer() );
+		}
+		break;
+
+	case Opcode::FuncFound_assignment:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_assignment");
+#endif
+		setVariableByAddress( *(opcode->getAddressData()), lastObject.raw(), false );
+		break;
+
+	case Opcode::FuncFound_pointerAssignment:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_pointerAssignment");
+#endif
+		setVariableByAddress( *(opcode->getAddressData()), lastObject.raw(), true );
+		break;
+
+	case Opcode::FuncFound_call:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_call");
+#endif
+		addNewTaskToStack( opcode->getTask() );
+		break;
+
+	case Opcode::FuncFound_setParam:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_setParam");
+#endif
+		task = getLastTask();
+		if ( task->name == TaskName::FuncFound ) {
+			((FuncFoundTask*)task)->addParam( lastObject.raw() );
+		} else {
+			throw BadOpcodeException(Opcode::FuncFound_setParam);
+		}
+		break;
+
+	case Opcode::FuncFound_finishCall:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_finishCall");
+#endif
+		task = getLastTask();
+		if ( task->name == TaskName::FuncFound ) {
+			opIter.next(); // Increment to the Terminal
+			switch( setupFunctionExecution(*((FuncFoundTask*)task), opStrandStackIter, opIter) ) {
+
+			case FuncExecReturn::Ran:
+				popLastTask();
+				return ExecutionResult::Ok;
+
+			case FuncExecReturn::Reset:
+				popLastTask();
+				return ExecutionResult::Reset; // Restart the iterator
+
+			case FuncExecReturn::ErrorOnRun:
+				return ExecutionResult::Error;
+
+			case FuncExecReturn::ExitCalled:
+				return ExecutionResult::Done;
+
+			case FuncExecReturn::Return:
+				popLastTask();
+				// Pop opcode stack and reset the iterator or...
+				opIter.makeLast(); // have the engine pop the opcode iterator itself
+				break;
+
+			case FuncExecReturn::NoMatch:
+			default:
+				popLastTask();
+				// Should never happen
+				print(LogLevel::debug, "Function failed to call in setupFunctionExecution.");
+				//return EngineResult::Error;
+				throw BadFuncFoundTaskException();
+				break;
+			}
+		} else {
+			throw BadOpcodeException(Opcode::FuncFound_finishCall);
+		}
+		break;
+
+	//------ Opcodes for if-structures, loops, and goto operations
+
+	case Opcode::Terminal:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode Terminal");
+#endif
+		break;
+
+	case Opcode::Goto:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode Goto");
+#endif
+		opIter.set( ((GotoOpcode*)opcode)->getOpStrandIter() );
+		break;
+
+	case Opcode::ConditionalGoto:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode ConditionalGoto");
+#endif
+		Object* obj; // Needs to be declared at the beginning of this method
+		if ( lastObject.obtain(obj) ) {
+			if ( isObjectBool(*obj) ) {
+				// Use the inverse of the value because if-statements request jumps when condition is false
+				if ( ((ObjectBool*)obj)->getValue() == false ) {
+					opIter.set( ((GotoOpcode*)opcode)->getOpStrandIter() );
+				}
+			} else {
+				print(LogLevel::warning, "Condition for goto operation is not boolean. Default is false.");
+				// Perform false operation
+				opIter.set( ((GotoOpcode*)opcode)->getOpStrandIter() );
+			}
+		} else {
+			print(LogLevel::error, "Missing condition for goto operation.");
+			return ExecutionResult::Error;
+		}
+		break;
+
+	//------ Opcodes for handling structures that accept a single raw address
+
+	case Opcode::Own:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode Own");
+#endif
+		return run_Own( *(opcode->getAddressData()) );
+
+	case Opcode::Is_owner:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode Is_owner");
+#endif
+		return run_Is_owner( *(opcode->getAddressData()) );
+
+	case Opcode::Is_pointer:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode Is_pointer");
+#endif
+		return run_Is_ptr( *(opcode->getAddressData()) );
+
+	//------ Opcodes for creating basic types
+
+	case Opcode::CreateBoolTrue:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode CreateBoolTrue");
+#endif
+		lastObject.setWithoutRef(new ObjectBool(true));
+		break;
+
+	case Opcode::CreateBoolFalse:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode CreateBoolFalse");
+#endif
+		lastObject.setWithoutRef(new ObjectBool(false));
+		break;
+
+	case Opcode::CreateNumber:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode CreateNumber");
+#endif
+		// Should be creating numbers from a user-set factory
+/*
+		NumberObjectFactory* factory;
+		if ( numberObjectFactoryPtr.obtain(factory) ) {
+			lastObject.setWithoutRef( factory->createNumber(value) );
+		} else {
+			print(LogLevel::warning, "Missing number factory.");
+			lastObject.setWithoutRef( new ObjectNumber(value) );
+		}
+*/
+		lastObject.setWithoutRef(
+			new ObjectNumber( opcode->getNameData() )
+		);
+		break;
+
+	case Opcode::CreateString:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode CreateString");
+#endif
+		// Should be creating strings from a user-set factory
+		lastObject.setWithoutRef(
+			new ObjectString( opcode->getNameData() )
+		);
+		break;
+
+	default:
+		print(LogLevel::error, "Invalid opcode encountered.");
+		return ExecutionResult::Error;
+	}
+
+	return ExecutionResult::Ok;
+}
+
+//EngineResult::Value
+FuncExecReturn::Value
+Engine::setupFunctionExecution(
+	FuncFoundTask& task,
+	OpStrandStackIter&	opStrandStackIter,
+	OpStrandIter&		opIter
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::setupFunctionExecution");
+#endif
+	// Protect from polution and allow for functions to have a default return.
+	lastObject.setWithoutRef(new FunctionContainer());
+	FuncExecReturn::Value result;
+
+	if ( ! task.varAddress.has() )
+		throw BadVarAddressException();
+
+	result = setupBuiltinFunctionExecution(task);
+	if ( result != FuncExecReturn::NoMatch ) {
+		return result;
+	}
+
+	result = setupForeignFunctionExecution(task);
+	if ( result != FuncExecReturn::NoMatch ) {
+		return result;
+	}
+
+	return setupUserFunctionExecution(task, opStrandStackIter, opIter);
+}
+
+FuncExecReturn::Value
+Engine::setupBuiltinFunctionExecution(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::setupBuiltinFunctionExecution");
 #endif
 
-	switch( task.cSideCallback ) {
+	// Which one is faster?
+	// a) Getting a key and using a switch
+	// b) Using a virtual function
+	// Based on time tests, the first one. Using a switch is basically a manual lookup-table.
+
+	VarAddressConstIter addrIter = task.varAddress.constStart();
+
+	RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
+		= builtinFunctions.getBucketData(*addrIter);
+
+	// No matching function found
+	if ( bucketData == 0 )
+		return FuncExecReturn::NoMatch;
+	// Else, bucketData found...
+
+	// Built-in function names should only have one name
+	if ( task.varAddress.size() > 1 ) {
+		print(LogLevel::error, "Attempt to call member of built-in function.");
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	SystemFunction::Value funcName = bucketData->item;
+
+	// Built-in function buckets only contain the name of the function to be run.
+	// While they could contain a "header" for indicating what they accept, the reality is that
+	// many of them can accept any object and/or any number of parameters.
+	// (e.g. are_same_type())
+
+	switch( funcName ) {
 	case SystemFunction::_unset:
 		print(LogLevel::error, "SYSTEM ERROR: Attempting to run system function without setting it.");
-		return TaskResult::_error;
+		return FuncExecReturn::ErrorOnRun;
+
 	case SystemFunction::_return:
-		process_sys_return(task);
-		break;
+		return process_sys_return(task);
+
 	case SystemFunction::_not:
 		process_sys_not(task);
 		break;
+
 	case SystemFunction::_all:
 		process_sys_all(task);
 		break;
+
 	case SystemFunction::_any:
 		process_sys_any(task);
 		break;
+
 	case SystemFunction::_nall:
 		process_sys_nall(task);
 		break;
+
 	case SystemFunction::_none:
 		process_sys_none(task);
 		break;
+
 	case SystemFunction::_are_fn:
 		process_sys_are_fn(task);
 		break;
+
 	case SystemFunction::_are_empty:
 		process_sys_are_empty(task);
 		break;
+
 	case SystemFunction::_are_same:
 		process_sys_are_same(task);
 		break;
+
 	case SystemFunction::_member:
-		switch( process_sys_member(task) ) {
-		case EngineResult::Error:
-			return TaskResult::_error;
-		default: break;
-		}
-		break;
+		return process_sys_member(task);
+
 	case SystemFunction::_member_count:
-		switch( process_sys_member_count(task) ) {
-		case EngineResult::Error:
-			return TaskResult::_error;
-		default: break;
-		}
-		break;
+		return process_sys_member_count(task);
+
 	case SystemFunction::_is_member:
-		switch( process_sys_is_member(task) ) {
-		case EngineResult::Error:
-			return TaskResult::_error;
-		default: break;
-		}
-		break;
+		return process_sys_is_member(task);
+
 	case SystemFunction::_set_member:
-		switch( process_sys_set_member(task) ) {
-		case EngineResult::Error:
-			return TaskResult::_error;
-		default: break;
-		}
-		break;
+		return process_sys_set_member(task);
+
 	case SystemFunction::_union:
 		process_sys_union(task);
 		break;
+
 	case SystemFunction::_type:
 		process_sys_type(task);
 		break;
+
 	case SystemFunction::_are_same_type:
 		process_sys_are_same_type(task);
 		break;
+
 	case SystemFunction::_are_bool:
 		process_sys_are_bool(task);
 		break;
+
 	case SystemFunction::_are_string:
 		process_sys_are_string(task);
 		break;
+
 	case SystemFunction::_are_number:
 		process_sys_are_number(task);
 		break;
+
 	case SystemFunction::_assert:
-		switch( process_sys_assert(task) ) {
-		case EngineResult::Error:
-			return TaskResult::_error;
-		default: break;
-		}
-		break;
+		return process_sys_assert(task);
+
 	default:
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::error, "SYSTEM ERROR: Could not find system function to run.");
-#endif
-		break;
+		return FuncExecReturn::NoMatch;
 	}
-	return TaskResult::_skip;
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_return(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::setupForeignFunctionExecution(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::setupForeignFunctionExecution");
+#endif
+	// Assemble a string from the address
+	String addr = addressToString(task.varAddress);
+
+	RobinHoodHash<ForeignFuncContainer>::BucketData* bucketData
+		= foreignFunctions.getBucketData(addr);
+
+	if ( bucketData == 0 ) {
+		return FuncExecReturn::NoMatch;
+	}
+
+	ForeignFunc* foreignFunc = bucketData->item.getForeignFunction();
+
+	if ( (foreignFunc->getParameterCount() != task.params.size()) && ! foreignFunc->isVariadic() ) {
+		// Language specification says this should optionally be a warning
+		print(LogLevel::error, "Parameter count does not match foreign function header.");
+		if ( ignoreBadForeignFunctionCalls ) {
+			return FuncExecReturn::Ran; // Leaves the return as empty function
+		} else {
+			return FuncExecReturn::ErrorOnRun;
+		}
+	}
+	unsigned int ffhIndex = 0;
+	ParamsIter taskParamsIter = task.params.start();
+	// This is for non-variadic functions. Variadic functions should only return a parameter count
+	// when they have a specific number of parameters that MUST be a certain type for any call.
+	// For example, a list function might be Top(List, Iter, Iter...) so it's constant parameter is
+	// the first one: Top(List...) meaning it should return a parameter count of 1 and have
+	// getParameterName() return the typename for the List.
+	while ( ffhIndex < foreignFunc->getParameterCount() ) {
+		if ( ! taskParamsIter.has() ) {
+			break; // For variadic functions
+		}
+		if ( ! util::equals(foreignFunc->getParameterName(ffhIndex), (*taskParamsIter)->typeName()) )
+		{
+			// Language specification says this should optionally be a warning
+			print(LogLevel::error, "Parameter types do not match foreign function header.");
+			if ( ignoreBadForeignFunctionCalls ) {
+				return FuncExecReturn::Ran; // Leaves the return as empty function
+			} else {
+				return FuncExecReturn::ErrorOnRun;
+			}
+		}
+		++ffhIndex;
+		if ( ! taskParamsIter.next() ) {
+			break;
+		}
+	}
+
+	ForeignFunctionInterface ffi(*this, task.params.start());
+	bool result = foreignFunc->call( ffi );
+
+	// lastObject is set by setResult() or setNewResult() of the FFI.
+	return result ?
+		FuncExecReturn::Ran :
+		FuncExecReturn::ErrorOnRun;
+}
+
+FuncExecReturn::Value
+Engine::setupUserFunctionExecution(
+	FuncFoundTask& task,
+	OpStrandStackIter&	opStrandStackIter,
+	OpStrandIter&		opIter // was using Opcode&
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::setupUserFunctionExecution");
+#endif
+
+	// Remember, "super" is set by what is on the address chain, NOT by the outer function.
+	// The "this" pointer (for function building) is set by the current scope,
+	// but that should already have been set.
+
+	// To get "super":
+	// If the address contains 2 or more names, the second from last is the "super".
+	// If there is a super, resolve it.
+	// Furthermore, you need only open its scope to get the variable whose function is called.
+	// If there is NO super, you must resolve the entire address for just the function being called.
+	Variable* callVariable = REAL_NULL;
+	Variable* super = REAL_NULL;
+	Scope* scope = &getCurrentTopScope();
+	Function* func = REAL_NULL;
+	VarAddressConstIter addrIter = task.varAddress.constStart();
+	do {
+		super = callVariable;
+		scope->getVariable(*addrIter, callVariable);
+		func = callVariable->getFunction(logger);
+		scope = &(func->getPersistentScope());
+	} while ( addrIter.next() );
+
+	// Short-circuit for constant-return functions
+	if ( func->constantReturn ) {
+		lastObject.set( func->result.raw() ); // Copy is created when saved to variable
+		return FuncExecReturn::Ran;
+	}
+
+	// Parse function body if not done yet.
+	// If function body contained errors, return error.
+	// If function body has been / is parsed, add its opcodes to the stack.
+	Body* body;
+	if ( ! func->body.obtain(body) ) {
+		print(LogLevel::error, "Function body is missing.");
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	if ( body->isEmpty() ) {
+		return FuncExecReturn::Ran;
+	}
+
+	// Attempt to compile. Automatically returns true if compiled.
+	if ( ! body->compile(this) ) {
+		print(LogLevel::error, "Function body contains errors.");
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	// "super" and "this" are added to new stack context if the body can be run.
+	StackFrame* stackFrame = new StackFrame();
+
+	if ( notNull(super) ) {
+		// Add "super" pointer
+		stackFrame->getScope().setVariable(CONSTANT_FUNCTION_SUPER, super, true);
+	}
+
+	// Add "this" pointer
+	stackFrame->getScope().setVariable(CONSTANT_FUNCTION_SELF, callVariable, true);
+
+	// For each parameter that the function requires, take from the passed parameters and
+	// assign it by pointer to a parameter name within the newly added scope.
+	ParamsIter givenParamsIter = task.params.start();
+	List<String>::Iter funcParamsIter = func->params.start();
+	bool done = false;
+	if ( funcParamsIter.has() ) {
+		if ( givenParamsIter.has() )
+		do {
+			// Match parameters with parameter list items
+			stackFrame->getScope().setVariableFrom( *funcParamsIter, *givenParamsIter, true );
+			if ( ! funcParamsIter.next() ) {
+				done = true;
+				break;
+			}
+		} while ( givenParamsIter.next() );
+		if ( !done )
+		do {
+			print( LogLevel::warning, EngineMessage::MissingFunctionCallParam );
+			// Default remaining parameters to empty function.
+			stackFrame->getScope().addVariable( *funcParamsIter );
+		} while ( funcParamsIter.next() );
+	}
+	// TODO: Leftover task parameters may eventually be stored in a splat variable or included as part
+	// of an all-inclusive "arguments" array.
+
+	stack.push(stackFrame);
+	stackFrame->deref();
+
+	// Unfortunately, incrementing up a stack frame leaves the current operator at a used token.
+	// We don't want this, so we increment it here.
+	// If it's already at the end, then execute() will pop it later.
+	//opIter.next();
+	// ^ Now handled using an extra Terminal after the function call.
+
+	// Finally, add the body to be processed
+	addOpStrandToStack(body->getOpcodeStrand());
+
+	opStrandStackIter.next();
+	//opStrandStackIter.makeLast();
+	// Since the iterator in the OpStrand container is separately defined from the list, there is no
+	// need to reset it and getCurrOp() should return the first opcode every time the function is called.
+	return FuncExecReturn::Reset;
+}
+
+//! Runs a given function with the passed parameters.
+// This is useful for callback functions.
+// It must NOT be run alongside Engine::run() or Engine::execute() but
+// must be run after them.
+/*
+	Currently, it is difficult to make this work.
+	It may be possible to simply append a set of function run opcodes to the end of the current operations
+	strand and then call Engine::execute().
+	Other than that, I can't think of a way that wouldn't overcomplicate the system.
+	Unfortunately, this wouldn't allow for functions like Foreach().
+*/
+/*
+bool
+Engine::runFunction( FunctionContainer* function, ParamsList* parameters ) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::runFunction");
+#endif
+
+}
+*/
+
+Variable*
+Engine::resolveVariableAddress(
+	const VarAddress& address
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::resolveVariableAddress");
+#endif
+	// First, check if the variable exists in the local scope.
+	// Then, check the global scope.
+	// Then, if it's not in either, create it in the local scope.
+
+	if ( ! address.has() )
+		throw BadVarAddressException();
+
+	// Should return REAL_NULL if the address belongs to a non-variable, such as a
+	// built-in function or foreign function.
+
+	VarAddressConstIter ai = address.constStart();
+
+	RobinHoodHash<SystemFunction::Value>::BucketData* sfBucket
+		= builtinFunctions.getBucketData(*ai);
+	if ( sfBucket != 0 ) { // Error, but handling is determined by the method that calls this one
+		print(LogLevel::warning, "Attempt to use standard access on a built-in function.");
+		return REAL_NULL;
+	}
+
+	// The varAddress is guaranteed to be of length > 0 because of parsing
+	String addr = addressToString(address);
+	RobinHoodHash<ForeignFuncContainer>::BucketData* ffBucket
+		= foreignFunctions.getBucketData(addr);
+	if ( ffBucket != 0 ) { // Error, but handling is determined by the method that calls this one
+		print(LogLevel::warning, "Attempt to use standard access on a foreign function.");
+		return REAL_NULL;
+	}
+
+	Scope* scope = &getCurrentTopScope();
+	Variable* var;
+	Function* func;
+	ai.reset(); // Restart
+	do {
+		if ( scope->findVariable(*ai, var) ) {
+			func = var->getFunction(logger);
+			scope = &(func->getPersistentScope());
+		} else {
+			goto resolve_addr_search_globals;
+		}
+	} while ( ai.next() );
+	return var;
+
+resolve_addr_search_globals:
+	ai.reset(); // Restart
+	scope = &getGlobalScope();
+
+	do {
+		if ( scope->findVariable(*ai, var) ) {
+			func = var->getFunction(logger);
+			scope = &(func->getPersistentScope());
+		} else {
+			goto resolve_addr_search_locals;
+		}
+	} while ( ai.next() );
+	return var;
+
+resolve_addr_search_locals:
+	ai.reset();
+	scope = &getCurrentTopScope();
+
+	do {
+		scope->getVariable(*ai, var);
+		func = var->getFunction(logger);
+		scope = &(func->getPersistentScope());
+	} while ( ai.next() );
+	return var;
+}
+
+ExecutionResult::Value
+Engine::run_Own(
+	const VarAddress& address
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::run_Own");
+#endif
+	lastObject.setWithoutRef(new FunctionContainer());
+	if ( !ownershipChangingEnabled ) {
+		print(LogLevel::warning, "Ownership changing is disabled.");
+		return ExecutionResult::Ok;
+	}
+	Variable* var = resolveVariableAddress(address);
+	if ( isNull(var) ) {
+		print(LogLevel::warning, "Cannot own given function. Built-in or foreign function.");
+		return ExecutionResult::Ok; // Could be set to EngineResult::Error
+	}
+	var->getRawContainer()->changeOwnerTo(var);
+	return ExecutionResult::Ok;
+}
+
+bool
+Engine::is_var_pointer(
+	const VarAddress& address
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::run_Is_owner");
+#endif
+	Variable* var = resolveVariableAddress(address);
+	if ( isNull(var) ) {
+		print(LogLevel::info, "Given function has system as owner.");
+		return false;
+	}
+	return var->isPointer();
+}
+
+ExecutionResult::Value
+Engine::run_Is_owner(
+	const VarAddress& address
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::run_Is_owner");
+#endif
+	lastObject.setWithoutRef(new ObjectBool(
+		! is_var_pointer( address )
+	));
+	return ExecutionResult::Ok;
+}
+
+ExecutionResult::Value
+Engine::run_Is_ptr(
+	const VarAddress& address
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::run_Is_ptr");
+#endif
+	lastObject.setWithoutRef(new ObjectBool(
+		is_var_pointer( address )
+	));
+	return ExecutionResult::Ok;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_return(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_return");
 #endif
-	functionReturnMailbox = true;
-
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		lastObject.setWithoutRef(new FunctionContainer()); // Default
-	} else {
-		lastObject.set(*paramIter);
+	if ( task.params.has() ) {
+		lastObject.set( task.params.getFirst() );
 	}
-	Object* obj = lastObject.raw();
-	if ( isNull(obj) ) {
-		lastObject.setWithoutRef(new FunctionContainer());
-	}
+	return FuncExecReturn::Return;
 }
 
-void Engine::process_sys_not(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_not(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_not");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(true));
-		return;
+	bool result = true;
+	ParamsIter pi = task.params.start();
+	if ( pi.has() ) {
+		result = ! getBoolValue(**pi);
 	}
-	// Only one parameter is used
-	lastObject.setWithoutRef(new ObjectBool(! getBoolValue(**paramIter)));
+	lastObject.setWithoutRef(new ObjectBool(result));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_all(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_all(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_all");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
-		return;
-	}
+	bool result = false;
+	ParamsIter pi = task.params.start();
+	if ( pi.has() )
 	do {
-		if ( ! getBoolValue(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(false));
-			return;
-		}
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(true));
+		result = getBoolValue(**pi);
+		if ( !result )
+			break;
+	} while ( pi.next() );
+	lastObject.setWithoutRef(new ObjectBool(result));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_any(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_any(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_any");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
-		return;
-	}
+	bool result = false;
+	ParamsIter pi = task.params.start();
+	if ( pi.has() )
 	do {
-		if ( getBoolValue(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(true));
-			return;
-		}
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(false));
+		result = getBoolValue(**pi);
+		if ( result )
+			break;
+	} while ( pi.next() );
+	lastObject.setWithoutRef(new ObjectBool(result));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_nall(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_nall(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_nall");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(true));
-		return;
-	}
+	bool result = true;
+	ParamsIter pi = task.params.start();
+	if ( pi.has() )
 	do {
-		if ( ! getBoolValue(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(true));
-			return;
-		}
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(false));
+		result = ! getBoolValue(**pi);
+		if ( !result )
+			break;
+	} while ( pi.next() );
+	lastObject.setWithoutRef(new ObjectBool(result));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_none(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_none(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_none");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(true));
-		return;
-	}
+	bool result = true;
+	ParamsIter pi = task.params.start();
+	if ( pi.has() )
 	do {
-		if ( getBoolValue(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(false));
-			return;
-		}
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(true));
+		result = ! getBoolValue(**pi);
+		if ( !result )
+			break;
+	} while ( pi.next() );
+	lastObject.setWithoutRef(new ObjectBool(result));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_are_fn(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_are_fn(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_fn");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
-		return;
-	}
-	// Check all parameters
+	bool result = false;
+	ParamsIter pi = task.params.start();
+	if ( pi.has() )
 	do {
-		if ( ! isObjectFunction(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(false));
-			return;
-		}
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(true));
+		result = isObjectFunction(**pi);
+		if ( !result )
+			break;
+	} while ( pi.next() );
+	lastObject.setWithoutRef(new ObjectBool(result));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_are_empty(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_are_empty(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_empty");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
-		return;
-	}
-	// Check all parameters
+	bool result = false;
+	ParamsIter pi = task.params.start();
+	if ( pi.has() )
 	do {
-		if ( ! isObjectEmptyFunction(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(false));
-			return;
-		}
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(true));
+		result = isObjectEmptyFunction(**pi);
+		if ( !result )
+			break;
+	} while ( pi.next() );
+	lastObject.setWithoutRef(new ObjectBool(result));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_are_same(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_are_same(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_same");
 #endif
-	// Accepts all parameters and compares their function pointers.
-	// If some objects are not functions, the result is false.
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
-		return;
-	}
-	bool out = false;
-	FunctionContainer* funcContainer = REAL_NULL;
-	do {
-		if ( *paramIter == REAL_NULL ) {
-			out = false;
-			break;
+	// Technically, this function should probably only compare equality of pointers
+	// to the same function, but as data is copied by default anyways, it won't matter.
+	bool result = true;
+	Object* firstPtr = REAL_NULL;
+	ParamsIter pi = task.params.start();
+	if ( pi.has() ) {
+		firstPtr = *pi;
+		while( pi.next() && result ) {
+			result = ( firstPtr == *pi );
 		}
-		if( (*paramIter)->getType() == ObjectType::Function ) {
-			if ( funcContainer == REAL_NULL ) {
-				funcContainer = (FunctionContainer*)(*paramIter);
-				continue;
-			} // else
-			if ( funcContainer == (FunctionContainer*)(*paramIter) ) {
-				out = true;
-				continue;
-			}
-		} // else failed continue conditions: not object, not first function, not same container
-		out = false;
-		break;
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(out));
+	}
+	lastObject.setWithoutRef(new ObjectBool(result));
+	return FuncExecReturn::Ran;
 }
 
-EngineResult::Value	Engine::process_sys_member(TaskFunctionFound& task) {
+// special return
+FuncExecReturn::Value
+Engine::process_sys_member(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_member");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() || task.getParamCount() != 2 ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( task.params.size() != 2 ) {
 		print(LogLevel::error, EngineMessage::MemberWrongParamCount);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the member sought
-	if ( ! isObjectFunction(**paramIter) ) {
+	if ( ! isObjectFunction(**paramsIter) ) {
 		print(LogLevel::error, EngineMessage::MemberParam1NotFunction);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
-	FunctionContainer* fc = (FunctionContainer*)(*paramIter);
+	FunctionContainer* parentFc = (FunctionContainer*)*paramsIter;
 	Function* parentFunc;
-	if ( ! fc->getFunction(parentFunc) ) {
+		// Attempt to extract the function
+		// Failure occurs for "pointer variables" that have not reset
+	if ( ! parentFc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberParam);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
-	++paramIter;
 	// Second parameter is the name of the member
-	if ( !isObjectString(**paramIter) ) {
+	paramsIter.next();
+	if ( !isObjectString(**paramsIter) ) {
 		print(LogLevel::error, EngineMessage::MemberParam2NotString);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectString* objStr = (ObjectString*)(*paramIter);
+	ObjectString* objStr = (ObjectString*)(*paramsIter);
 	String& rawStr = objStr->getString();
 	if ( ! isValidName( rawStr ) ) {
 		print(LogLevel::error, EngineMessage::MemberFunctionInvalidNameParam);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	Variable* var;
 	parentFunc->getPersistentScope().getVariable( rawStr, var );
 	lastObject.set( var->getRawContainer() );
-	return EngineResult::Ok;
+	return FuncExecReturn::Ran;
 }
 
-EngineResult::Value Engine::process_sys_member_count(TaskFunctionFound& task) {
+// special return
+FuncExecReturn::Value
+Engine::process_sys_member_count(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_member_count");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( task.getParamCount() == 0 ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( task.params.size() == 0 ) {
 		print(LogLevel::warning, EngineMessage::MemberCountWrongParamCount);
+		// Seems inefficient, but it's faster that ObjectNumber(0) because the class uses string representation
 		lastObject.setWithoutRef(new ObjectNumber(String("0")));
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
-	// First parameter is the parent function of the members
-	if ( ! isObjectFunction(**paramIter) ) {
+	// The only parameter is the parent function of the members
+	if ( ! isObjectFunction(**paramsIter) ) {
 		print(LogLevel::error, EngineMessage::MemberCountParam1NotFunction);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
-	FunctionContainer* fc = (FunctionContainer*)(*paramIter);
+	FunctionContainer* fc = (FunctionContainer*)(*paramsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberCountParam);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	unsigned long size = parentFunc->getPersistentScope().occupancy();
 	// The bummer here is that it's cramming an unsigned int into an int.
 	// On the bright side, no one should be creating 2.7 billion variables.
 	lastObject.setWithoutRef(new ObjectNumber(size));
-	return EngineResult::Ok;
+	return FuncExecReturn::Ran;
 }
 
-EngineResult::Value Engine::process_sys_is_member(TaskFunctionFound& task) {
+// special return
+FuncExecReturn::Value
+Engine::process_sys_is_member(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_is_member");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( task.getParamCount() != 2 ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( task.params.size() != 2 ) {
 		print(LogLevel::error, EngineMessage::IsMemberWrongParamCount);
 		lastObject.setWithoutRef(new ObjectBool(false));
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the members
-	if ( ! isObjectFunction(**paramIter) ) {
+	if ( ! isObjectFunction(**paramsIter) ) {
 		print(LogLevel::error, EngineMessage::IsMemberParam1NotFunction);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
-	FunctionContainer* fc = (FunctionContainer*)(*paramIter);
+	FunctionContainer* fc = (FunctionContainer*)(*paramsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsIsMemberParam);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	// Second parameter should be a string
-	++paramIter;
+	paramsIter.next();
 	bool result = false;
-	if ( ! isObjectString(**paramIter) ) {
+	if ( ! isObjectString(**paramsIter) ) {
 		print(LogLevel::error, EngineMessage::IsMemberParam2NotString);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
-	result = parentFunc->getPersistentScope().variableExists(
-						((ObjectString*)*paramIter)->getString()
-						);
+	const String& memberName = ((ObjectString*)*paramsIter)->getString();
+	result = parentFunc->getPersistentScope().variableExists( memberName );
 	lastObject.setWithoutRef(new ObjectBool(result));
-	return EngineResult::Ok;
+	return FuncExecReturn::Ran;
 }
 
-EngineResult::Value Engine::process_sys_set_member(TaskFunctionFound& task) {
+// special return
+FuncExecReturn::Value
+Engine::process_sys_set_member(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_set_member");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( task.getParamCount() != 3 ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( task.params.size() != 3 ) {
 		print(LogLevel::error, EngineMessage::SetMemberWrongParamCount);
 		lastObject.setWithoutRef(new FunctionContainer());
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter should be the parent function of the members
-	if ( ! isObjectFunction(**paramIter) ) {
+	if ( ! isObjectFunction(**paramsIter) ) {
 		print(LogLevel::error, EngineMessage::SetMemberParam1NotFunction);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
-	FunctionContainer* fc = (FunctionContainer*)(*paramIter);
+	FunctionContainer* fc = (FunctionContainer*)(*paramsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsSetMemberParam);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	// Second parameter should be a string
-	++paramIter;
-	if ( ! isObjectString(**paramIter) ) {
+	paramsIter.next();
+	if ( ! isObjectString(**paramsIter) ) {
 		print(LogLevel::error, EngineMessage::SetMemberParam2NotString);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
-	String& memberName = ((ObjectString*)*paramIter)->getString();
+	String& memberName = ((ObjectString*)*paramsIter)->getString();
 	if ( !isValidName(memberName) ) {
 		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
-		return EngineResult::Error;
+		return FuncExecReturn::ErrorOnRun;
 	}
 	// Third parameter can be anything
-	++paramIter;
-	parentFunc->getPersistentScope().setVariableFrom( memberName, *paramIter, false );
+	paramsIter.next();
+	parentFunc->getPersistentScope().setVariableFrom( memberName, *paramsIter, false );
 	lastObject.setWithoutRef(new FunctionContainer());
-	return EngineResult::Ok;
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_union(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_union(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_union");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( !paramsIter.has() ) {
+		print(LogLevel::info, "Union function called without parameters. Default return is empty function.");
 		lastObject.setWithoutRef(new FunctionContainer());
-		return;
+		return FuncExecReturn::Ran;
 	}
 	FunctionContainer* finalFC = new FunctionContainer();
 	Function* finalFunc;
@@ -2636,8 +5145,8 @@ void Engine::process_sys_union(TaskFunctionFound& task) {
 	FunctionContainer* usableFC;
 	Function* usableFunc;
 	do {
-		if ( isObjectFunction(**paramIter) ) {
-			usableFC = (FunctionContainer*)(*paramIter);
+		if ( isObjectFunction(**paramsIter) ) {
+			usableFC = (FunctionContainer*)(*paramsIter);
 			if ( usableFC->getFunction(usableFunc) ) {
 				finalFunc->getPersistentScope().copyMembersFrom( usableFunc->getPersistentScope() );
 			} else {
@@ -2647,616 +5156,142 @@ void Engine::process_sys_union(TaskFunctionFound& task) {
 		} else {
 			print(LogLevel::warning, EngineMessage::NonFunctionAsUnionParam);
 		}
-	} while( ++paramIter );
+	} while( paramsIter.next() );
 	lastObject.set(finalFC);
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_type(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_type(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_type");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( !paramsIter.has() ) {
 		lastObject.setWithoutRef(new FunctionContainer());
-		return;
+		return FuncExecReturn::Ran;
 	}
 	// Get only the first parameter
-	lastObject.setWithoutRef(new ObjectString( (*paramIter)->typeName() ));
+	lastObject.setWithoutRef(new ObjectString( (*paramsIter)->typeName() ));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_are_same_type(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_are_same_type(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_same_type");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( !paramsIter.has() ) {
 		lastObject.setWithoutRef(new FunctionContainer());
-		return;
+		return FuncExecReturn::Ran;
 	}
 	// First parameter, to which all other parameters are compared
-	String first( (*paramIter)->typeName() );
+	String first( (*paramsIter)->typeName() );
 	bool same = true;
 	do {
-		if ( ! first.equals( (*paramIter)->typeName() ) ) {
-			same = false;
+		same = first.equals( (*paramsIter)->typeName() );
+		if ( !same )
 			break;
-		}
-	} while( ++paramIter );
+	} while( paramsIter.next() );
 	// Get only the first parameter
 	lastObject.setWithoutRef(new ObjectBool(same));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_are_bool(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_are_bool(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_bool");
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_bool");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( !paramsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
-		return;
+		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
+	bool out = true;
 	do {
-		if ( ! isObjectBool(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(false));
-			return;
-		}
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(true));
+		out = isObjectBool(**paramsIter);
+		if ( !out) break;
+	} while ( paramsIter.next() );
+	lastObject.setWithoutRef(new ObjectBool(out));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_are_string(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_are_string(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_string");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( !paramsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
-		return;
+		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
+	bool out = true;
 	do {
-		if ( ! isObjectString(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(false));
-			return;
-		}
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(true));
+		out = isObjectString(**paramsIter);
+		if ( !out)
+			break;
+	} while ( paramsIter.next() );
+	lastObject.setWithoutRef(new ObjectBool(out));
+	return FuncExecReturn::Ran;
 }
 
-void Engine::process_sys_are_number(TaskFunctionFound& task) {
+FuncExecReturn::Value
+Engine::process_sys_are_number(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_number");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
+	ParamsIter paramsIter = task.params.start();
+	if ( !paramsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
-		return;
+		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
+	bool out = true;
 	do {
-		if ( ! isObjectNumber(**paramIter) ) {
-			lastObject.setWithoutRef(new ObjectBool(false));
-			return;
-		}
-	} while ( ++paramIter );
-	lastObject.setWithoutRef(new ObjectBool(true));
+		out = isObjectNumber(**paramsIter);
+		if ( !out)
+			break;
+	} while ( paramsIter.next() );
+	lastObject.setWithoutRef(new ObjectBool(out));
+	return FuncExecReturn::Ran;
 }
 
-EngineResult::Value Engine::process_sys_assert(TaskFunctionFound& task) {
+// special return
+FuncExecReturn::Value
+Engine::process_sys_assert(
+	FuncFoundTask& task
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_assert");
 #endif
-	List<Object*>::Iter paramIter = task.createParamsIterator();
-	if ( !paramIter.has() ) {
-		return EngineResult::Ok;
+	ParamsIter paramsIter = task.params.start();
+	if ( !paramsIter.has() ) {
+		return FuncExecReturn::Ran;
 	}
 	do {
-		if ( ! getBoolValue(**paramIter) ) {
+		if ( ! getBoolValue(**paramsIter) ) {
 			print(LogLevel::error, EngineMessage::AssertionFailed);
-			return EngineResult::Error;
+			return FuncExecReturn::ErrorOnRun;
 		}
-	} while ( ++paramIter );
+	} while ( paramsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(true));
-	return EngineResult::Ok;
+	return FuncExecReturn::Ran;
 }
 
-TaskResult::Value Engine::FunctionFound_processAssignmentObj(TaskFunctionFound& task) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FunctionFound_processAssignmentObj");
-#endif
-	Object* obj = REAL_NULL;
-	Variable* var = REAL_NULL;
-	if ( ! lastObject.obtain(obj) ) {
-		//print( LogLevel::error, "ERROR: Failed to obtain an object when assigning." );
-		print( LogLevel::error, EngineMessage::UnsetLastObjectInAsgn );
-		return TaskResult::_error;
-	}
 
-	// Note: The last object MUST be set.
-	// This is the user variable, unless a system or external function is used,
-	// in which case, the last object is set to a new function.
-	switch(task.type) {
-	case TASK_FFTYPE_variable:
-		switch( obj->getType() ) {
-		case ObjectType::Function:
-			if ( task.varPtr.obtain(var) ) {
-				var->setFunc((FunctionContainer*)obj, false);
-				lastObject.set(var->getRawContainer());
-			} else {
-				print(LogLevel::error, EngineMessage::TaskVarIsNull);
-			}
-			break;
-		case ObjectType::Data:
-			if ( task.varPtr.obtain(var) ) {
-				var->setFuncReturn( obj );
-				lastObject.set(var->getRawContainer());
-			} else {
-				print(LogLevel::error, EngineMessage::TaskVarIsNull);
-			}
-			break;
-		}
-		//lastObject.set(task.varPtr.raw()->getRawContainer());
-		return TaskResult::_pop_loop;
-
-	case TASK_FFTYPE_cside:
-		//print( LogLevel::warning, "Warning: Cannot save over built-in function." );
-		print( LogLevel::warning, EngineMessage::AttemptToOverrideBuiltinFunc );
-		lastObject.setWithoutRef(new FunctionContainer());
-		return TaskResult::_pop_loop;
-
-	case TASK_FFTYPE_ext_cside:
-		//print( LogLevel::warning, "Warning: Cannot save over external function." );
-		print( LogLevel::warning, EngineMessage::AttemptToOverrideExternalFunc );
-		lastObject.setWithoutRef(new FunctionContainer());
-		return TaskResult::_pop_loop;
-
-	default:
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::error, "SYSTEM ERROR: Default case reached in FunctionFound_processAssignmentObj");
-#endif
-		return TaskResult::_error;
-	}
-}
-
-TaskResult::Value Engine::FunctionFound_processPointerAssignmentObj(TaskFunctionFound& task) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::FunctionFound_processPointerAssignmentObj");
-#endif
-	Object* obj;
-	if ( ! lastObject.obtain(obj) ) {
-		//print( LogLevel::error, "ERROR: Failed to obtain an object when assigning to a pointer." );
-		print( LogLevel::error, EngineMessage::UnsetLastObjectInPtrAsgn );
-		return TaskResult::_error;
-	}
-	// Make sure the last object is a function
-	if ( obj->getType() != ObjectType::Function ) {
-		// Maybe this should merely be a warning and the system creates a wrapper function.
-		//print( LogLevel::error, "ERROR: Can only save pointer to functions, not data." );
-		print( LogLevel::error, EngineMessage::DataAssignedToPtr );
-		return TaskResult::_error;
-	}
-	// Note: The last object MUST be set.
-	// This is the user variable, unless a system or external function is used,
-	// in which case, the last object is set to a new function.
-	switch(task.type) {
-	case TASK_FFTYPE_variable:
-		task.varPtr.raw()->setFunc((FunctionContainer*)obj, true);
-		lastObject.set(obj);
-		return TaskResult::_pop_loop;
-
-	case TASK_FFTYPE_cside:
-		//print( LogLevel::warning, "Warning: Cannot save pointer over built-in function." );
-		print( LogLevel::warning, EngineMessage::AttemptToOverrideBuiltinFunc );
-		lastObject.setWithoutRef(new FunctionContainer());
-		return TaskResult::_pop_loop;
-
-	case TASK_FFTYPE_ext_cside:
-		//print( LogLevel::warning, "Warning: Cannot save pointer over external function." );
-		print( LogLevel::warning, EngineMessage::AttemptToOverrideExternalFunc );
-		lastObject.setWithoutRef(new FunctionContainer());
-		return TaskResult::_pop_loop;
-
-	default:
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::error, "SYSTEM ERROR: Default case reached in FunctionFound_processPointerAssignmentObj");
-#endif
-		return TaskResult::_error;
-	}
-}
-
-TaskResult::Value Engine::processIfStatement(TaskIfStructure& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processIfStatement");
-#endif
-	switch( task.state ) {
-	case TASK_IF_find_cond: // has "if", search for '('
-		return ifStatement_findCondition(task, lastToken);
-
-	case TASK_IF_get_cond: // has '(', search for object, hoping for bool
-		return ifStatement_getCondition(task, lastToken);
-
-	case TASK_IF_seek_cond_end: // has object, search for ')'
-		if ( lastToken.type == TT_parambody_close ) {
-			task.openParamBodies -= 1;
-			task.state = TASK_IF_seek_body;
-		}
-		return TaskResult::_cycle;
-
-	case TASK_IF_seek_body: // has ')', search for '{'
-		// After seeking the body, check if the body should process, else seek body end
-		return ifStatement_seekBody(task, lastToken);
-
-	case TASK_IF_run_body: // has '{', run til '}'
-		if ( functionReturnMailbox )
-			return TaskResult::_cycle;
-		if ( lastToken.type == TT_body_close ) {
-			task.openBodies -= 1;
-			if ( task.openBodies == 0 ) {
-				task.state = TASK_IF_seek_else;
-				return TaskResult::_cycle;
-			}
-		}
-		return TaskResult::_none;
-
-	case TASK_IF_seek_body_end: // search for '}'
-		return ifStatement_seekBodyEnd(task, lastToken);
-
-	case TASK_IF_seek_else: // search for "else" or "elif"
-		return ifStatement_seekElse(task, lastToken);
-
-	default:
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::error, "SYSTEM ERROR: Default case reached in processIfStatement");
-#endif
-		return TaskResult::_error;
-	}
-}
-
-TaskResult::Value Engine::ifStatement_findCondition(TaskIfStructure& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::ifStatement_findCondition");
-#endif
-	if ( lastToken.type == TT_parambody_open ) {
-		if ( task.ran == false ) {
-			task.state = TASK_IF_get_cond;
-		} else {
-			task.state = TASK_IF_seek_cond_end;
-		}
-		// TODO: Should check for cap on openParamBodies so that the max value is not exceeded
-		task.openParamBodies += 1;
-		return TaskResult::_cycle;
-	} else {
-		//print(LogLevel::error, "ERROR: Invalid token after \"if\". Expected condition body.");
-		print(LogLevel::error, EngineMessage::InvalidTokenAtIfStart);
-		return TaskResult::_error;
-	}
-}
-
-TaskResult::Value Engine::ifStatement_getCondition(TaskIfStructure& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::ifStatement_getCondition");
-#endif
-	if ( lastToken.type == TT_parambody_open ) {
-		// TODO: Should check for cap on openParamBodies so that the max value is not exceeded
-		task.openParamBodies += 1;
-		return TaskResult::_none;
-	}
-	// Condition relies on getting an object, but user may short-circuit by immediately ending param body.
-	if ( lastToken.type == TT_parambody_close ) {
-		task.openParamBodies -= 1;
-		if ( task.openParamBodies == 0 ) {
-			if ( task.isConditionSet ) {
-				task.state = TASK_IF_seek_body;
-			} else {
-				//print(LogLevel::warning, "Warning: No condition passed to if-structure. Default is false.");
-				print(LogLevel::warning, EngineMessage::ConditionlessIf);
-				task.condition = false;
-				task.isConditionSet = true; // We have to set it here unfortunately
-				task.state = TASK_IF_seek_body;
-			}
-			return TaskResult::_cycle;
-		}
-	}
-	return TaskResult::_none;
-}
-
-TaskResult::Value Engine::ifStatement_seekBody(TaskIfStructure& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::ifStatement_seekBody");
-#endif
-	if ( lastToken.type == TT_body_open ) {
-		// TODO: Should check for cap on openBodies so that the max value is not exceeded
-		task.openBodies += 1;
-		if ( task.condition && task.ran == false ) {
-			task.state = TASK_IF_run_body;
-			task.ran = true;
-		} else {
-			task.state = TASK_IF_seek_body_end;
-		}
-		return TaskResult::_cycle;
-	}
-	//print(LogLevel::error, "ERROR: Illegal token found while seeking if-structure body opening token.");
-	print(LogLevel::error, EngineMessage::InvalidTokenBeforeIfBody);
-	return TaskResult::_error;
-}
-
-TaskResult::Value Engine::ifStatement_seekBodyEnd(TaskIfStructure& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::ifStatement_seekBodyEnd");
-#endif
-	// check for both { and }
-	switch( lastToken.type ) {
-	case TT_body_open:
-		// TODO: Should check for cap on openBodies so that the max value is not exceeded
-		task.openBodies += 1;
-		break;
-
-	case TT_body_close:
-		task.openBodies -= 1;
-		if ( task.openBodies == 0 ) {
-			task.state = TASK_IF_seek_else;
-		}
-		break;
-
-	default: break;
-	}
-	return TaskResult::_cycle; // Absorb token
-}
-
-TaskResult::Value Engine::ifStatement_seekElse(TaskIfStructure& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::ifStatement_seekElse");
-#endif
-		// Note: This will be used whether the else/elif body is run or not
-		// When encountering this, reset the condition and isConditionSet tokens
-		// based on whether this is an "elif" or an "else".
-		// Also, "else" should set the task.condition to true so the body will be run.
-		// If neither "elif" nor "else" is encountered, pop.
-
-	// Next token must be "elif" or "else". If not, pop.
-	if ( lastToken.type == TT_elif ) {
-		task.state = TASK_IF_find_cond; // Skipping the condition is handled in the find-condition part
-	} else if ( lastToken.type == TT_else ) {
-		task.state = TASK_IF_seek_body;
-		task.condition = ! task.condition;
-	} else {
-		return TaskResult::_pop_loop;
-	}
-	return TaskResult::_cycle;
-}
-
-TaskResult::Value Engine::processObjForIfStatement(TaskIfStructure& task) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processObjForIfStatement");
-#endif
-	if ( task.state == TASK_IF_get_cond ) {
-		// Gets the first object value and considers it the condition.
-		task.condition = getBoolValue( *(lastObject.raw()) );
-		task.isConditionSet = true;
-		task.state = TASK_IF_seek_cond_end;
-	}
-	// Should if-structures set the last object before popping?
-	// Maybe not, as it may allow for inline if-statements such as:
-	// a = if( gt(b() 10) ){ 4 }else{ 1 }
-	// Could also allow problems.
-
-	if ( functionReturnMailbox ) {
-		taskStack.pop();
-	}
-	return TaskResult::_none;
-}
-
-TaskResult::Value Engine::processLoop(TaskLoopStructure& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processLoop");
-#endif
-	switch( task.state ) {
-	case TASK_LOOP_find_body:
-		if ( lastToken.type == TT_body_open )
-		{
-			task.openBodies = 1;
-			task.state = TASK_LOOP_collect_body;
-			return TaskResult::_cycle;
-		} else {
-			//print(LogLevel::error, "Stray token between loop keyword and definition.");
-			print(LogLevel::error, EngineMessage::StrayTokenInLoopHead);
-			return TaskResult::_error;
-		}
-
-	case TASK_LOOP_collect_body:
-		switch ( lastToken.type )
-		{
-		case TT_body_open:
-			// TODO: Should check for cap on openBodies so that the max value is not exceeded
-			task.openBodies += 1;
-			break;
-		case TT_body_close:
-			task.openBodies -= 1;
-			if ( task.openBodies == 0 ) {
-				task.state = TASK_LOOP_run;
-				return loopStructure_runBody(task);
-			}
-			break;
-		case TT_function_end_run:
-			print(LogLevel::error, "SYSTEM ERROR: Found stray function-end-run token for processLoop.");
-			return TaskResult::_error;
-		default:
-			 break;
-		}
-		task.body.addToken(lastToken);
-		return TaskResult::_cycle;
-
-	case TASK_LOOP_run:
-		if ( lastToken.type == TT_function_end_run ) {
-			print(LogLevel::error, "SYSTEM ERROR: Found stray function-end-run token in processLoop.");
- 			return TaskResult::_error;
-		}
-		return TaskResult::_none;
-
-	default:
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::error, "SYSTEM ERROR: Default case reached in Engine::processLoop");
-#endif
-		return TaskResult::_error;
-	}
-}
-
-TaskResult::Value Engine::loopStructure_runBody(TaskLoopStructure& task) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::loopStructure_runBody");
-#endif
-	List<Token>::ConstIter tokenIter = task.body.getIterator();
-	loopEndMailbox = false;
-#ifdef COPPER_DEBUG_LOOP_STRUCTURE
-int debug_max = 0;
-#endif
-	if ( tokenIter.has() )
-	do {
-		// "stop"/"endloop" and "skip" are handled by setting mailboxes (global booleans)
-		if ( process( *tokenIter ) == EngineResult::Error ) {
-			return TaskResult::_error;
-		}
-		if ( functionReturnMailbox ) {
-			break;
-		}
-		// If at the end, restart
-		if ( ! ++tokenIter || loopSkipMailbox ) {
-#ifdef COPPER_DEBUG_LOOP_STRUCTURE
-			debug_max++;
-			if ( debug_max == 100 ) break;
-#endif
-			tokenIter.reset();
-			loopSkipMailbox = false;
-		}
-	} while( !loopEndMailbox );
-	loopEndMailbox = false; // Prevents cascading loop-end effect on outer loops
-	loopSkipMailbox = false; // Prevents cascading loop-skip effect on outer loops
-	// Pop overhead tasks (which should all be done when "stop" is found)
-	while ( ! taskStack.getLast().areSameTask(&task) ) {
-		taskStack.pop();
-	}
-	taskStack.pop();
-	return TaskResult::_cycle;
-}
-
-TaskResult::Value Engine::processNamed(TaskProcessNamed& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processNamed");
-#endif
-	// The lastObject is, at best, only a function, not the name of the variable it came from (if any).
-	// Therefore, to find the variable, search the scope for the given name.
-	// At worst, the lastObject is some valid unhandled token.
-
-	switch( task.state ) {
-	case TASK_PROC_NAMED_find_opening:
-		if ( lastToken.type == TT_parambody_open ) {
-			task.state = TASK_PROC_NAMED_param_name;
-			return TaskResult::_cycle;
-		}
-		print(LogLevel::error, EngineMessage::InvalidTokenBeforePtrHandlerParamBody);
-		return TaskResult::_error;
-
-	case TASK_PROC_NAMED_param_name:
-		if ( lastToken.type == TT_name ) {
-			// Get the variable. Should report it if the variable does not exist but create the variable anyways.
-			// Needs to check both global and local scopes.
-			processNamed_collectVariable(task, lastToken);
-			task.state = TASK_PROC_NAMED_find_closing;
-			return TaskResult::_cycle;
-		}
-		print(LogLevel::error, EngineMessage::NonNameFoundInPtrHandlerParamBody);
-		return TaskResult::_error;
-
-	// Note: This actually handles several cases:
-	// 1) If the closing is found
-	// 2) If the member-link token is found, which takes it to find_child_member
-	case TASK_PROC_NAMED_find_closing:
-		if ( lastToken.type == TT_member_link ) {
-			task.state = TASK_PROC_NAMED_find_member;
-			return TaskResult::_cycle;
-		} // else
-		if ( lastToken.type == TT_parambody_close ) {
-			// This point should never be reached without a variable, so calling raw() is safe
-			switch( task.name ) {
-			case TaskName::_own:
-				task.varPtr.raw()->getRawContainer()->changeOwnerTo(task.varPtr.raw());
-				lastObject.setWithoutRef(new FunctionContainer());
-				break;
-
-			case TaskName::_is_ptr:
-				lastObject.setWithoutRef(new ObjectBool( task.varPtr.raw()->isPointer() ));
-				break;
-
-			case TaskName::_is_owner:
-				lastObject.setWithoutRef(new ObjectBool( ! task.varPtr.raw()->isPointer() ));
-				break;
-
-			default: break;
-			}
-			// If there is an error here, it's internal.
-			taskStack.pop();
-			return TaskResult::_skip;
-		}
-		print(LogLevel::error, EngineMessage::InvalidTokenForEndingPtrHandlerParamBody);
-		return TaskResult::_error;
-
-	case TASK_PROC_NAMED_find_member:
-		// There should be a pointer to the parent scope saved in the task.
-		if ( lastToken.type == TT_name ) {
-			// Get the variable. Should report it if the variable does not exist but create the variable anyways.
-			// Needs to check both global and local scopes.
-			processNamed_collectMember(task, lastToken);
-			task.state = TASK_PROC_NAMED_find_closing;
-			return TaskResult::_cycle;
-		}
-		print(LogLevel::error, EngineMessage::NonNameFoundInPtrHandlerParamBody);
-		return TaskResult::_error;
-
-	default:
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-		print(LogLevel::debug, "[SYSTEM ERROR: default case reached in Engine::processNamed.");
-#endif
-		return TaskResult::_error;
-	}
-}
-
-void Engine::processNamed_collectVariable(TaskProcessNamed& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processNamed_collectVariable");
-#endif
-	Variable* var = REAL_NULL;
-	if ( stack.getTop().getScope().findVariable(lastToken.name, var) ) {
-		task.varPtr.set(var);
-	}
-		// bottom stack frame != top stack frame
-	else if ( stack.getCurrLevel() > 1 && stack.getBottom().getScope().findVariable(lastToken.name, var) ) {
-		task.varPtr.set(var);
-	} else {
-		print(LogLevel::warning, EngineMessage::NonexistentVariablePassedToPtrHandler);
-		// Using new(no throw) for creating variables is not helpful. It should throw and catch elsewhere.
-		var = stack.getTop().getScope().addVariable(lastToken.name);
-		task.varPtr.set(var);
-	}
-}
-
-void Engine::processNamed_collectMember(TaskProcessNamed& task, const Token& lastToken) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::processNamed_collectMember");
-#endif
-	Variable* var = REAL_NULL;
-	Variable* member = REAL_NULL;
-	Function* f = REAL_NULL;
-	if ( task.varPtr.obtain(var) ) {
-		f = var->getFunction(logger);
-		if ( f->getPersistentScope().findVariable(lastToken.name, member) ) {
-			task.varPtr.set(member);
-		} else {
-			print(LogLevel::warning, EngineMessage::NonexistentVariablePassedToPtrHandler);
-			f->getPersistentScope().getVariable(lastToken.name, member);
-			task.varPtr.set(member);
-		}
-	}
-}
-
-}
+} // end namespace Cu

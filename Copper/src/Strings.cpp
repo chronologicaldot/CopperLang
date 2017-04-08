@@ -199,7 +199,7 @@ CharList& CharList::operator= ( const CharList& pOther )
 	if ( i.atEnd() ) return *this;
 	do {
 		push_back( *i );
-	} while ( ++i );
+	} while ( i.next() );
 	return *this;
 }
 
@@ -209,7 +209,7 @@ CharList& CharList::append( const CharList& pOther )
 	if ( i.atEnd() ) return *this;
 	do {
 		push_back( *i );
-	} while ( ++i );
+	} while ( i.next() );
 	return *this;
 }
 
@@ -233,7 +233,7 @@ bool CharList::equals( const char* pString )
 	Iter i = start();
 	while ( (*i) == pString[si] )
 	{
-		if ( pString[si] == '\0' && ! ++i )
+		if ( pString[si] == '\0' && ! i.next() )
 			return false;
 		if ( i.atEnd() )
 			return false;
@@ -257,7 +257,7 @@ bool CharList::equals( const CharList& pOther )
 
 	while( *i_me == *i_ot )
 	{
-		if ( ++i_me != ++i_ot )
+		if ( i_me.next() != i_ot.next() )
 			return false;
 	}
 	return true;
@@ -279,7 +279,7 @@ bool CharList::equalsIgnoreCase( const CharList& pOther )
 
 	while( tolower(*i_me) == tolower(*i_ot) )
 	{
-		if ( ++i_me != ++i_ot )
+		if ( i_me.next() != i_ot.next() )
 			return false;
 	}
 	return true;
@@ -334,7 +334,7 @@ String::String( const CharList& pList )
 	do {
 		str[len] = *i;
 		len++;
-	} while ( ++i );
+	} while ( i.next() );
 	str[len] = '\0'; // only for returning as c-strings
 }
 
@@ -410,7 +410,7 @@ String& String::operator= ( const CharList& pList )
 		*s = *i; // str[len] = *i;
 		//len++; // Now is set before loop
 		++s;
-	} while ( ++i );
+	} while ( i.next() );
 	*s = '\0'; //str[len] = '\0'; // only for returning as c-strings
 	return *this;
 }
@@ -484,9 +484,9 @@ bool String::equals( const CharList& pList ) const
 	uint si = 0;
 	char* s = str;
 	for( ; si < len; ++si, ++s ) {
-		if ( *s != *ci )
+		if ( *s != ci.getItem() )
 			return false;
-		if ( !++ci && si+1 != len ) // reached end of CharList before String end
+		if ( !ci.next() && si+1 != len ) // reached end of CharList before String end
 			return false;
 	}
 	return true;
