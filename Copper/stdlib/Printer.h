@@ -6,7 +6,7 @@ namespace CuStd {
 using util::List;
 using Cu::RefPtr;
 using Cu::Object;
-using Cu::ForeignFunctionInterface;
+using Cu::FFIServices;
 
 /*
 A printer class for printing the return of writeToString, including:
@@ -31,10 +31,10 @@ public:
 		}
 	}
 
-	virtual bool call( ForeignFunctionInterface& ffi ) {
+	virtual bool call( FFIServices& ffi ) {
 		util::String out;
-		while ( ffi.hasMoreParams() ) {
-			ffi.getNextParam()->writeToString(out);
+		while ( ffi.hasMoreArgs() ) {
+			ffi.getNextArg()->writeToString(out);
 			std::fprintf(writeFile, "%s", out.c_str());
 		}
 		return true;
@@ -42,14 +42,6 @@ public:
 
 	virtual bool isVariadic() {
 		return true;
-	}
-
-	virtual const char* getParameterName( unsigned int index ) {
-		return "";
-	}
-
-	virtual unsigned int getParameterCount() {
-		return 0;
 	}
 };
 

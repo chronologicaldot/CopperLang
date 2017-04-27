@@ -1,4 +1,25 @@
 ===========
+2017/4/10-13,23-25
+
+- Rewrote timemath.h and timemath.cpp functions as structs implementing Cu::ForeignFunc.
+-- Create
+-- ToNumber
+-- Add
+-- Subtract
+-- ClockTime
+
+- Rewrote BasicPrimitiveSizes.h and BasicPrimitiveSizes.cpp functions as struct implementing Cu::ForeignFunc.
+- Replaced BASIC_PRIMITIVE_TYPENAME with BasicPrimitive::StaticTypeName().
+
+- Rewrote intmath.h and intmath.cpp functions.
+- Rewrote ulongmath.h and ulongmath.cpp functions.
+- Rewrote ManagedList.h and ManagedList.cpp functions.
+
+BasicPrimitive.h
+- Replaced inheritance from Number with inheritance from Object.
+
+
+===========
 2017/2/12
 
 intmath/

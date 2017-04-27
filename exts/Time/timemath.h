@@ -2,24 +2,20 @@
 #include "../../Copper/src/Copper.h"
 #include <ctime>
 #include <limits.h>
-#include "../FFIBase.h"
 
 namespace Cu {
   namespace MSecTime {
 
-using FFI::constParamsList;
-using FFI::constParamsIter;
-using FFI::CallResult;
-
 typedef long long int ms_time;
-static const char* MSecTime_TYPENAME = "mstime";
 
-void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames);
+void addFunctionsToEngine(Engine& engine, bool useShortNames);
 
 class MSecTime : public Object {
   ms_time value;
 
 public:
+  static const char* StaticTypeName() { return "mstime"; }
+
   MSecTime()
     : value(0)
   {}
@@ -43,7 +39,7 @@ public:
   virtual void writeToString(String& out) const;
 
   virtual const char* typeName() const {
-    return MSecTime_TYPENAME;
+    return StaticTypeName();
   }
 
   void fromUnsignedLong(unsigned long);
@@ -65,13 +61,52 @@ public:
 };
 
 bool isObjectMSecTime(Object*);
-bool getTimeValue(constParamsIter&, MSecTime*&);
 
-bool create(constParamsList&, CallResult&, Logger*);
-bool mstimeToNumber(constParamsList&, CallResult&, Logger*);
-bool mstimeAdd(constParamsList&, CallResult&, Logger*);
-bool mstimeSubtract(constParamsList&, CallResult&, Logger*);
-bool clockTime(constParamsList&, CallResult&);
+struct Create : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct ToNumber : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual const char* getParameterName( unsigned int index ) {
+		if ( index == 0 )
+			return MSecTime::StaticTypeName();
+		return "";
+	}
+
+	virtual unsigned int getParameterCount() {
+		return 1;
+	}
+};
+
+struct Add : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Subtract : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct ClockTime : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
 
   }
 }

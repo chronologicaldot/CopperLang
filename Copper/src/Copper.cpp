@@ -1277,7 +1277,7 @@ LoopStructureParseTask::LoopStructureParseTask(
 	: ParseTask( ParseTask::Loop )
 	, firstIter(*strand)
 	, finalGotos()
-	, openBodies(0)
+	, openBodies(1)
 	, state(Start)
 {
 #ifdef COPPER_PARSER_LEVEL_MESSAGES
@@ -1325,7 +1325,7 @@ LoopStructureParseTask::finalizeGotos(
 
 // *********** FOREIGN FUNCTION INTERFACE ************
 
-ForeignFunctionInterface::ForeignFunctionInterface(
+FFIServices::FFIServices(
 	Engine&			enginePtr,
 	ParamsIter		paramsStart
 )
@@ -1336,7 +1336,7 @@ ForeignFunctionInterface::ForeignFunctionInterface(
 
 // returns each successive parameter sent to the function
 Object*
-ForeignFunctionInterface::getNextParam() {
+FFIServices::getNextArg() {
 	Object* out;
 	if ( done )
 		throw FFIMisuseException(); // Prevents accidental misuse
@@ -1347,33 +1347,33 @@ ForeignFunctionInterface::getNextParam() {
 }
 
 bool
-ForeignFunctionInterface::hasMoreParams() {
+FFIServices::hasMoreArgs() {
 	return !done;
 }
 
 void
-ForeignFunctionInterface::printInfo(
+FFIServices::printInfo(
 	const char* message
 ) {
 	engine.print(LogLevel::info, message);
 }
 
 void
-ForeignFunctionInterface::printWarning(
+FFIServices::printWarning(
 	const char* message
 ) {
 	engine.print(LogLevel::warning, message);
 }
 
 void
-ForeignFunctionInterface::printError(
+FFIServices::printError(
 	const char* message
 ) {
 	engine.print(LogLevel::error, message);
 }
 
 void
-ForeignFunctionInterface::setResult(
+FFIServices::setResult(
 	Object* obj
 ) {
 	engine.lastObject.set(obj);
@@ -1568,12 +1568,33 @@ void Engine::print(const LogLevel::Value& logLevel, const EngineMessage::Value& 
 }
 
 void
-Engine::addForeignFunction(const String& pName, ForeignFunc* pFunction) {
+Engine::addForeignFunctionInstance(
+	const String&	pName,
+	ForeignFunc*	pFunction
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::addForeignFunctionInstance");
+#endif
+	if ( isNull(pFunction) )
+		throw NullForeignFunctionException();
+	foreignFunctions.insert(pName, ForeignFuncContainer(pFunction));
+}
+
+/*
+void
+Engine::addForeignFunction(
+	const String&	pName,
+	bool			(*pFunction)( FFIServices& ),
+	bool			pIsVariadic
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::addForeignFunction");
 #endif
-	foreignFunctions.insert(pName, ForeignFuncContainer(pFunction));
+	ForeignFunctionWrapper* ffw = new ForeignFunctionWrapper(pFunction, pIsVariadic );
+	foreignFunctions.insert(pName, ForeignFuncContainer(ffw));
+	ffw->deref();
 }
+*/
 
 EngineResult::Value
 Engine::run(
@@ -1582,13 +1603,6 @@ Engine::run(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::run");
 #endif
-	//char c;
-	//CharList byteQueue; // Waste of space but fast (only needs to be a singly-linked list)
-	//while( ! stream.atEOS() ) {
-	//	c = stream.getNextByte();
-	//	byteQueue.push_front(c);
-	//}
-	//switch( lexAndParse(byteQueue, false) ) {
 	switch( lexAndParse(stream, false) ) {
 	case ParseResult::Done:
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
@@ -1624,23 +1638,21 @@ Engine::printGlobalStrand() {
 ParseResult::Value
 Engine::lexAndParse(
 	ByteStream& stream,
-	//const CharList& byteQueue
 	bool srcDone
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::lexAndParse");
 #endif
-	//if ( byteQueue.size() == 0 )
-	//	return ParseResult::More;
-
+#ifdef COPPER_SPEED_PROFILE
+	std::printf("PROFILE Engine::lexAndParse() start\n");
+	time_t endTime;
+	time_t startTime = clock();
+#endif
 	char c;
 	CharList tokenValue; // Since I have to build with it, it's an easy-to-append-to list
 	//List<Token> bufferedTokens; // Within the engine, so it's state is saved
 	TokenType tokenType;
 
-	//CharList::ConstIter ci = byteQueue.constStart();
-	//do {
-		//c = *ci;
 	while ( ! stream.atEOS() ) {
 		c = stream.getNextByte();
 
@@ -1692,7 +1704,7 @@ Engine::lexAndParse(
 			}
 			tokenValue.push_back(c);
 		}
-	} //while ( ci.next() );
+	}
 
 	if ( tokenValue.size() > 0 ) {
 		// Push the last token
@@ -1703,8 +1715,14 @@ Engine::lexAndParse(
 		}
 	}
 
-	if ( ! bufferedTokens.has() )
+#ifdef COPPER_SPEED_PROFILE
+	endTime = clock();
+	std::printf("PROFILE Engine::lexAndParse() time = %f\n", static_cast<double>((endTime - startTime) * 1000 / CLOCKS_PER_SEC));
+#endif
+
+	if ( ! bufferedTokens.has() ) {
 		return ParseResult::More;
+	}
 
 	ParserContext& context = getGlobalParserContext();
 	context.setTokenSource( bufferedTokens );
@@ -1715,7 +1733,6 @@ Engine::lexAndParse(
 	case ParseResult::Error:
 		return ParseResult::Error;
 	case ParseResult::Done:
-		//bufferedTokens.clear(); // removed for now
 		context.clearUsedTokens();
 		return ParseResult::Done;
 	// to get -Wall to stop griping
@@ -1730,7 +1747,6 @@ void Engine::signalEndofProcessing() {
 	print(LogLevel::debug, "[DEBUG: Engine::signalEndofProcessing");
 #endif
 	if ( notNull(endMainCallback) ) {
-printf("has endMainCallback\n");
 		endMainCallback->CuEngineDoneProcessing();
 	}
 }
@@ -1949,7 +1965,7 @@ Engine::isSpecialCharacter(
 	case '.': pTokenType = TT_member_link;				return true;
 	case '(': pTokenType = TT_parambody_open;			return true;
 	case ')': pTokenType = TT_parambody_close;			return true;
-	case '{': pTokenType = TT_execbody_open;				return true;
+	case '{': pTokenType = TT_execbody_open;			return true;
 	case '}': pTokenType = TT_execbody_close;			return true;
 	case '[': pTokenType = TT_objectbody_open;			return true;
 	case ']': pTokenType = TT_objectbody_close;			return true;
@@ -2109,37 +2125,9 @@ Engine::collectString(
 	return Result::Error;
 }
 
-// ********* OPERATION CODE HANDLING ********
-
-void
-Engine::opStrandAddNewOperation(
-	OpStrand*	strand,
-	Opcode*		newOp	// passed directly after creation with "new"
-) {
-	if ( isNull(strand) )
-		throw EmptyOpstrandException();
-	if ( isNull(newOp) )
-		throw NullOpcodeException();
-	strand->push_back(OpcodeContainer(newOp));
-	newOp->deref();
-}
-
-// Should inline
-void
-Engine::opStrandAddOperation(
-	OpStrand*	strand,
-	Opcode*		op
-) {
-	if ( isNull(strand) )
-		throw EmptyOpstrandException();
-	if ( isNull(op) )
-		throw NullOpcodeException();
-	strand->push_back(OpcodeContainer(op));
-}
 
 //--------------------------------------
 // ******** SYSTEM FUNCTION SETUP ******
-
 
 void
 Engine::setupSystemFunctions() {
@@ -2183,6 +2171,11 @@ Engine::parse(
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::parse");
+#endif
+#ifdef COPPER_SPEED_PROFILE
+	std::printf("PROFILE Engine::parse() start\n");
+	time_t endTime;
+	time_t startTime = clock();
 #endif
 	// IMPORTANT NOTE: You cannot short-circuit this function by merely checking for if the context
 	// is finished. There may be unfinished tasks that prevent valid processing.
@@ -2235,7 +2228,7 @@ Engine::parse(
 			}
 		} while ( result == ParseTask::Result::task_done );
 
-		switch( interpretToken( context, srcDone ) )
+		switch( interpretToken( context ) )
 		{
 		case ParseResult::More:
 			continue; // Skip to perform processing cycle (task has been added)
@@ -2255,6 +2248,10 @@ Engine::parse(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	context.outputStrand->validate();
 	print(LogLevel::debug, "[DEBUG: Engine::parse validated output strand.");
+#endif
+#ifdef COPPER_SPEED_PROFILE
+	endTime = clock();
+	std::printf("PROFILE Engine::parse() time = %f\n", static_cast<double>((endTime - startTime) * 1000 / CLOCKS_PER_SEC));
 #endif
 
 	//outStrand.append(context.buildStrand); // Should be saved in the context anyways
@@ -2279,8 +2276,7 @@ Engine::moveToFirstUnusedToken(
 
 ParseResult::Value
 Engine::interpretToken(
-	ParserContext&	context,
-	bool			srcDone
+	ParserContext&	context
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::intepretToken");
@@ -2525,10 +2521,8 @@ Engine::processParseTask(
 	case ParseTask::SRPS: // Single Raw Parameter Structure "own", "is_owner", "is_ptr"
 		return parseSRPS( (SRPSParseTask*)task, context, srcDone );
 
-	// to get -Wall to stop griping:
 	default:
-		// Should probably throw, but also should never happen
-		return ParseTask::Result::syntax_error;
+		throw BadParserStateException();
 	}
 }
 
@@ -2576,7 +2570,10 @@ Engine::parseFuncBuildTask(
 		return ParseFunctionBuild_CollectParameters(task, context, srcDone);
 
 	case FuncBuildParseTask::State::FromExecBody:
-		return ParseFunctionBuild_FromExecBody(task, context, srcDone);
+		return ParseFunctionBuild_FromExecBody(context, srcDone);
+
+	default:
+		throw BadParserStateException();
 	}
 
 	// REMEMBER TO EAT TOKENS!
@@ -2792,7 +2789,7 @@ std::printf("[DEBUG: Engine::ParseFunctionBuild_CollectParams -> FromExecBody, t
 			context.commitTokenUsage(); // Keep object-body-close token
 			task->state = FuncBuildParseTask::State::FromExecBody;
 			context.moveToNextToken(); // Move back to execbody open token
-			return ParseFunctionBuild_FromExecBody(task, context, srcDone);
+			return ParseFunctionBuild_FromExecBody(context, srcDone);
 		} else {
 			// No execution body, so end here
 			context.addNewOperation( new Opcode( Opcode::FuncBuild_end ) );
@@ -2809,7 +2806,7 @@ std::printf("[DEBUG: Engine::ParseFunctionBuild_CollectParams -> FromExecBody, t
 
 ParseTask::Result::Value
 Engine::ParseFunctionBuild_FromExecBody(
-	FuncBuildParseTask*	task,
+	//FuncBuildParseTask*	task,
 	ParserContext&		context,
 	bool				srcDone
 ) {
@@ -2970,7 +2967,7 @@ Engine::parseFuncFoundTask(
 			task->state = FuncFoundParseTask::ValidateAssignment;
 			context.commitTokenUsage(); // Keep the assignment symbol
 			if ( context.moveToNextToken() ) {
-				return ParseFuncFound_ValidateAssignment(task, context, srcDone);
+				return ParseFuncFound_ValidateAssignment(task, context);
 			} else {
 				if ( srcDone ) {
 					print(LogLevel::error, "Variable assignment incomplete.");
@@ -2984,7 +2981,7 @@ Engine::parseFuncFoundTask(
 			task->state = FuncFoundParseTask::ValidatePointerAssignment;
 			context.commitTokenUsage(); // Keep the assignment symbol
 			if ( context.moveToNextToken() ) {
-				return ParseFuncFound_ValidatePointerAssignment(task, context, srcDone);
+				return ParseFuncFound_ValidatePointerAssignment(task, context);
 			} else {
 				if ( srcDone ) {
 					print(LogLevel::error, "Variable pointer assignment incomplete.");
@@ -3032,13 +3029,13 @@ Engine::parseFuncFoundTask(
 		r = moveToFirstUnusedToken(context, srcDone);
 		if ( r != ParseTask::Result::task_done )
 			return r;
-		return ParseFuncFound_ValidateAssignment(task, context, srcDone);
+		return ParseFuncFound_ValidateAssignment(task, context);
 
 	case FuncFoundParseTask::ValidatePointerAssignment:
 		r = moveToFirstUnusedToken(context, srcDone);
 		if ( r != ParseTask::Result::task_done )
 			return r;
-		return ParseFuncFound_ValidatePointerAssignment(task, context, srcDone);
+		return ParseFuncFound_ValidatePointerAssignment(task, context);
 
 	case FuncFoundParseTask::CompleteAssignment:
 		task->code->setType( Opcode::FuncFound_assignment );
@@ -3064,14 +3061,16 @@ Engine::parseFuncFoundTask(
 		// Need to collect parameters until the parameter body closing is found.
 		// This means keeping track of brackets.
 		return ParseFuncFound_CollectParams(task, context, srcDone);
+
+	default:
+		throw BadParserStateException();
 	}
 }
 
 ParseTask::Result::Value
 Engine::ParseFuncFound_ValidateAssignment(
 	FuncFoundParseTask*	task,
-	ParserContext&		context,
-	bool				srcDone
+	ParserContext&		context
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::ParseFuncFound_ValidateAssignment");
@@ -3101,8 +3100,7 @@ Engine::ParseFuncFound_ValidateAssignment(
 ParseTask::Result::Value
 Engine::ParseFuncFound_ValidatePointerAssignment(
 	FuncFoundParseTask*	task,
-	ParserContext&		context,
-	bool				srcDone
+	ParserContext&		context
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::ParseFuncFound_ValidatePointerAssignment");
@@ -3297,6 +3295,9 @@ Engine::parseIfStructure(
 	case IfStructureParseTask::PostBody:
 		// This section performs appending of last opcodes to strand
 		return ParseIfStructure_PostBody(task, context, srcDone);
+
+	default:
+		throw BadParserStateException();
 	}
 
 	// Before popping, this task must add a final terminal that all the remaining goto's can point to.
@@ -3643,35 +3644,27 @@ Engine::parseLoopStructure(
 		// Loop head found
 		context.commitTokenUsage();
 		// Note: Loop start terminal was added when the "loop" token was found.
+
+		// Scan the body first to make sure that it's all there. Once that's confirmed, I can collect the tokens.
 		task->state = LoopStructureParseTask::CollectBody;
 
 	case LoopStructureParseTask::CollectBody:
 
-		moveToTokenResult = moveToFirstUnusedToken(context, true);
-		if ( moveToTokenResult != ParseTask::Result::task_done )
-			return moveToTokenResult;
+		while ( context.moveToNextToken() ) {
 
-		//if ( !context.moveToNextToken() && srcDone ) {
-		//	print(LogLevel::error, "Loop-structure body not complete before stream end.");
-		//	return ParseTask::Result::syntax_error;
-		//}
-
-		// Perform initial scan to make sure all execution body tokens are paired
-		do {
 			switch( context.peekAtToken().type ) {
 			case TT_execbody_open:
+				task->openBodies++;
 				if ( task->openBodies == PARSER_OPENBODY_MAX_COUNT ) {
 					print(LogLevel::error, EngineMessage::ExceededBodyCountLimit );
 					return ParseTask::Result::syntax_error;
 				}
-				openBodies++;
 				break;
 
 			case TT_execbody_close:
-				openBodies--;
-				if ( openBodies == 0 ) {
-					// Allow creation of processes within the body of the loop
-					task->openBodies = 1;
+				task->openBodies--;
+				if ( task->openBodies == 0 ) {
+					task->openBodies = 1; // Reset to allow AwaitFinish to use it.
 					task->state = LoopStructureParseTask::AwaitFinish;
 					return ParseLoop_AwaitFinish(task, context);
 				}
@@ -3680,10 +3673,10 @@ Engine::parseLoopStructure(
 			default:
 				break;
 			}
-		} while ( context.moveToNextToken() );
+		}
 
 		if ( srcDone ) {
-			print(LogLevel::error, "Loop structure is incomplete.");
+			print(LogLevel::error, "Stream ended before loop structure was completed.");
 			return ParseTask::Result::syntax_error;
 		} else {
 			return ParseTask::Result::need_more;
@@ -3693,8 +3686,7 @@ Engine::parseLoopStructure(
 		return ParseLoop_AwaitFinish(task, context);
 
 	default:
-		print(LogLevel::error, "Loop structure parsing reached invalid state.");
-		return ParseTask::Result::syntax_error;
+		throw BadParserStateException();
 	}
 }
 
@@ -3930,6 +3922,11 @@ Engine::execute() {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::execute");
 #endif
+#ifdef COPPER_SPEED_PROFILE
+	std::printf("PROFILE Engine::execute() start\n");
+	time_t endTime;
+	time_t startTime = clock();
+#endif
 
 	// Note: When adding a list of operations, also set currOp.
 	OpStrandStackIter opcodeStrandStackIter = opcodeStrandStack.end();
@@ -3963,6 +3960,10 @@ Engine::execute() {
 				case ExecutionResult::Done:
 					clearStacks();
 					signalEndofProcessing();
+#ifdef COPPER_SPEED_PROFILE
+	endTime = clock();
+	std::printf("PROFILE Engine::execute() Done time = %f\n", static_cast<double>((endTime - startTime) * 1000 / CLOCKS_PER_SEC));
+#endif
 					return EngineResult::Done;
 
 				case ExecutionResult::Reset:
@@ -4014,6 +4015,11 @@ Engine::execute() {
 
 	// Clear all first-level opcodes that have been run up to this point
 	opcodeStrandStack.start()->removeAllUpToCurrentCode();
+
+#ifdef COPPER_SPEED_PROFILE
+	endTime = clock();
+	std::printf("PROFILE Engine::execute() Normal time = %f\n", static_cast<double>((endTime - startTime) * 1000 / CLOCKS_PER_SEC));
+#endif
 
 	return EngineResult::Ok;
 }
@@ -4173,7 +4179,7 @@ Engine::operate(
 		task = getLastTask();
 		if ( task->name == TaskName::FuncFound ) {
 			opIter.next(); // Increment to the Terminal
-			switch( setupFunctionExecution(*((FuncFoundTask*)task), opStrandStackIter, opIter) ) {
+			switch( setupFunctionExecution(*((FuncFoundTask*)task), opStrandStackIter) ) {
 
 			case FuncExecReturn::Ran:
 				popLastTask();
@@ -4323,8 +4329,7 @@ Engine::operate(
 FuncExecReturn::Value
 Engine::setupFunctionExecution(
 	FuncFoundTask& task,
-	OpStrandStackIter&	opStrandStackIter,
-	OpStrandIter&		opIter
+	OpStrandStackIter&	opStrandStackIter
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupFunctionExecution");
@@ -4346,7 +4351,7 @@ Engine::setupFunctionExecution(
 		return result;
 	}
 
-	return setupUserFunctionExecution(task, opStrandStackIter, opIter);
+	return setupUserFunctionExecution(task, opStrandStackIter);
 }
 
 FuncExecReturn::Value
@@ -4499,20 +4504,20 @@ Engine::setupForeignFunctionExecution(
 		}
 	}
 	unsigned int ffhIndex = 0;
-	ParamsIter taskParamsIter = task.params.start();
+	ParamsIter taskArgsIter = task.params.start();
 	// This is for non-variadic functions. Variadic functions should only return a parameter count
 	// when they have a specific number of parameters that MUST be a certain type for any call.
 	// For example, a list function might be Top(List, Iter, Iter...) so it's constant parameter is
 	// the first one: Top(List...) meaning it should return a parameter count of 1 and have
 	// getParameterName() return the typename for the List.
 	while ( ffhIndex < foreignFunc->getParameterCount() ) {
-		if ( ! taskParamsIter.has() ) {
+		if ( ! taskArgsIter.has() ) {
 			break; // For variadic functions
 		}
-		if ( ! util::equals(foreignFunc->getParameterName(ffhIndex), (*taskParamsIter)->typeName()) )
+		if ( ! util::equals(foreignFunc->getParameterName(ffhIndex), (*taskArgsIter)->typeName()) )
 		{
 			// Language specification says this should optionally be a warning
-			print(LogLevel::error, "Parameter types do not match foreign function header.");
+			print(LogLevel::error, "Argument types do not match foreign function header.");
 			if ( ignoreBadForeignFunctionCalls ) {
 				return FuncExecReturn::Ran; // Leaves the return as empty function
 			} else {
@@ -4520,12 +4525,12 @@ Engine::setupForeignFunctionExecution(
 			}
 		}
 		++ffhIndex;
-		if ( ! taskParamsIter.next() ) {
+		if ( ! taskArgsIter.next() ) {
 			break;
 		}
 	}
 
-	ForeignFunctionInterface ffi(*this, task.params.start());
+	FFIServices ffi(*this, task.params.start());
 	bool result = foreignFunc->call( ffi );
 
 	// lastObject is set by setResult() or setNewResult() of the FFI.
@@ -4537,8 +4542,7 @@ Engine::setupForeignFunctionExecution(
 FuncExecReturn::Value
 Engine::setupUserFunctionExecution(
 	FuncFoundTask& task,
-	OpStrandStackIter&	opStrandStackIter,
-	OpStrandIter&		opIter // was using Opcode&
+	OpStrandStackIter&	opStrandStackIter
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupUserFunctionExecution");
@@ -4630,10 +4634,7 @@ Engine::setupUserFunctionExecution(
 	stackFrame->deref();
 
 	// Unfortunately, incrementing up a stack frame leaves the current operator at a used token.
-	// We don't want this, so we increment it here.
-	// If it's already at the end, then execute() will pop it later.
-	//opIter.next();
-	// ^ Now handled using an extra Terminal after the function call.
+	// We don't want this, so handle it in execute().
 
 	// Finally, add the body to be processed
 	addOpStrandToStack(body->getOpcodeStrand());

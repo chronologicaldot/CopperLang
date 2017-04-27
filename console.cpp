@@ -11,8 +11,8 @@
 #include "Copper/stdlib/InStreamLogger.h"
 #include "exts/Math/intmath.h"
 #include "exts/Math/ulongmath.h"
-#include "exts/Math/floatmath.h"
-#include "exts/Math/doublemath.h"
+//#include "exts/Math/floatmath.h"
+//#include "exts/Math/doublemath.h"
 #include "exts/Math/BasicPrimitiveSizes.h"
 #include "exts/Iterable/ManagedList.h"
 #include "exts/Time/timemath.h"
@@ -35,18 +35,18 @@ void handler(int sig) {
 int main() {
 	Cu::Engine engine;
 	CuStd::Printer printer;
-	CuStd::InStreamLogger logger;
-	engine.setLogger(&logger);
-	engine.addForeignFunction(util::String("print"), &printer);
-	engine.setStackTracePrintingEnabled(true);
+	CuStd::InStreamLogger streamLogger;
+	engine.setLogger(&streamLogger);
+	engine.addForeignFunctionInstance(util::String("print"), &printer);
+	//engine.setStackTracePrintingEnabled(true);
 
-	Cu::Numeric::Int::addFunctionsToEngine(engine, logger, false);
-	Cu::Numeric::ULong::addFunctionsToEngine(engine, logger, false);
-	Cu::Numeric::Float::addFunctionsToEngine(engine, logger, false);
-	Cu::Numeric::Double::addFunctionsToEngine(engine, logger, false);
-	Cu::Numeric::Sizes::addFunctionsToEngine(engine, logger, false);
-	Cu::ManagedList::addFunctionsToEngine(engine, logger, true);
-	Cu::MSecTime::addFunctionsToEngine(engine, logger, true);
+	Cu::Numeric::Int::addFunctionsToEngine(engine, false);
+	Cu::Numeric::ULong::addFunctionsToEngine(engine, false);
+	//Cu::Numeric::Float::addFunctionsToEngine(engine, false);
+	//Cu::Numeric::Double::addFunctionsToEngine(engine, false);
+	Cu::Numeric::Sizes::addFunctionsToEngine(engine, false);
+	Cu::ManagedList::addFunctionsToEngine(engine, true);
+	Cu::MSecTime::addFunctionsToEngine(engine, true);
 
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
@@ -54,7 +54,7 @@ int main() {
 
 	int err = 0;
 	try {
-		while ( engine.run( logger ) == Cu::EngineResult::Ok );
+		while ( engine.run( streamLogger ) == Cu::EngineResult::Ok );
 	}
 	catch( Cu::BadReferenceCountingException& brce ) {
 		if ( brce.object ) {

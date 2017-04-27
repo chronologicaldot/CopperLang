@@ -9,20 +9,20 @@ namespace Numeric {
 namespace ULong {
 
 bool isObjectULong(const Object* pObject) {
-	return ( util::equals( pObject->typeName(), BASIC_PRIMITIVE_TYPENAME )
+	return ( isObjectOfType( *pObject, BasicPrimitive::StaticTypeName() )
 		&& ((BasicPrimitive*)pObject)->isPrimitiveType( BasicPrimitive::Type::_ulong ) );
 }
 
 bool getULong(const Object* pObject, ulong& pValue) {
-	if ( util::equals( pObject->typeName(), BASIC_PRIMITIVE_TYPENAME ) ) {
+	if ( isObjectOfType( *pObject, BasicPrimitive::StaticTypeName() ) ) {
 		pValue = ((BasicPrimitive*)pObject)->getAsUnsignedLong();
 		return true;
 	} else
-	if ( ! util::equals( pObject->typeName(), NUMBER_TYPENAME ) ) {
+	if ( ! isObjectOfType( *pObject, ObjectNumber::StaticTypeName() ) ) {
 		pValue = 0;
 		return false;
 	}
-	pValue = ((Number*)(pObject))->getAsUnsignedLong();
+	pValue = ((ObjectNumber*)(pObject))->getAsUnsignedLong();
 	return true;
 }
 
@@ -30,188 +30,53 @@ bool iszero(ulong p) {
 	return p == 0;
 }
 
-bool isEqual(ulong p, ulong q) {
-	return p == q;
-}
-
-bool isGreaterThan(ulong p, ulong q) {
-	return p > q;
-}
-
-bool isLessThan(ulong p, ulong q) {
-	return p < q;
-}
-
-bool isGreaterThanOrEqual(ulong p, ulong q) {
-	return p >= q;
-}
-
-bool isLessThanOrEqual(ulong p, ulong q) {
-	return p <= q;
-}
-
-// Thanks to pmg for the bounds tests for integers.
-// https://stackoverflow.com/questions/199333/how-to-detect-integer-overflow-in-c-c
-// and thanks to Franz D. for observing more detection is needed for multiplication.
-// Tests have been modified for unsigned long.
-
-ulong add(ulong p, ulong q, Logger* logger) {
-#ifdef ENABLE_COPPER_ULONG_BOUNDS_CHECKS
-	if ((q > 0) && (p > ULONG_MAX - q)) // detect overflow
-	{
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "ULong-sum overflows. Returning max value.");
-		}
-		return ULONG_MAX;
-	}
-#endif
-	return p + q;
-}
-
-ulong subtract(ulong p, ulong q, Logger* logger) {
-#ifdef ENABLE_COPPER_ULONG_BOUNDS_CHECKS
-	if ((q < 0) && (p > ULONG_MAX + q)) // detect overflow
-	{
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "ULong-reduce overflows. Returning max value.");
-		}
-		return ULONG_MAX;
-	}
-	else if ((q > 0) && (p < q)) // detect underflow
-	{
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "ULong-reduce underflows. Returning min value.");
-		}
-		return 0;
-	}
-#endif
-	return p - q;
-}
-
-ulong multiply(ulong p, ulong q, Logger* logger) {
-#ifdef ENABLE_COPPER_ULONG_BOUNDS_CHECKS
-	if ( q > 0 && p > ULONG_MAX / q ) {
-		logger->print(LogLevel::warning, "ULong-multiplication overflows. Returning max value.");
-		return ULONG_MAX;
-	}
-#endif
-	return p * q;
-}
-
-ulong divide(ulong p, ulong q, Logger* logger) {
-	if ( iszero(q) ) {
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "ULong-division divisor is zero. Ignoring param value.");
-		}
-		return p;
-	}
-	return p / q;
-}
-
-ulong power(ulong p, ulong q, Logger* logger) {
-	double r = pow((double)p, (double)q);
-	return (ulong)r;
-}
-
-ulong mod(ulong p, ulong q, Logger* logger) {
-	if ( iszero(q) ) {
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "ULong-modulus divisor is zero. Ignoring param value.");
-		}
-		return p;
-	}
-	return p % q;
-}
-
-ulong pick_max(ulong p, ulong q, Logger*) {
-	return (p > q ? p : q);
-}
-
-ulong pick_min(ulong p, ulong q, Logger*) {
-	return (p < q ? p : q);
-}
-
-void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
-
-	AreULong*			ulongAreULong	= new AreULong();
-	Create*				ulongCreate		= new Create(&logger);
-	Compare*			ulongEqual		= new Compare(&logger, isEqual);
-	Compare*			ulongGreaterThanOrEq	= new Compare(&logger, isGreaterThanOrEqual);
-	Compare*			ulongLessThanOrEq		= new Compare(&logger, isLessThanOrEqual);
-	Compare*			ulongGreaterThan		= new Compare(&logger, isGreaterThan);
-	Compare*			ulongLessThan			= new Compare(&logger, isLessThan);
-	SingleOperation*	ulongSum = new SingleOperation(&logger, add);
-	SingleOperation*	ulongRdc = new SingleOperation(&logger, subtract);
-	SingleOperation*	ulongMul = new SingleOperation(&logger, multiply);
-	SingleOperation*	ulongDiv = new SingleOperation(&logger, divide);
-	SingleOperation*	ulongMod = new SingleOperation(&logger, mod);
-	SingleOperation*	ulongPow = new SingleOperation(&logger, power);
-	Avg*				ulongAvg = new Avg(&logger);
-	SingleOperation*	ulongMax = new SingleOperation(&logger, pick_max);
-	SingleOperation*	ulongMin = new SingleOperation(&logger, pick_min);
-
-	Unimplemented* ulongUnimplemented = new Unimplemented(&logger);
-
-	engine.addForeignFunction(util::String("are_ulong"), ulongAreULong);
-	engine.addForeignFunction(util::String("ulong"),	ulongCreate);
+void addFunctionsToEngine(
+	Engine&		engine,
+	bool		useShortNames
+) {
+	addForeignFuncInstance<AreULong>	(engine, "are_ulong");
+	addForeignFuncInstance<Create>		(engine, "ulong");
 
 	if ( useShortNames ) {
-		engine.addForeignFunction(util::String("equal"),ulongEqual);
-		engine.addForeignFunction(util::String("gte"),	ulongGreaterThanOrEq);
-		engine.addForeignFunction(util::String("lte"),	ulongLessThanOrEq);
-		engine.addForeignFunction(util::String("gt"),	ulongGreaterThan);
-		engine.addForeignFunction(util::String("lt"),	ulongLessThan);
-		engine.addForeignFunction(util::String("+"),	ulongSum);
-		engine.addForeignFunction(util::String("-"),	ulongRdc);
-		engine.addForeignFunction(util::String("*"),	ulongMul);
-		engine.addForeignFunction(util::String("/"),	ulongDiv);
-		engine.addForeignFunction(util::String("%"),	ulongMod);
-		engine.addForeignFunction(util::String("pow"),	ulongPow);
-		engine.addForeignFunction(util::String("avg"),	ulongAvg);
-		engine.addForeignFunction(util::String("max"),	ulongMax);
-		engine.addForeignFunction(util::String("min"),	ulongMin);
-		FFI::simpleFunctionAdd(engine, util::String("abs"),	get_abs, &logger);
+		addForeignFuncInstance<AreEqual>				(engine, "equal");
+		addForeignFuncInstance<IsGreaterThan>			(engine, "gt");
+		addForeignFuncInstance<IsLessThan>				(engine, "lt");
+		addForeignFuncInstance<IsGreaterThanOrEqual>	(engine, "gte");
+		addForeignFuncInstance<IsLessThanOrEqual>		(engine, "lte");
+		addForeignFuncInstance<Add>						(engine, "+");
+		addForeignFuncInstance<Subtract>				(engine, "-");
+		addForeignFuncInstance<Multiply>				(engine, "*");
+		addForeignFuncInstance<Divide>					(engine, "/");
+		addForeignFuncInstance<Modulus>					(engine, "%");
+		addForeignFuncInstance<Power>					(engine, "pow");
+		addForeignFuncInstance<Avg>						(engine, "avg");
+		addForeignFuncInstance<Get_abs>					(engine, "abs");
+		addForeignFuncInstance<Incr>					(engine, "++");
+		addForeignFuncInstance<Pick_min>				(engine, "min");
+		addForeignFuncInstance<Pick_max>				(engine, "max");
 
-		engine.addForeignFunction(util::String("sin"),	ulongUnimplemented);
-		engine.addForeignFunction(util::String("cos"),	ulongUnimplemented);
-		engine.addForeignFunction(util::String("tan"),	ulongUnimplemented);
+		addForeignFuncInstance<Unimplemented>			(engine, "sin");
+		addForeignFuncInstance<Unimplemented>			(engine, "cos");
+		addForeignFuncInstance<Unimplemented>			(engine, "tan");
 	} else {
-		engine.addForeignFunction(util::String("ulong_equal"),	ulongEqual);
-		engine.addForeignFunction(util::String("ulong_gte"),	ulongGreaterThanOrEq);
-		engine.addForeignFunction(util::String("ulong_lte"),	ulongLessThanOrEq);
-		engine.addForeignFunction(util::String("ulong_gt"),		ulongGreaterThan);
-		engine.addForeignFunction(util::String("ulong_lt"),		ulongLessThan);
-		engine.addForeignFunction(util::String("ulong+"),		ulongSum);
-		engine.addForeignFunction(util::String("ulong-"),		ulongRdc);
-		engine.addForeignFunction(util::String("ulong*"),		ulongMul);
-		engine.addForeignFunction(util::String("ulong/"),		ulongDiv);
-		engine.addForeignFunction(util::String("ulong%"),		ulongMod);
-		engine.addForeignFunction(util::String("ulong_pow"),	ulongPow);
-		engine.addForeignFunction(util::String("ulong_avg"),	ulongAvg);
-		engine.addForeignFunction(util::String("ulong_max"),	ulongMax);
-		engine.addForeignFunction(util::String("ulong_min"),	ulongMin);
-		FFI::simpleFunctionAdd(engine, util::String("ulong_abs"),	get_abs, &logger);
+		addForeignFuncInstance<AreEqual>				(engine, "ulong_equal");
+		addForeignFuncInstance<IsGreaterThan>			(engine, "ulong_gt");
+		addForeignFuncInstance<IsLessThan>				(engine, "ulong_lt");
+		addForeignFuncInstance<IsGreaterThanOrEqual>	(engine, "ulong_gte");
+		addForeignFuncInstance<IsLessThanOrEqual>		(engine, "ulong_lte");
+		addForeignFuncInstance<Add>						(engine, "ulong+");
+		addForeignFuncInstance<Subtract>				(engine, "ulong-");
+		addForeignFuncInstance<Multiply>				(engine, "ulong*");
+		addForeignFuncInstance<Divide>					(engine, "ulong/");
+		addForeignFuncInstance<Modulus>					(engine, "ulong%");
+		addForeignFuncInstance<Power>					(engine, "ulong_pow");
+		addForeignFuncInstance<Avg>						(engine, "ulong_avg");
+		addForeignFuncInstance<Get_abs>					(engine, "ulong_abs");
+		addForeignFuncInstance<Incr>					(engine, "ulong++");
+		addForeignFuncInstance<Pick_min>				(engine, "ulong_min");
+		addForeignFuncInstance<Pick_max>				(engine, "ulong_max");
 	}
-
-	ulongAreULong->deref();
-	ulongCreate->deref();
-	ulongEqual->deref();
-	ulongGreaterThanOrEq->deref();
-	ulongLessThanOrEq->deref();
-	ulongGreaterThan->deref();
-	ulongLessThan->deref();
-	ulongSum->deref();
-	ulongRdc->deref();
-	ulongMul->deref();
-	ulongDiv->deref();
-	ulongMod->deref();
-	ulongPow->deref();
-	ulongAvg->deref();
-	ulongMax->deref();
-	ulongMin->deref();
-	ulongUnimplemented->deref();
 }
-
 
 ULong::ULong(const String& pInitValue)
 		: BasicPrimitive( BasicPrimitive::Type::_ulong )
@@ -260,155 +125,455 @@ double ULong::getAsDouble() const {
 	return (double)value;
 }
 
-bool AreULong::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
-	bool is = true;
-	if ( paramsIter.has() ) {
-		do {
-			if ( ! isObjectULong(**paramsIter) ) {
-				is = false;
-				break;
-			}
-		} while( ++paramsIter );
-	} else {
-		is = false;
+bool
+AreULong::call(
+	FFIServices& ffi
+) {
+	bool is = false;
+	while ( ffi.hasMoreArgs() ) {
+		is = isObjectULong(*(ffi.getNextArg()));
+		if ( !is ) {
+			break;
+		}
 	}
-	result.setWithoutRef(new ObjectBool(is));
+	ObjectBool* out = new ObjectBool(is);
+	ffi.setResult(out);
+	out->deref();
 	return true;
 }
 
-bool Create::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+Create::call(
+	FFIServices& ffi
+) {
+	// Only accepts at most 1 arg, but may have zero
+	Object* arg;
 	ulong value = 0;
-	// Use only the first param
-	if ( params.size() != 1 ) {
-		print(LogLevel::warning, "ULong-creation requires one param.");
-	} else {
-		if ( ! getULong( *paramsIter, value ) ) {
-			if ( util::equals( (*paramsIter)->typeName(), "number" ) ) {
-				result.setWithoutRef( new ULong( ((ObjectNumber*)*paramsIter)->getRawValue() ) );
-				return true;
+	if ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( ! getULong( *arg, value ) ) {
+			if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
+				value = ((ObjectNumber*)arg)->getAsUnsignedLong();
 			} else {
-				print(LogLevel::warning, "ULong-creation parameter was not a compatible number type.");
+				ffi.printWarning("ULong-creation argument was not a compatible number type.");
 			}
 		}
 	}
-	result.setWithoutRef(new ULong(value));
+	ULong* out = new ULong(value);
+	ffi.setResult(out);
+	out->deref();
 	return true;
 }
 
-bool Unimplemented::call( const List<Object*>& params, RefPtr<Object>& result ) {
-	print(LogLevel::warning, "ULong function not implemented.");
-	result.setWithoutRef(new ULong(0));
-	return true;
+bool
+Unimplemented::call(
+	FFIServices& ffi
+) {
+	ffi.printError("Unimplemented function for integer.");
+	return false;
 }
 
-bool Compare::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+IsZero::call(
+	FFIServices& ffi
+) {
+	Object* arg = ffi.getNextArg();
 	ulong value = 0;
-	ulong other_value = 0;
-	bool match = true;
-	if ( params.size() < 2 ) {
-		print(LogLevel::warning, "ULong-comparison function should have at least two parameters.");
+	ObjectBool* out = REAL_NULL;
+	if ( getULong(*arg, value) ) {
+		out = new ObjectBool(value == 0);
+	} else if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
+		out = new ObjectBool( ((ObjectNumber*)arg)->getAsUnsignedLong() == 0 );
 	} else {
-		if ( ! getULong(*paramsIter, value) ) {
-			print(LogLevel::warning, "ULong-comparison function should have only numeric parameters.");
-		}
-		while ( ++paramsIter ) {
-			if ( ! getULong(*paramsIter, other_value) ) {
-				print(LogLevel::warning, "ULong-comparison function should have only numeric parameters.");
-				other_value = 0;
-			}
-			if ( ! comparison(value, other_value) ) {
-				match = false;
-				break;
-			}
-		}
+		// Default return is an empty function
+		// Should this be a warning and default to true? Doesn't seem right.
+		ffi.printError("ULong-is-zero was not given a parsable number.");
+		return false;
 	}
-	result.setWithoutRef(new ObjectBool(match));
+	ffi.setResult(out);
+	out->deref();
 	return true;
 }
 
-bool SingleOperation::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+const char*
+IsZero::getParameterName(
+	unsigned int index
+) {
+	if ( index == 0 )
+		return BasicPrimitive::StaticTypeName();
+	return "";
+}
+
+unsigned int
+IsZero::getParameterCount() {
+	return 1;
+};
+
+bool
+AreEqual::call(
+	FFIServices& ffi
+) {
+	Object* arg;
+	bool are_equal = true;
+	ulong startValue = 0;
+	ulong value = 0;
+	bool hasFirstValue = false;
+	while( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getULong(*arg, value) ) {
+			if ( hasFirstValue ) {
+				are_equal &= (startValue == value);
+				if ( ! are_equal )
+					break;
+			} else {
+				startValue = value;
+				hasFirstValue = true;
+			}
+		} else {
+			are_equal = false;
+			ffi.printWarning("ULong are-equal function given non-numeric argument. Cancelling calculation...");
+			return false;
+		}
+	}
+	ObjectBool* out = new ObjectBool(are_equal);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+};
+
+bool
+IsGreaterThan::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	BasicPrimitive* arg2 = (BasicPrimitive*)(ffi.getNextArg());
+	ObjectBool* out = new ObjectBool(
+		arg->getAsUnsignedLong() > arg2->getAsUnsignedLong()
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+IsLessThan::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	BasicPrimitive* arg2 = (BasicPrimitive*)(ffi.getNextArg());
+	ObjectBool* out = new ObjectBool(
+		arg->getAsUnsignedLong() < arg2->getAsUnsignedLong()
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+IsGreaterThanOrEqual::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	BasicPrimitive* arg2 = (BasicPrimitive*)(ffi.getNextArg());
+	ObjectBool* out = new ObjectBool(
+		arg->getAsUnsignedLong() >= arg2->getAsUnsignedLong()
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+IsLessThanOrEqual::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	BasicPrimitive* arg2 = (BasicPrimitive*)(ffi.getNextArg());
+	ObjectBool* out = new ObjectBool(
+		arg->getAsUnsignedLong() <= arg2->getAsUnsignedLong()
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+// Thanks to pmg for the bounds tests for integers.
+// https://stackoverflow.com/questions/199333/how-to-detect-integer-overflow-in-c-c
+// and thanks to Franz D. for observing more detection is needed for multiplication.
+// Tests have been modified for unsigned long.
+
+bool
+Add::call(
+	FFIServices& ffi
+) {
+	Object* arg;
 	ulong total = 0;
 	ulong indie = 0;
-	if ( paramsIter.has() ) {
-		// First param is for the total
-		if ( ! getULong(*paramsIter, total) ) {
-			total = 0;
-			print(LogLevel::warning, "ULong math function should have only numeric parameters.");
-		}
-		while( ++paramsIter ) {
-			if ( ! getULong(*paramsIter, indie) ) {
-				indie = 0;
-				print(LogLevel::warning, "ULong math function should have only numeric parameters.");
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getULong(*arg, indie) ) {
+#ifdef ENABLE_COPPER_ULONG_BOUNDS_CHECKS
+			if ((indie > 0) && (total > ULONG_MAX - indie)) // detect overflow
+			{
+				ffi.printWarning("ULong-sum overflows. Returning max value.");
+				total = INT_MAX;
+				break;
 			}
-			total = operation(total, indie, logger);
+#endif
+			total += indie;
 		}
 	}
-	// Create a zeroed instance
-	result.setWithoutRef(new ULong(total));
+	ULong* out = new ULong(total);
+	ffi.setResult(out);
+	out->deref();
 	return true;
 }
-/*
-bool SingleParamOperation::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+
+bool
+Subtract::call(
+	FFIServices& ffi
+) {
+	Object* arg;
 	ulong total = 0;
-	if ( paramsIter.has() ) {
-		if ( ! getULong(*paramsIter, total) ) {
-			total = 0;
-			print(LogLevel::warning, "ULong math function should have a single numeric parameter.");
-		} else {
-			total = operation(total, logger);
+	ulong indie = 0;
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getULong(*arg, indie) ) {
+#ifdef ENABLE_COPPER_ULONG_BOUNDS_CHECKS
+			if ((indie > 0) && (total < indie)) // detect underflow
+			{
+				ffi.printWarning("ULong-subtraction/reduce underflows. Returning min value.");
+				total = 0;
+				break;
+			}
+#endif
+			total -= indie;
 		}
 	}
-	// Create a zeroed instance
-	result.setWithoutRef(new ULong(total));
+	ULong* out = new ULong(total);
+	ffi.setResult(out);
+	out->deref();
 	return true;
-}*/
+}
 
-bool Avg::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+Multiply::call(
+	FFIServices& ffi
+) {
+	Object* arg;
+	ulong total = 1;
+	ulong indie = 0;
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getULong(*arg, indie) ) {
+#ifdef ENABLE_COPPER_ULONG_BOUNDS_CHECKS
+			if ( ! iszero(indie) ) {
+				if ( total > ULONG_MAX / indie ) {
+					ffi.printWarning("ULong-multiplication overflows. Returning max value.");
+					total = ULONG_MAX;
+					break;
+				}
+				if ( total < 0 / indie ) {
+					ffi.printWarning("ULong-multiplication underflows. Returning min value.");
+					total = 0;
+					break;
+				}
+			}
+#endif
+			total *= indie;
+		}
+	}
+	ULong* out = new ULong(total);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Divide::call(
+	FFIServices& ffi
+) {
+	Object* arg;
+	ulong total = 1;
+	ulong indie = 0;
+	if ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		// Get the first arg and save it as the total.
+		// Failure results in termination
+		if ( ! getULong(*arg, total) ) {
+			ffi.printError("ULong division first argument was not a number.");
+			return false;
+		}
+	}
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getULong(*arg, indie) ) {
+			if ( iszero(indie) ) {
+				ffi.printWarning("ULong division divisor is zero. Returning maximized value instead.");
+				total = (total >= 0 ? ULONG_MAX : 0);
+				break;
+			}
+			else if ( total == 0 && indie == -1 ) {
+				ffi.printWarning("ULong division is integer min over -1. Returning max positive integer value instead.");
+				total = INT_MAX;
+				break;
+			}
+			// else
+			total /= indie;
+		}
+	}
+	ULong* out = new ULong(total);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+
+bool
+Power::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	ulong argValue1 = arg->getAsUnsignedLong();
+	arg = (BasicPrimitive*)(ffi.getNextArg());
+	ulong argValue2 = arg->getAsUnsignedLong();
+	ulong total = 1;
+	double r = pow((double)argValue1, (double)argValue2);
+#ifdef ENABLE_COPPER_ULONG_BOUNDS_CHECKS
+	if ( r > INT_MAX ) {
+		ffi.printWarning("ULong power result is greater than ulong max. Returning max value.");
+		total = INT_MAX;
+	}
+	else if ( r < 0 ) {
+		ffi.printWarning("ULong power result is less than ulong min. Returning min value.");
+		total = 0;
+	} else
+#endif
+		total = ulong(r);
+
+	ULong* out = new ULong(total);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Modulus::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	ulong argValue1 = arg->getAsUnsignedLong();
+	arg = (BasicPrimitive*)(ffi.getNextArg());
+	ulong argValue2 = arg->getAsUnsignedLong();
+	ulong total = 0;
+	if ( iszero(argValue2) ) {
+		ffi.printWarning("ULong modulus divisor is zero. Ignoring argument value.");
+		total = argValue1;
+	} else {
+		total = argValue1 % argValue2;
+	}
+	ULong* out = new ULong(total);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Pick_min::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	ulong argValue1 = arg->getAsUnsignedLong();
+	arg = (BasicPrimitive*)(ffi.getNextArg());
+	ulong argValue2 = arg->getAsUnsignedLong();
+	ObjectBool* out = new ObjectBool(
+		argValue1 > argValue2 ? argValue2 : argValue1
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Pick_max::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	ulong argValue1 = arg->getAsUnsignedLong();
+	arg = (BasicPrimitive*)(ffi.getNextArg());
+	ulong argValue2 = arg->getAsUnsignedLong();
+	ObjectBool* out = new ObjectBool(
+		argValue1 > argValue2 ? argValue1 : argValue2
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Avg::call(
+	FFIServices& ffi
+) {
 	ulong total = 0;
 	ulong indie = 0;
 	ulong used_count = 0;
-	if ( paramsIter.has() ) {
-		do {
-			if ( getULong(*paramsIter, indie) ) {
-				total += indie;
-				used_count++;
-			} else {
-				print(LogLevel::warning, "ULong-avg function should have only numeric parameters. Ignoring param value.");
-			}
-		} while( ++paramsIter );
+	while ( ffi.hasMoreArgs() ) {
+		if ( getULong(ffi.getNextArg(), indie) ) {
+			total += indie;
+			used_count++;
+		} else {
+			ffi.printWarning("ULong average function given non-numeric arg. Cancelling calculation...");
+			return false;
+		}
 	}
-	// Create a zeroed instance
 	if ( used_count > 0 )
 		total /= used_count;
-	result.setWithoutRef(new ULong(total));
+	ULong* i = new ULong(total);
+	ffi.setResult(i);
+	i->deref();
 	return true;
 }
 
-bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	List<Object*>::ConstIter paramsIter = params.constStart();
-	if ( ! paramsIter.has() ) {
-		result.setWithoutRef(new ULong(0));
-		return true;
-	}
-	ulong value;
-	if ( ! getULong(*paramsIter, value) ) {
-		FFI::printWarning(logger, "ULong-abs function requires numeric parameter.");
-	}
-	result.setWithoutRef(new ULong(value));
+bool
+Get_abs::call(
+	FFIServices& ffi
+) {
+	ulong value = 0;
+	getULong(ffi.getNextArg(), value);
+	ULong* i = new ULong(value);
+	ffi.setResult(i);
+	i->deref();
 	return true;
 }
 
+const char*
+Get_abs::getParameterName(
+	unsigned int index
+) {
+	if ( index == 0 )
+		return BasicPrimitive::StaticTypeName();
+	return "";
+}
+
+unsigned int
+Get_abs::getParameterCount() {
+	return 1;
+}
+
+bool
+Incr::call(
+	FFIServices& ffi
+) {
+	Object* arg;
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( isObjectULong(*arg) ) {
+			((ULong*)arg)->incr();
+		} else {
+			ffi.printWarning("ULong increment argument was not of type ULong. Ignoring...");
+		}
+	}
+	return true;
+}
 
 }}}

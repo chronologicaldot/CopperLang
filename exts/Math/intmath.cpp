@@ -9,21 +9,21 @@ namespace Numeric {
 namespace Int {
 
 bool isObjectInt(const Object* pObject) {
-	return ( util::equals( pObject->typeName(), BASIC_PRIMITIVE_TYPENAME )
+	return ( isObjectOfType( *pObject, BasicPrimitive::StaticTypeName() )
 		&& ((BasicPrimitive*)pObject)->isPrimitiveType( BasicPrimitive::Type::_int ) );
 }
 
 bool getInt(const Object* pObject, int& pValue) {
-	if ( util::equals( pObject->typeName(), BASIC_PRIMITIVE_TYPENAME ) ) {
+	if ( isObjectOfType( *pObject, BasicPrimitive::StaticTypeName() ) ) {
 		pValue = ((BasicPrimitive*)pObject)->getAsInt();
 		return true;
 	}
-	else // If not a number, return false
-	if ( ! util::equals( pObject->typeName(), NUMBER_TYPENAME ) ) {
+	// If not a number, return false
+	if ( ! isObjectOfType( *pObject, ObjectNumber::StaticTypeName() ) ) {
 		pValue = 0;
 		return false;
 	}
-	unsigned long ui = ((Number*)(pObject))->getAsUnsignedLong();
+	unsigned long ui = ((ObjectNumber*)(pObject))->getAsUnsignedLong();
 	if ( ui > INT_MAX ) {
 		pValue = INT_MAX;
 	} else {
@@ -36,230 +36,57 @@ bool iszero(int p) {
 	return p == 0;
 }
 
-bool isEqual(int p, int q) {
-	return p == q;
-}
-
-bool isGreaterThan(int p, int q) {
-	return p > q;
-}
-
-bool isLessThan(int p, int q) {
-	return p < q;
-}
-
-bool isGreaterThanOrEqual(int p, int q) {
-	return p >= q;
-}
-
-bool isLessThanOrEqual(int p, int q) {
-	return p <= q;
-}
-
-// Thanks to pmg for the bounds tests.
-// https://stackoverflow.com/questions/199333/how-to-detect-integer-overflow-in-c-c
-// and thanks to Franz D. for observing more detection is needed for multiplication.
-
-int add(int p, int q, Logger* logger) {
-#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
-	if ((q > 0) && (p > INT_MAX - q)) // detect overflow
-	{
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "Int-sum overflows. Returning max value.");
-		}
-		return INT_MAX;
-	}
-	else if ((q < 0) && (p < INT_MIN - q)) // detect underflow
-	{
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "Int-sum underflows. Returning min value.");
-		}
-		return INT_MIN;
-	}
-#endif
-	return p + q;
-}
-
-int subtract(int p, int q, Logger* logger) {
-#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
-	if ((q < 0) && (p > INT_MAX + q)) // detect overflow
-	{
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "Int-reduce overflows. Returning max value.");
-		}
-		return INT_MAX;
-	}
-	else if ((q > 0) && (p < INT_MIN + q)) // detect underflow
-	{
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "Int-reduce underflows. Returning min value.");
-		}
-		return INT_MIN;
-	}
-#endif
-	return p - q;
-}
-
-int multiply(int p, int q, Logger* logger) {
-#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
-	int q0 = q;
-	if ( q < 0 )
-		q0 = -q;
-	if ( !iszero(q0) ) {
-		if ( p > INT_MAX / q0 ) {
-			logger->print(LogLevel::warning, "Int-multiplication overflows. Returning max value.");
-			return INT_MAX;
-		}
-		if ( p < INT_MIN / q0 ) {
-			logger->print(LogLevel::warning, "Int-multiplication underflows. Returning min value.");
-			return INT_MIN;
-		}
-	}
-#endif
-	return p * q;
-}
-
-int divide(int p, int q, Logger* logger) {
-	if ( iszero(q) ) {
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "Int-division divisor is zero. Ignoring param value.");
-		}
-		return p;
-	}
-	else if ( p == INT_MIN && q == -1 ) {
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "Int-division is integer min over -1. Returning max value.");
-		}
-		return INT_MAX;
-	}
-	return p / q;
-}
-
-int power(int p, int q, Logger* logger) {
-	double r = pow((double)p, (double)q);
-#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
-	if ( r > INT_MAX ) {
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "Int-power result is greater than integer max. Returning max value.");
-		}
-		return INT_MAX;
-	}
-	else if ( r < INT_MIN ) {
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "Int-power result is less than integer min. Returning min value.");
-		}
-		return INT_MIN;
-	}
-#endif
-	return (int)r;
-}
-
-int mod(int p, int q, Logger* logger) {
-	if ( q == 0 ) {
-		if ( notNull(logger) ) {
-			logger->print(LogLevel::warning, "Int-modulus divisor is zero. Ignoring param value.");
-		}
-		return p;
-	}
-	return p % q;
-}
-
-int pick_max(int p, int q, Logger*) {
-	return (p > q ? p : q);
-}
-
-int pick_min(int p, int q, Logger*) {
-	return (p < q ? p : q);
-}
-
-void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
-
-	AreInt*				intAreInt	= new AreInt();
-	Create*				intCreate	= new Create(&logger);
-	Compare*			intEqual	= new Compare(&logger, isEqual);
-	Compare*			intGreaterThanOrEq	= new Compare(&logger, isGreaterThanOrEqual);
-	Compare*			intLessThanOrEq		= new Compare(&logger, isLessThanOrEqual);
-	Compare*			intGreaterThan		= new Compare(&logger, isGreaterThan);
-	Compare*			intLessThan			= new Compare(&logger, isLessThan);
-	SingleOperation*	intSum = new SingleOperation(&logger, add);
-	SingleOperation*	intRdc = new SingleOperation(&logger, subtract);
-	SingleOperation*	intMul = new SingleOperation(&logger, multiply);
-	SingleOperation*	intDiv = new SingleOperation(&logger, divide);
-	SingleOperation*	intMod = new SingleOperation(&logger, mod);
-	SingleOperation*	intPow = new SingleOperation(&logger, power);
-	Avg*				intAvg = new Avg(&logger);
-	SingleOperation*	intMax = new SingleOperation(&logger, pick_max);
-	SingleOperation*	intMin = new SingleOperation(&logger, pick_min);
-	Incr*				incr	= new Incr(&logger);
-
-	Unimplemented* intUnimplemented = new Unimplemented(&logger);
-
-	engine.addForeignFunction(util::String("are_int"), intAreInt);
-	engine.addForeignFunction(util::String("int"),	intCreate);
+void addFunctionsToEngine(
+	Engine&		engine,
+	bool		useShortNames
+) {
+	addForeignFuncInstance<AreInt>	(engine, "are_int");
+	addForeignFuncInstance<Create>	(engine, "int");
 
 	if ( useShortNames ) {
-		engine.addForeignFunction(util::String("equal"),intEqual);
-		engine.addForeignFunction(util::String("gte"),	intGreaterThanOrEq);
-		engine.addForeignFunction(util::String("lte"),	intLessThanOrEq);
-		engine.addForeignFunction(util::String("gt"),	intGreaterThan);
-		engine.addForeignFunction(util::String("lt"),	intLessThan);
-		engine.addForeignFunction(util::String("+"),	intSum);
-		engine.addForeignFunction(util::String("-"),	intRdc);
-		engine.addForeignFunction(util::String("*"),	intMul);
-		engine.addForeignFunction(util::String("/"),	intDiv);
-		engine.addForeignFunction(util::String("%"),	intMod);
-		engine.addForeignFunction(util::String("pow"),	intPow);
-		engine.addForeignFunction(util::String("avg"),	intAvg);
-		engine.addForeignFunction(util::String("max"),	intMax);
-		engine.addForeignFunction(util::String("min"),	intMin);
-		FFI::simpleFunctionAdd(engine, util::String("abs"),	get_abs, &logger);
+		addForeignFuncInstance<AreEqual>				(engine, "equal");
+		addForeignFuncInstance<IsGreaterThan>			(engine, "gt");
+		addForeignFuncInstance<IsLessThan>				(engine, "lt");
+		addForeignFuncInstance<IsGreaterThanOrEqual>	(engine, "gte");
+		addForeignFuncInstance<IsLessThanOrEqual>		(engine, "lte");
+		addForeignFuncInstance<Add>						(engine, "+");
+		addForeignFuncInstance<Subtract>				(engine, "-");
+		addForeignFuncInstance<Multiply>				(engine, "*");
+		addForeignFuncInstance<Divide>					(engine, "/");
+		addForeignFuncInstance<Modulus>					(engine, "%");
+		addForeignFuncInstance<Power>					(engine, "pow");
+		addForeignFuncInstance<Avg>						(engine, "avg");
+		addForeignFuncInstance<Get_abs>					(engine, "abs");
+		addForeignFuncInstance<Incr>					(engine, "++");
+		addForeignFuncInstance<Pick_min>				(engine, "min");
+		addForeignFuncInstance<Pick_max>				(engine, "max");
 
-		engine.addForeignFunction(util::String("sin"),	intUnimplemented);
-		engine.addForeignFunction(util::String("cos"),	intUnimplemented);
-		engine.addForeignFunction(util::String("tan"),	intUnimplemented);
-
-		engine.addForeignFunction(util::String("++"),	incr);
+		addForeignFuncInstance<Unimplemented>			(engine, "sin");
+		addForeignFuncInstance<Unimplemented>			(engine, "cos");
+		addForeignFuncInstance<Unimplemented>			(engine, "tan");
 	} else {
-		engine.addForeignFunction(util::String("int_equal"),intEqual);
-		engine.addForeignFunction(util::String("int_gte"),	intGreaterThanOrEq);
-		engine.addForeignFunction(util::String("int_lte"),	intLessThanOrEq);
-		engine.addForeignFunction(util::String("int_gt"),	intGreaterThan);
-		engine.addForeignFunction(util::String("int_lt"),	intLessThan);
-		engine.addForeignFunction(util::String("int+"),		intSum);
-		engine.addForeignFunction(util::String("int-"),		intRdc);
-		engine.addForeignFunction(util::String("int*"),		intMul);
-		engine.addForeignFunction(util::String("int/"),		intDiv);
-		engine.addForeignFunction(util::String("int%"),		intMod);
-		engine.addForeignFunction(util::String("int_pow"),	intPow);
-		engine.addForeignFunction(util::String("int_avg"),	intAvg);
-		engine.addForeignFunction(util::String("int_max"),	intMax);
-		engine.addForeignFunction(util::String("int_min"),	intMin);
-		FFI::simpleFunctionAdd(engine, util::String("int_abs"),	get_abs, &logger);
-
-		engine.addForeignFunction(util::String("int++"),	incr);
+		addForeignFuncInstance<AreEqual>				(engine, "int_equal");
+		addForeignFuncInstance<IsGreaterThan>			(engine, "int_gt");
+		addForeignFuncInstance<IsLessThan>				(engine, "int_lt");
+		addForeignFuncInstance<IsGreaterThanOrEqual>	(engine, "int_gte");
+		addForeignFuncInstance<IsLessThanOrEqual>		(engine, "int_lte");
+		addForeignFuncInstance<Add>						(engine, "int+");
+		addForeignFuncInstance<Subtract>				(engine, "int-");
+		addForeignFuncInstance<Multiply>				(engine, "int*");
+		addForeignFuncInstance<Divide>					(engine, "int/");
+		addForeignFuncInstance<Modulus>					(engine, "int%");
+		addForeignFuncInstance<Power>					(engine, "int_pow");
+		addForeignFuncInstance<Avg>						(engine, "int_avg");
+		addForeignFuncInstance<Get_abs>					(engine, "int_abs");
+		addForeignFuncInstance<Incr>					(engine, "int++");
+		addForeignFuncInstance<Pick_min>				(engine, "int_min");
+		addForeignFuncInstance<Pick_max>				(engine, "int_max");
 	}
-
-	intAreInt->deref();
-	intCreate->deref();
-	intEqual->deref();
-	intGreaterThanOrEq->deref();
-	intLessThanOrEq->deref();
-	intGreaterThan->deref();
-	intLessThan->deref();
-	intSum->deref();
-	intRdc->deref();
-	intMul->deref();
-	intDiv->deref();
-	intMod->deref();
-	intPow->deref();
-	intAvg->deref();
-	intMax->deref();
-	intMin->deref();
-	incr->deref();
-	intUnimplemented->deref();
 }
 
-Int::Int(const String& pInitValue)
+Int::Int(
+	const String& pInitValue
+)
 		: BasicPrimitive( BasicPrimitive::Type::_int )
 		, value(0)
 {
@@ -268,11 +95,15 @@ Int::Int(const String& pInitValue)
 		value = 0;
 }
 
-bool Int::equal(const Int& pOther) {
+bool Int::equal(
+	const Int& pOther
+) {
 	return value == pOther.value;
 }
 
-void Int::writeToString(String& out) const {
+void Int::writeToString(
+	String& out
+) const {
 	std::ostringstream os;
 	if ( os << value )
 		out = os.str().c_str();
@@ -302,173 +133,471 @@ double Int::getAsDouble() const {
 	return (double)value;
 }
 
-bool AreInt::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
-	bool is = true;
-	if ( paramsIter.has() ) {
-		do {
-			if ( ! isObjectInt(**paramsIter) ) {
-				is = false;
-				break;
-			}
-		} while( ++paramsIter );
-	} else {
-		is = false;
+bool
+AreInt::call(
+	FFIServices& ffi
+) {
+	bool is = false;
+	while ( ffi.hasMoreArgs() ) {
+		is = isObjectInt(*(ffi.getNextArg()));
+		if ( !is ) {
+			break;
+		}
 	}
-	result.setWithoutRef(new ObjectBool(is));
+	ObjectBool* out = new ObjectBool(is);
+	ffi.setResult(out);
+	out->deref();
 	return true;
 }
 
-bool Create::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+Create::call(
+	FFIServices& ffi
+) {
+	// Only accepts at most 1 arg, but may have zero
+	Object* arg;
 	int value = 0;
-	// Use only the first param
-	if ( params.size() != 1 ) {
-		print(LogLevel::warning, "Int-creation requires one param.");
-	} else {
-		if ( ! getInt( *paramsIter, value ) ) {
-			if ( util::equals( (*paramsIter)->typeName(), "number" ) ) {
-				result.setWithoutRef( new Int( ((ObjectNumber*)*paramsIter)->getRawValue() ) );
-				return true;
+	unsigned int big = 0;
+	if ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( ! getInt( *arg, value ) ) {
+			if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
+				big = ((ObjectNumber*)arg)->getAsUnsignedLong();
+				value = big > INT_MAX ? INT_MAX : big;
 			} else {
-				print(LogLevel::warning, "Int-creation parameter was not a compatible number type.");
+				ffi.printWarning("Int-creation argument was not a compatible number type.");
 			}
 		}
 	}
-	result.setWithoutRef(new Int(value));
+	Int* out = new Int(value);
+	ffi.setResult(out);
+	out->deref();
 	return true;
 }
 
-bool Unimplemented::call( const List<Object*>& params, RefPtr<Object>& result ) {
-	print(LogLevel::warning, "Int function not implemented.");
-	result.setWithoutRef(new Int(0));
-	return true;
+bool
+Unimplemented::call(
+	FFIServices& ffi
+) {
+	ffi.printError("Unimplemented function for integer.");
+	return false;
 }
 
-bool Compare::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+IsZero::call(
+	FFIServices& ffi
+) {
+	Object* arg = ffi.getNextArg();
 	int value = 0;
-	int other_value = 0;
-	bool match = true;
-	if ( params.size() < 2 ) {
-		print(LogLevel::warning, "Int-comparison function should have at least two parameters.");
+	ObjectBool* out = REAL_NULL;
+	if ( getInt(*arg, value) ) {
+		out = new ObjectBool(value == 0);
+	} else if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
+		out = new ObjectBool( ((ObjectNumber*)arg)->getAsUnsignedLong() == 0 );
 	} else {
-		if ( ! getInt(*paramsIter, value) ) {
-			print(LogLevel::warning, "Int-comparison function should have only numeric parameters.");
-		}
-		while ( ++paramsIter ) {
-			if ( ! getInt(*paramsIter, other_value) ) {
-				print(LogLevel::warning, "Int-comparison function should have only numeric parameters.");
-				other_value = 0;
-			}
-			if ( ! comparison(value, other_value) ) {
-				match = false;
-				break;
-			}
-		}
+		// Default return is an empty function
+		// Should this be a warning and default to true? Doesn't seem right.
+		ffi.printError("Int-is-zero was not given a parsable number.");
+		return false;
 	}
-	result.setWithoutRef(new ObjectBool(match));
+	ffi.setResult(out);
+	out->deref();
 	return true;
 }
 
-bool SingleOperation::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+const char*
+IsZero::getParameterName(
+	unsigned int index
+) {
+	if ( index == 0 )
+		return BasicPrimitive::StaticTypeName();
+	return "";
+}
+
+unsigned int
+IsZero::getParameterCount() {
+	return 1;
+};
+
+bool
+AreEqual::call(
+	FFIServices& ffi
+) {
+	Object* arg;
+	bool are_equal = true;
+	int startValue = 0;
+	int value = 0;
+	bool hasFirstValue = false;
+	while( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getInt(*arg, value) ) {
+			if ( hasFirstValue ) {
+				are_equal &= (startValue == value);
+				if ( ! are_equal )
+					break;
+			} else {
+				startValue = value;
+				hasFirstValue = true;
+			}
+		} else {
+			are_equal = false;
+			ffi.printWarning("Int are-equal function given non-numeric argument. Cancelling calculation...");
+			return false;
+		}
+	}
+	ObjectBool* out = new ObjectBool(are_equal);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+};
+
+bool
+IsGreaterThan::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	BasicPrimitive* arg2 = (BasicPrimitive*)(ffi.getNextArg());
+	ObjectBool* out = new ObjectBool(
+		arg->getAsInt() > arg2->getAsInt()
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+IsLessThan::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	BasicPrimitive* arg2 = (BasicPrimitive*)(ffi.getNextArg());
+	ObjectBool* out = new ObjectBool(
+		arg->getAsInt() < arg2->getAsInt()
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+IsGreaterThanOrEqual::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	BasicPrimitive* arg2 = (BasicPrimitive*)(ffi.getNextArg());
+	ObjectBool* out = new ObjectBool(
+		arg->getAsInt() >= arg2->getAsInt()
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+IsLessThanOrEqual::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	BasicPrimitive* arg2 = (BasicPrimitive*)(ffi.getNextArg());
+	ObjectBool* out = new ObjectBool(
+		arg->getAsInt() <= arg2->getAsInt()
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+// Thanks to pmg for the bounds tests for integers.
+// https://stackoverflow.com/questions/199333/how-to-detect-integer-overflow-in-c-c
+// and thanks to Franz D. for observing more detection is needed for multiplication.
+
+bool
+Add::call(
+	FFIServices& ffi
+) {
+	Object* arg;
 	int total = 0;
 	int indie = 0;
-	if ( paramsIter.has() ) {
-		// First param is for the total
-		if ( ! getInt(*paramsIter, total) ) {
-			total = 0;
-			print(LogLevel::warning, "Int math function should have only numeric parameters.");
-		}
-		while( ++paramsIter ) {
-			if ( ! getInt(*paramsIter, indie) ) {
-				indie = 0;
-				print(LogLevel::warning, "Int math function should have only numeric parameters.");
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getInt(*arg, indie) ) {
+#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
+			if ((indie > 0) && (total > INT_MAX - indie)) // detect overflow
+			{
+				ffi.printWarning("Int-sum overflows. Returning max value.");
+				total = INT_MAX;
+				break;
 			}
-			total = operation(total, indie, logger);
+			else if ((indie < 0) && (total < INT_MIN - indie)) // detect underflow
+			{
+				ffi.printWarning("Int-sum underflows. Returning min value.");
+				total = INT_MIN;
+				break;
+			}
+#endif
+			total += indie;
 		}
 	}
-	// Create a zeroed instance
-	result.setWithoutRef(new Int(total));
+	Int* out = new Int(total);
+	ffi.setResult(out);
+	out->deref();
 	return true;
 }
-/*
-bool SingleParamOperation::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+
+bool
+Subtract::call(
+	FFIServices& ffi
+) {
+	Object* arg;
 	int total = 0;
-	if ( paramsIter.has() ) {
-		if ( ! getInt(*paramsIter, total) ) {
-			total = 0;
-			print(LogLevel::warning, "Int math function should have a single numeric parameter.");
-		} else {
-			total = operation(total, logger);
+	int indie = 0;
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getInt(*arg, indie) ) {
+#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
+			if ((indie < 0) && (total > INT_MAX + indie)) // detect overflow
+			{
+				ffi.printWarning("Int-subtraction/reduce overflows. Returning max value.");
+				total = INT_MAX;
+				break;
+			}
+			else if ((indie > 0) && (total < INT_MIN + indie)) // detect underflow
+			{
+				ffi.printWarning("Int-subtraction/reduce underflows. Returning min value.");
+				total = INT_MIN;
+				break;
+			}
+#endif
+			total -= indie;
 		}
 	}
-	// Create a zeroed instance
-	result.setWithoutRef(new Int(total));
+	Int* out = new Int(total);
+	ffi.setResult(out);
+	out->deref();
 	return true;
-}*/
+}
 
-bool Avg::call( const List<Object*>& params, RefPtr<Object>& result )
-{
-	List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+Multiply::call(
+	FFIServices& ffi
+) {
+	Object* arg;
+	int total = 1;
+	int indie = 0;
+	int indieAbs = 0;
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getInt(*arg, indie) ) {
+#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
+			indieAbs = (indie > 0 ? indie : -indie);
+			if ( ! iszero(indieAbs) ) {
+				if ( total > INT_MAX / indieAbs ) {
+					ffi.printWarning("Int-multiplication overflows. Returning max value.");
+					total = INT_MAX;
+					break;
+				}
+				if ( total < INT_MIN / indieAbs ) {
+					ffi.printWarning("Int-multiplication underflows. Returning min value.");
+					total = INT_MIN;
+					break;
+				}
+			}
+#endif
+			total *= indie;
+		}
+	}
+	Int* out = new Int(total);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Divide::call(
+	FFIServices& ffi
+) {
+	Object* arg;
+	int total = 1;
+	int indie = 0;
+	if ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		// Get the first arg and save it as the total.
+		// Failure results in termination
+		if ( ! getInt(*arg, total) ) {
+			ffi.printError("Int division first argument was not a number.");
+			return false;
+		}
+	}
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getInt(*arg, indie) ) {
+			if ( iszero(indie) ) {
+				ffi.printWarning("Int division divisor is zero. Returning maximized value instead.");
+				total = (total >= 0 ? INT_MAX : INT_MIN);
+				break;
+			}
+			else if ( total == INT_MIN && indie == -1 ) {
+				ffi.printWarning("Int division is integer min over -1. Returning max positive integer value instead.");
+				total = INT_MAX;
+				break;
+			}
+			// else
+			total /= indie;
+		}
+	}
+	Int* out = new Int(total);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+
+bool
+Power::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	int argValue1 = arg->getAsInt();
+	arg = (BasicPrimitive*)(ffi.getNextArg());
+	int argValue2 = arg->getAsInt();
+	int total = 1;
+	double r = pow((double)argValue1, (double)argValue2);
+#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
+	if ( r > INT_MAX ) {
+		ffi.printWarning("Int power result is greater than integer max. Returning max value.");
+		total = INT_MAX;
+	}
+	else if ( r < INT_MIN ) {
+		ffi.printWarning("Int power result is less than integer min. Returning min value.");
+		total = INT_MIN;
+	} else
+#endif
+		total = int(r);
+
+	Int* out = new Int(total);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Modulus::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	int argValue1 = arg->getAsInt();
+	arg = (BasicPrimitive*)(ffi.getNextArg());
+	int argValue2 = arg->getAsInt();
+	int total = 0;
+	if ( iszero(argValue2) ) {
+		ffi.printWarning("Int modulus divisor is zero. Ignoring argument value.");
+		total = argValue1;
+	} else {
+		total = argValue1 % argValue2;
+	}
+	Int* out = new Int(total);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Pick_min::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	int argValue1 = arg->getAsInt();
+	arg = (BasicPrimitive*)(ffi.getNextArg());
+	int argValue2 = arg->getAsInt();
+	ObjectBool* out = new ObjectBool(
+		argValue1 > argValue2 ? argValue2 : argValue1
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Pick_max::call(
+	FFIServices& ffi
+) {
+	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
+	int argValue1 = arg->getAsInt();
+	arg = (BasicPrimitive*)(ffi.getNextArg());
+	int argValue2 = arg->getAsInt();
+	ObjectBool* out = new ObjectBool(
+		argValue1 > argValue2 ? argValue1 : argValue2
+	);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Avg::call(
+	FFIServices& ffi
+) {
 	int total = 0;
 	int indie = 0;
 	int used_count = 0;
-	if ( paramsIter.has() ) {
-		do {
-			if ( getInt(*paramsIter, indie) ) {
-				total += indie;
-				used_count++;
-			} else {
-				print(LogLevel::warning, "Int-avg function should have only numeric parameters. Ignoring param value.");
-			}
-		} while( ++paramsIter );
+	while ( ffi.hasMoreArgs() ) {
+		if ( getInt(ffi.getNextArg(), indie) ) {
+			total += indie;
+			used_count++;
+		} else {
+			ffi.printWarning("Int average function given non-numeric arg. Cancelling calculation...");
+			return false;
+		}
 	}
-	// Create a zeroed instance
 	if ( used_count > 0 )
 		total /= used_count;
-	result.setWithoutRef(new Int(total));
+	Int* i = new Int(total);
+	ffi.setResult(i);
+	i->deref();
 	return true;
 }
 
-bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	List<Object*>::ConstIter paramsIter = params.constStart();
-	if ( ! paramsIter.has() ) {
-		result.setWithoutRef(new Int(0));
-		return true;
+bool
+Get_abs::call(
+	FFIServices& ffi
+) {
+	int value = 0;
+	if ( getInt(ffi.getNextArg(), value) ) {
+		value = value < 0 ? -value : value;
 	}
-	int value;
-	if ( ! getInt(*paramsIter, value) ) {
-		FFI::printWarning(logger, "Int-abs function requires numeric parameter.");
-		result.setWithoutRef(new Int(0));
-		return true;
-	}
-	result.setWithoutRef(new Int( value < 0 ? -value : value ));
+	Int* i = new Int(value);
+	ffi.setResult(i);
+	i->deref();
 	return true;
 }
 
-bool Incr::call( const List<Object*>& params, RefPtr<Object>& result ) {
-	List<Object*>::ConstIter paramsIter = params.constStart();
-	if ( ! paramsIter.has() ) {
-		result.setWithoutRef(new Int(0));
-		return true;
+const char*
+Get_abs::getParameterName(
+	unsigned int index
+) {
+	if ( index == 0 )
+		return BasicPrimitive::StaticTypeName();
+	return "";
+}
+
+unsigned int
+Get_abs::getParameterCount() {
+	return 1;
+}
+
+bool
+Incr::call(
+	FFIServices& ffi
+) {
+	Object* arg;
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( isObjectInt(*arg) ) {
+			((Int*)arg)->incr();
+		} else {
+			ffi.printWarning("Int increment argument was not of type Int. Ignoring...");
+		}
 	}
-	int value;
-	if ( !isObjectInt(*paramsIter) ) {
-		FFI::printWarning(logger, "Int-incr function requires numeric parameter.");
-		result.setWithoutRef(new Int(0));
-		return true;
-	}
-	Int* i = (Int*)(*paramsIter);
-	i->incr();
-	result.setWithoutRef(new Int(0)); // should be i->getAsInt() but that's expensize
 	return true;
 }
 

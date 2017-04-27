@@ -12,9 +12,7 @@
 namespace Cu {
 namespace Numeric {
 
-static const char* BASIC_PRIMITIVE_TYPENAME = "bp#";
-
-struct BasicPrimitive : public Number {
+struct BasicPrimitive : public Object {
 	struct Type {
 		enum Value {
 			_char,
@@ -26,6 +24,8 @@ struct BasicPrimitive : public Number {
 			_double
 		};
 	};
+
+	static const char* StaticTypeName() { return "bp#"; }
 
 protected:
 	Type::Value type;
@@ -46,11 +46,11 @@ public:
 	}
 
 	virtual const char* typeName() const {
-		return BASIC_PRIMITIVE_TYPENAME;
+		return StaticTypeName();
 	}
 
 	static const char* realName() {
-		return BASIC_PRIMITIVE_TYPENAME;
+		return StaticTypeName();
 	}
 
 	virtual char getAsChar() const {
@@ -75,6 +75,24 @@ public:
 
 	virtual double getAsDouble() const {
 		return 0;
+	}
+};
+
+// Meant to be the base for any function with two basic primitive arguments
+struct TwoArgBase : public ForeignFunc {
+	virtual const char* getParameterName( unsigned int index ) {
+		switch( index ) {
+		case 0:
+		case 1:
+			return BasicPrimitive::StaticTypeName();
+
+		default:
+			return "";
+		}
+	}
+
+	virtual unsigned int getParameterCount() {
+		return 2;
 	}
 };
 

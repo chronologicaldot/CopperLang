@@ -4,11 +4,10 @@
 #include "../../Copper/src/Strings.h"
 #include "../../Copper/src/Copper.h"
 #include "BasicPrimitive.h"
-#include "../FFIBase.h"
 
 // Comment out to disable bounds checks.
 // Bounds checks for division and mod are always enabled.
-//#define ENABLE_COPPER_ULONG_BOUNDS_CHECKS
+#define ENABLE_COPPER_ULONG_BOUNDS_CHECKS
 
 namespace Cu {
 namespace Numeric {
@@ -16,31 +15,16 @@ namespace ULong {
 
 using util::List;
 using util::String;
-using FFI::Base;
 
 typedef unsigned long	ulong;
 
 	// You should really just use me. :)
-void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames);
+void addFunctionsToEngine(Engine& engine, bool useShortNames);
 
 bool isObjectULong(const Object* pObject);
 bool getULong(const Object* pObject, ulong& pValue); // Returns "true" if an ulong could be obtained.
 
 bool iszero(ulong);
-bool isEqual(ulong, ulong);
-bool isGreaterThan(ulong, ulong);
-bool isLessThan(ulong, ulong);
-bool isGreaterThanOrEqual(ulong, ulong);
-bool isLessThanOrEqual(ulong, ulong);
-
-ulong add(ulong, ulong, Logger*);
-ulong subtract(ulong, ulong, Logger*);
-ulong multiply(ulong, ulong, Logger*);
-ulong divide(ulong, ulong, Logger*);
-ulong power(ulong, ulong, Logger*);
-ulong mod(ulong, ulong, Logger*);
-ulong pick_max(ulong, ulong, Logger*);
-ulong pick_min(ulong, ulong, Logger*);
 
 class ULong : public BasicPrimitive {
 	ulong value;
@@ -75,80 +59,139 @@ public:
 	virtual float getAsFloat() const;
 
 	virtual double getAsDouble() const;
+
+	void incr() {
+		value++;
+	}
 };
 
-// ULong object identification
+// Int object identification
 struct AreULong : public ForeignFunc {
-	AreULong()
-	{}
+	virtual bool call( FFIServices& ffi );
 
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+	virtual bool isVariadic() {
+		return true;
+	}
 };
 
-// ULong Creation
-struct Create : public Base {
-	Create(Logger* pLogger)
-		: Base(pLogger)
-	{}
+// Int Creation
+struct Create : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+	virtual bool isVariadic() {
+		return true;
+	}
 };
 
 // Unimplemented
-struct Unimplemented : public Base {
-	Unimplemented(Logger* pLogger)
-		: Base(pLogger)
-	{}
-
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+struct Unimplemented : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 };
 
-// Base class for comparison
-// Requires pointer to a static function that compares two numbers
-struct Compare : public Base {
-	bool (*comparison)(ulong, ulong);
+struct IsZero : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 
-	Compare(Logger* pLogger, bool (*pComparison)(ulong, ulong) )
-		: Base(pLogger)
-		, comparison(pComparison)
-	{}
+	virtual const char* getParameterName( unsigned int index );
 
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+	virtual unsigned int getParameterCount();
 };
 
-// For performing general math
-struct SingleOperation : public Base {
-	ulong (*operation)(ulong, ulong, Logger*);
+struct AreEqual : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 
-	SingleOperation(Logger* pLogger, ulong (*pOperation)(ulong, ulong, Logger*) )
-		: Base(pLogger)
-		, operation(pOperation)
-	{}
-
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
-};
-/*
-struct SingleParamOperation : public Base {
-	ulong (*operation)(ulong, Logger*);
-
-	SingleParamOperation(Logger* pLogger, ulong (*pOperation)(ulong, Logger*) )
-		: Base(pLogger)
-		, operation(pOperation)
-	{}
-
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
-};*/
-
-// ULong Average
-struct Avg : public Base {
-	Avg(Logger* pLogger)
-		: Base(pLogger)
-	{}
-
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+	virtual bool isVariadic() {
+		return true;
+	}
 };
 
-bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logger );
+struct IsGreaterThan : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct IsLessThan : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct IsGreaterThanOrEqual : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct IsLessThanOrEqual : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Add : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Subtract : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Multiply : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Divide : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Power : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Modulus : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Pick_max : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Pick_min : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+// Int Average
+struct Avg : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Get_abs : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual const char* getParameterName( unsigned int index );
+
+	virtual unsigned int getParameterCount();
+};
+
+struct Incr : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
 
 }}}
 #endif

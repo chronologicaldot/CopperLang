@@ -4,7 +4,6 @@
 #include "../../Copper/src/Strings.h"
 #include "../../Copper/src/Copper.h"
 #include "BasicPrimitive.h"
-#include "../FFIBase.h"
 
 // Comment out to disable integer bounds checks.
 // Bounds checks for division and mod are always enabled.
@@ -16,29 +15,14 @@ namespace Int {
 
 using util::List;
 using util::String;
-using FFI::Base;
 
 	// You should really just use me. :)
-void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames);
+void addFunctionsToEngine(Engine& engine, bool useShortNames);
 
 bool isObjectInt(const Object* pObject);
 bool getInt(const Object* pObject, int& pValue); // Returns "true" if an int could be obtained.
 
 bool iszero(int);
-bool isEqual(int, int);
-bool isGreaterThan(int, int);
-bool isLessThan(int, int);
-bool isGreaterThanOrEqual(int, int);
-bool isLessThanOrEqual(int, int);
-
-int add(int, int, Logger*);
-int subtract(int, int, Logger*);
-int multiply(int, int, Logger*);
-int divide(int, int, Logger*);
-int power(int, int, Logger*);
-int mod(int, int, Logger*);
-int pick_max(int, int, Logger*);
-int pick_min(int, int, Logger*);
 
 class Int : public BasicPrimitive {
 	int value;
@@ -81,84 +65,130 @@ public:
 
 // Int object identification
 struct AreInt : public ForeignFunc {
-	AreInt()
-	{}
+	virtual bool call( FFIServices& ffi );
 
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+	virtual bool isVariadic() {
+		return true;
+	}
 };
 
 // Int Creation
-struct Create : public Base {
-	Create(Logger* pLogger)
-		: Base(pLogger)
-	{}
+struct Create : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+	virtual bool isVariadic() {
+		return true;
+	}
 };
 
 // Unimplemented
-struct Unimplemented : public Base {
-	Unimplemented(Logger* pLogger)
-		: Base(pLogger)
-	{}
-
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+struct Unimplemented : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 };
 
-// Base class for comparison
-// Requires pointer to a static function that compares two numbers
-struct Compare : public Base {
-	bool (*comparison)(int, int);
+struct IsZero : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 
-	Compare(Logger* pLogger, bool (*pComparison)(int, int) )
-		: Base(pLogger)
-		, comparison(pComparison)
-	{}
+	virtual const char* getParameterName( unsigned int index );
 
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+	virtual unsigned int getParameterCount();
 };
 
-// For performing general math
-struct SingleOperation : public Base {
-	int (*operation)(int, int, Logger*);
+struct AreEqual : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 
-	SingleOperation(Logger* pLogger, int (*pOperation)(int, int, Logger*) )
-		: Base(pLogger)
-		, operation(pOperation)
-	{}
-
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+	virtual bool isVariadic() {
+		return true;
+	}
 };
-/*
-struct SingleParamOperation : public Base {
-	int (*operation)(int, Logger*);
 
-	SingleParamOperation(Logger* pLogger, int (*pOperation)(int, Logger*) )
-		: Base(pLogger)
-		, operation(pOperation)
-	{}
+struct IsGreaterThan : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
 
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
-};*/
+struct IsLessThan : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct IsGreaterThanOrEqual : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct IsLessThanOrEqual : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Add : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Subtract : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Multiply : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Divide : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Power : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Modulus : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Pick_max : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Pick_min : public TwoArgBase {
+	virtual bool call( FFIServices& ffi );
+};
 
 // Int Average
-struct Avg : public Base {
-	Avg(Logger* pLogger)
-		: Base(pLogger)
-	{}
+struct Avg : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+	virtual bool isVariadic() {
+		return true;
+	}
 };
 
-bool get_abs( const List<Object*>& params, RefPtr<Object>& result, Logger* logger );
+struct Get_abs : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
 
+	virtual const char* getParameterName( unsigned int index );
 
-struct Incr : public Base {
-	Incr(Logger* pLogger )
-		: Base(pLogger)
-	{}
+	virtual unsigned int getParameterCount();
+};
 
-	virtual bool call( const List<Object*>& params, RefPtr<Object>& result );
+struct Incr : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
 };
 
 }}}

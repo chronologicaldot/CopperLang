@@ -49,124 +49,138 @@ unsigned long MSecTime::getAsUnsignedLong() const {
   return static_cast<unsigned long>(value);
 }
 
-void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
-  FFI::simpleFunctionAdd(engine, util::String("MSecTime"), create, &logger);
-  FFI::simpleFunctionAdd(engine, util::String("MSecTime_to_number"), mstimeToNumber, &logger);
-  FFI::simpleFunctionAdd(engine, util::String("MSecTime_sum"), mstimeAdd, &logger);
-  FFI::simpleFunctionAdd(engine, util::String("MSecTime_rdc"), mstimeSubtract, &logger);
-  FFI::simpleFunctionAdd(engine, util::String("MSec_ClockTime"), clockTime);
+void addFunctionsToEngine(
+	Engine& engine,
+	bool useShortNames
+) {
+	if ( useShortNames ) {
+		addForeignFuncInstance<Create>	(engine, "MSec");
+		addForeignFuncInstance<ToNumber>(engine, "MSec_to_number");
+		addForeignFuncInstance<Add>		(engine, "MSec+");
+		addForeignFuncInstance<Subtract>(engine, "MSec-");
+		addForeignFuncInstance<ClockTime>(engine, "MSec_ClockTime");
+	} else {
+		addForeignFuncInstance<Create>	(engine, "MSecTime");
+		addForeignFuncInstance<ToNumber>(engine, "MSecTime_to_number");
+		addForeignFuncInstance<Add>		(engine, "MSecTime+");
+		addForeignFuncInstance<Subtract>(engine, "MSecTime-");
+		addForeignFuncInstance<ClockTime>(engine, "MSec_ClockTime");
+	}
 }
 
-bool isObjectMSecTime(Object* obj) {
-  return isObjectOfType(*obj, MSecTime_TYPENAME);
+bool isObjectMSecTime(
+	Object* obj
+) {
+	return isObjectOfType(*obj, MSecTime::StaticTypeName());
 }
 
-bool getTimeValue(constParamsIter& iter, MSecTime*& out) {
-  if ( ! iter.has() )
-    return false;
-  if ( ! isObjectMSecTime(*iter) ) {
-    return false;
-  }
-  out = (MSecTime*)(*iter);
-  return true;
+bool
+Create::call(
+	FFIServices& ffi
+) {
+	MSecTime* m;
+	Object* arg;
+	if ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
+			m = new MSecTime();
+			m->setRaw( (long long int) ((ObjectNumber*)arg)->getAsUnsignedLong() );
+		} else {
+			m = new MSecTime();
+			ffi.printWarning("MSecTime-creation was not given a numeric starting argument. Defaulting to zero.");
+			ffi.setResult(m);
+			m->deref();
+			return false;
+		}
+	} else {
+		m = new MSecTime();
+	}
+	ffi.setResult(m);
+	m->deref();
+	return true;
 }
 
-bool create(constParamsList& params, CallResult& result, Logger* logger) {
-  if ( ! params.has() ) {
-    result.setWithoutRef(new MSecTime());
-    return true;
-  }
-  // Can create time from a number or another time
-  MSecTime* m;
-  constParamsIter start = params.constStart();
-  if ( getTimeValue(start, m) ) {
-    result.setWithoutRef(new MSecTime(*m));
-    return true;
-  }
-  if ( isObjectNumber(**start) ) {
-    m = new MSecTime();
-    m->setRaw(
-      ((Number*)(*start))->getAsUnsignedLong()
-    );
-    result.setWithoutRef(m);
-  }
-  return true;
+bool
+ToNumber::call(
+	FFIServices& ffi
+) {
+	MSecTime* m = (MSecTime*)(ffi.getNextArg());
+	ObjectNumber* out = new ObjectNumber(m->getAsUnsignedLong());
+	ffi.setResult(out);
+	out->deref();
+	return true;
 }
 
-bool mstimeToNumber(constParamsList& params, CallResult& result, Logger* logger) {
-  if ( !params.has() ) {
-    FFI::printWarning(logger, "MSecTime-to-number function requires a parameter.");
-    result.setWithoutRef(new ObjectNumber());
-    return true;
-  }
-  MSecTime* m;
-  constParamsIter start = params.constStart();
-  if ( ! getTimeValue(start, m) ) {
-    FFI::printWarning(logger, "MSecTime-to-number function requires a time.");
-    result.setWithoutRef(new ObjectNumber());
-    return true;
-  }
-  result.setWithoutRef(new ObjectNumber(m->getAsUnsignedLong()));
-  return true;
+bool
+Add::call(
+	FFIServices& ffi
+) {
+	MSecTime* m;
+	MSecTime* firstM;
+	MSecTime* secondM;
+	Object* arg;
+	if ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( isObjectMSecTime(arg) ) {
+			firstM = new MSecTime( *((MSecTime*)arg) );
+		} else {
+			ffi.printError("MSecTime-addition was not given an MSecTime object as the first argument.");
+			return false;
+		}
+	}
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( isObjectMSecTime(arg) ) {
+			secondM = (MSecTime*)arg;
+			firstM->addTime(*secondM);
+		} else {
+			ffi.printWarning("MSecTime-addition arg was not of type MSecTime. Ignoring arg...");
+		}
+	}
+	ffi.setResult(firstM);
+	firstM->deref();
+	return true;
 }
 
-bool mstimeAdd(constParamsList& params, CallResult& result, Logger* logger) {
-  if ( !params.has() ) {
-    FFI::printWarning(logger, "MSecTime-add function requires parameters.");
-    result.setWithoutRef(new MSecTime());
-    return true;
-  }
-  constParamsIter paramsIter = params.constStart();
-  MSecTime* start = REAL_NULL;
-  MSecTime* addition = REAL_NULL;
-  do {
-    if ( getTimeValue(paramsIter, addition) ) {
-      if ( isNull(start) ) {
-		start = (MSecTime*)(addition->copy());
-      } else {
-		start->addTime(*addition);
-      }
-    }
-  } while ( ++paramsIter );
-  if ( notNull(start) ) {
-    result.setWithoutRef(start);
-    return true;
-  } else {
-    return false;
-  }
+bool
+Subtract::call(
+	FFIServices& ffi
+) {
+	MSecTime* firstM;
+	MSecTime* secondM;
+	Object* arg;
+	if ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( isObjectMSecTime(arg) ) {
+			firstM = new MSecTime( *((MSecTime*)arg) );
+		} else {
+			ffi.printError("MSecTime-subtraction was not given an MSecTime object as the first argument.");
+			return false;
+		}
+	}
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( isObjectMSecTime(arg) ) {
+			secondM = (MSecTime*)arg;
+			firstM->subtractTime(*secondM);
+		} else {
+			ffi.printWarning("MSecTime-subtraction arg was not of type MSecTime. Ignoring arg...");
+		}
+	}
+	ffi.setResult(firstM);
+	firstM->deref();
+	return true;
 }
 
-bool mstimeSubtract(constParamsList& params, CallResult& result, Logger* logger) {
-  if ( !params.has() ) {
-    FFI::printWarning(logger, "MSecTime-subtract function requires parameters.");
-    result.setWithoutRef(new MSecTime());
-    return true;
-  }
-  constParamsIter paramsIter = params.constStart();
-  MSecTime* start = REAL_NULL;
-  MSecTime* removal = REAL_NULL;
-  do {
-    if ( getTimeValue(paramsIter, removal) ) {
-      if ( isNull(start) ) {
-		start = (MSecTime*)(removal->copy());
-      } else {
-		start->subtractTime(*removal);
-      }
-    }
-  } while ( ++paramsIter );
-  if ( notNull(start) ) {
-    result.setWithoutRef(start);
-    return true;
-  } else {
-    return false;
-  }
-}
-
-bool clockTime(constParamsList& params, CallResult& result) {
-  MSecTime* m = new MSecTime();
-  m->fromNativeTime(clock());
-  result.setWithoutRef(m);
-  return true;
+bool
+ClockTime::call(
+	FFIServices& ffi
+) {
+	MSecTime* m = new MSecTime();
+	m->fromNativeTime(clock());
+	ffi.setResult(m);
+	m->deref();
+	return true;
 }
 
   }

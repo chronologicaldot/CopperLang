@@ -33,7 +33,7 @@ int main() {
 	CuStd::Printer printer;
 	CuStd::InStreamLogger streamLogger;
 	engine.setLogger(&streamLogger);
-	engine.addForeignFunction(util::String("print"), &printer);
+	engine.addForeignFunctionInstance(util::String("print"), &printer);
 	//engine.setStackTracePrintingEnabled(true);
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);

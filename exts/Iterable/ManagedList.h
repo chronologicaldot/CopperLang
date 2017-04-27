@@ -3,18 +3,12 @@
 #define COPPER_OBJECT_LIST_H
 #include "../../Copper/src/utilList.h"
 #include "../../Copper/src/Copper.h"
-#include "../FFIBase.h"
 
 namespace Cu {
 namespace ManagedList {
 
-using FFI::Base;
-
-static const char* MGD_LIST_TYPENAME = "mgdlist";
-static const char* MGD_LIST_ITER_TYPENAME = "mgditer";
-
 	// You should really just use me. :)
-void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames);
+void addFunctionsToEngine(Engine& engine, bool useShortNames);
 
 bool isIterator(const Object& pObject);
 bool isList(const Object& pObject);
@@ -49,6 +43,8 @@ class Iter : public Data {
 	Node* node;
 
 public:
+	static const char* StaticTypeName() { return "mgditer"; }
+
 	explicit Iter(List* pList, Node* pNode);
 	explicit Iter(List* pList, bool top);
 	~Iter();
@@ -60,13 +56,14 @@ public:
 	bool go_up();
 	bool go_down();
 	void get_elem(RefPtr<Object>& result);
+	void set_result_to_elem(FFIServices& ffi);
 	bool insert_above(Object* pData);
 	bool insert_below(Object* pData);
 	bool extract();
 	bool replace(Object* pData);
 
 	virtual const char* typeName() const {
-		return MGD_LIST_ITER_TYPENAME;
+		return StaticTypeName();
 	}
 };
 
@@ -77,6 +74,8 @@ protected:
 	Node* top;
 
 public:
+	static const char* StaticTypeName() { return "mgdlist"; }
+
 	List()
 		: bottom(REAL_NULL)
 		, top(REAL_NULL)
@@ -95,7 +94,7 @@ public:
 	unsigned long getSize();
 
 	virtual const char* typeName() const {
-		return MGD_LIST_TYPENAME;
+		return StaticTypeName();
 	}
 };
 
@@ -143,8 +142,143 @@ Relocate = fn(iter newIter){
 }
 */
 
-inline bool getList( const util::List<Object*>::ConstIter& paramsIter, List*& list, Logger* logger, const char* failMsg );
-inline bool getIter( const util::List<Object*>::ConstIter& paramsIter, Iter*& list, Logger* logger, const char* failMsg );
+inline bool getList(
+	FFIServices& ffi,
+	List*& list
+);
+
+inline bool getIter(
+	FFIServices& ffi,
+	Iter*& iter
+);
+
+struct AreList : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Create : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct Build : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+void build_appendList( List* outList, List* src ); // used by bool Build::call()
+
+// Abstract
+struct OneListFunc : public ForeignFunc {
+	virtual const char* getParameterName( unsigned int index ) {
+		return List::StaticTypeName();
+	}
+
+	virtual unsigned int getParameterCount() {
+		return 1;
+	}
+};
+
+struct Length : public OneListFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct HasNodes : public OneListFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct PushTop : public OneListFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct PushBottom : public OneListFunc {
+	virtual bool call( FFIServices& ffi );
+
+	virtual bool isVariadic() {
+		return true;
+	}
+};
+
+struct PopTop : public OneListFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct PopBottom : public OneListFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+	// TODO - Implement
+/*struct Foreach : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};*/
+
+struct Iter_Top : public OneListFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Iter_Bottom : public OneListFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Iter_Tied : public OneListFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+
+// Abstract
+struct OneIterFunc : public ForeignFunc {
+	virtual const char* getParameterName( unsigned int index ) {
+		return Iter::StaticTypeName();
+	}
+
+	virtual unsigned int getParameterCount() {
+		return 1;
+	}
+};
+
+struct Iter_GoUp : public OneIterFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Iter_GoDown : public OneIterFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Iter_Elem : public OneIterFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Iter_InsertAbove : public OneIterFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Iter_InsertBelow : public OneIterFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Iter_Extract : public OneIterFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Iter_Replace : public OneIterFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+/*
 
 bool areList( const util::List<Object*>& params, RefPtr<Object>& result );
 bool create( const util::List<Object*>& params, RefPtr<Object>& result );
@@ -181,6 +315,7 @@ bool iter_insert_above( const util::List<Object*>& params, RefPtr<Object>& resul
 bool iter_insert_below( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger );
 bool iter_extract( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger );
 bool iter_replace( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger );
+*/
 
 }}
 

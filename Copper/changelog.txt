@@ -1,4 +1,46 @@
 ====================
+2017/4/8-10,23-26
+v 3-0.191
+
+- Removed bool srcDone parameter from Engine::interpretToken().
+- Removed Engine::opStrandAddNewOperation() and Engine::opStrandAddOperation().
+- Added class BadParserStateException.
+- Engine::parseFuncBuildTask now throws BadParserStateException when default state is reached.
+- Engine::processParseTask now throws BadParserStateException when default state is reached.
+- Engine::parseFuncFoundTask now throws BadParserStateException when default state is reached.
+- Engine::parseIfStructure now throws BadParserStateException when default state is reached.
+- Engine::parseLoopStructure now throws BadParserStateException when default state is reached.
+- Removed parameter OpStrandIter& opIter from Engine::setupFunctionExecution() and Engine::setupUserFunctionExecution().
+- Commented-out parameter FuncBuildParseTask* task from Engine::ParseFunctionBuild_FromExecBody().
+- Removed param bool srcDone from Engine::ParseFuncFound_ValidateAssignment() and Engine::ParseFuncFound_ValidatePointerAssignment().
+- Provided short implementations for ForeignFunc::getParameterName() and ForeignFunc::getParameterCount().
+
+- Changed Engine::addForeignFunction() to Engine::addForeignFunctionInstance().
+- Changed ForeignFunctionInterface to FFIServices.
+- Changed FFIServices::getNextParam() to getNextArg().
+- Changed FFIServices::hasMoreParams() to hasMoreArgs().
+
+- Added ObjectString::ObjectString().
+- Removed NUMBER_TYPENAME and replaced it with static const char* ObjectNumber::StaticTypeName().
+- Removed OBJECTSTRING_TYPENAME and replaced it with static const char* ObjectString::StaticTypeName().
+- Added static const char* ObjectBool::StaticTypeName().
+
+- Fixed LoopStructureParseTask::State::CollectBody in Engine::parseLoopStructure().
+
+Printer.h
+- Removed Printer::getParameterName() and Printer::getParameterCount().
+
+docs.html
+- Changed name to CopperLangGuide.html
+- Miscellaneous updates.
+
+InterpreterUsageGuide.html created.
+
+TODO:
+- Add Engine::addForeignFunction( const String& pName, bool (*pFunction)( FFIServices& ), bool pIsVariadic ).
+
+
+====================
 2017/3/24 - 2017/4/8
 v 3-0.19
 

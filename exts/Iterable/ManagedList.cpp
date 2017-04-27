@@ -6,60 +6,60 @@
 namespace Cu {
 namespace ManagedList {
 
-using FFI::simpleFunctionAdd;
-
 bool isList(const Object& pObject) {
-	return util::equals(pObject.typeName(), MGD_LIST_TYPENAME);
+	return util::equals(pObject.typeName(), List::StaticTypeName());
 }
 
 bool isIterator(const Object& pObject) {
-	return util::equals(pObject.typeName(), MGD_LIST_ITER_TYPENAME);
+	return util::equals(pObject.typeName(), Iter::StaticTypeName());
 }
 
-void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames) {
-	simpleFunctionAdd(engine, String("Are_list"), areList);
-	simpleFunctionAdd(engine, String("List"), create);
-	Foreach* foreach = new Foreach(&engine, &logger);
+void addFunctionsToEngine(
+	Engine& engine,
+	bool useShortNames
+) {
+	addForeignFuncInstance<AreList> 		(engine, "AreList");
+	addForeignFuncInstance<Create> 			(engine, "List");
+
 	if ( useShortNames ) {
-		simpleFunctionAdd(engine, String("Build"),			build, &logger);
-		simpleFunctionAdd(engine, String("Length"),			length, &logger);
-		simpleFunctionAdd(engine, String("Has_nodes"),		has_nodes, &logger);
-		simpleFunctionAdd(engine, String("Push_top"),		push_top, &logger);
-		simpleFunctionAdd(engine, String("Push_bottom"),	push_bottom, &logger);
-		simpleFunctionAdd(engine, String("Pop_top"),		pop_top, &logger);
-		simpleFunctionAdd(engine, String("Pop_bottom"),		pop_bottom, &logger);
-		engine.addForeignFunction(String("Foreach"),		foreach);
-		simpleFunctionAdd(engine, String("Bottom"),			iter_bottom, &logger);
-		simpleFunctionAdd(engine, String("Top"),			iter_top, &logger);
-		simpleFunctionAdd(engine, String("Are_tied"),		iter_tied, &logger);
-		simpleFunctionAdd(engine, String("Go_up"),			iter_go_up, &logger);
-		simpleFunctionAdd(engine, String("Go_down"),		iter_go_down, &logger);
-		simpleFunctionAdd(engine, String("Elem"),			iter_elem, &logger);
-		simpleFunctionAdd(engine, String("Insert_above"),	iter_insert_above, &logger);
-		simpleFunctionAdd(engine, String("Insert_below"),	iter_insert_below, &logger);
-		simpleFunctionAdd(engine, String("Extract"),		iter_extract, &logger);
-		simpleFunctionAdd(engine, String("Replace"),		iter_replace, &logger);
+		addForeignFuncInstance<Build> 			(engine, "Build");
+		addForeignFuncInstance<Length> 			(engine, "Length");
+		addForeignFuncInstance<HasNodes>		(engine, "Has_nodes");
+		addForeignFuncInstance<PushTop>			(engine, "Push_top");
+		addForeignFuncInstance<PushBottom>		(engine, "Push_bottom");
+		addForeignFuncInstance<PopTop> 			(engine, "Pop_top");
+		addForeignFuncInstance<PopBottom>		(engine, "Pop_bottom");
+		//addForeignFuncInstance<Foreach>		(engine, "Foreach");
+		addForeignFuncInstance<Iter_Top> 		(engine, "Top");
+		addForeignFuncInstance<Iter_Bottom>		(engine, "Bottom");
+		addForeignFuncInstance<Iter_Tied> 		(engine, "Are_tied");
+		addForeignFuncInstance<Iter_GoUp>		(engine, "Go_up");
+		addForeignFuncInstance<Iter_GoDown>		(engine, "Go_down");
+		addForeignFuncInstance<Iter_Elem> 		(engine, "Elem");
+		addForeignFuncInstance<Iter_InsertAbove>(engine, "Insert_above");
+		addForeignFuncInstance<Iter_InsertBelow>(engine, "Insert_below");
+		addForeignFuncInstance<Iter_Extract> 	(engine, "Extract");
+		addForeignFuncInstance<Iter_Replace>	(engine, "Replace");
 	} else {
-		simpleFunctionAdd(engine, String("List_build"),			build, &logger);
-		simpleFunctionAdd(engine, String("List_length"),		length, &logger);
-		simpleFunctionAdd(engine, String("List_has_nodes"),		has_nodes, &logger);
-		simpleFunctionAdd(engine, String("List_push_top"),		push_top, &logger);
-		simpleFunctionAdd(engine, String("List_push_bottom"),	push_bottom, &logger);
-		simpleFunctionAdd(engine, String("List_pop_top"),		pop_top, &logger);
-		simpleFunctionAdd(engine, String("List_pop_bottom"),	pop_bottom, &logger);
-		engine.addForeignFunction(String("List_foreach"),		foreach);
-		simpleFunctionAdd(engine, String("List_bottom"),		iter_bottom, &logger);
-		simpleFunctionAdd(engine, String("List_top"),			iter_top, &logger);
-		simpleFunctionAdd(engine, String("List_are_tied"),		iter_tied, &logger);
-		simpleFunctionAdd(engine, String("Iter_go_up"),			iter_go_up, &logger);
-		simpleFunctionAdd(engine, String("Iter_go_down"),		iter_go_down, &logger);
-		simpleFunctionAdd(engine, String("Iter_elem"),			iter_elem, &logger);
-		simpleFunctionAdd(engine, String("Iter_insert_above"),	iter_insert_above, &logger);
-		simpleFunctionAdd(engine, String("Iter_insert_below"),	iter_insert_below, &logger);
-		simpleFunctionAdd(engine, String("Iter_extract"),		iter_extract, &logger);
-		simpleFunctionAdd(engine, String("Iter_replace"),		iter_replace, &logger);
+		addForeignFuncInstance<Build> 			(engine, "List_build");
+		addForeignFuncInstance<Length> 			(engine, "List_length");
+		addForeignFuncInstance<HasNodes>		(engine, "List_has_nodes");
+		addForeignFuncInstance<PushTop>			(engine, "List_push_top");
+		addForeignFuncInstance<PushBottom>		(engine, "List_push_bottom");
+		addForeignFuncInstance<PopTop> 			(engine, "List_pop_top");
+		addForeignFuncInstance<PopBottom>		(engine, "List_pop_bottom");
+		//addForeignFuncInstance<Foreach>		(engine, "List_foreach");
+		addForeignFuncInstance<Iter_Top> 		(engine, "List_top");
+		addForeignFuncInstance<Iter_Bottom>		(engine, "List_bottom");
+		addForeignFuncInstance<Iter_Tied> 		(engine, "List_are_tied");
+		addForeignFuncInstance<Iter_GoUp>		(engine, "List_go_up");
+		addForeignFuncInstance<Iter_GoDown>		(engine, "List_go_down");
+		addForeignFuncInstance<Iter_Elem> 		(engine, "List_elem");
+		addForeignFuncInstance<Iter_InsertAbove>(engine, "List_insert_above");
+		addForeignFuncInstance<Iter_InsertBelow>(engine, "List_insert_below");
+		addForeignFuncInstance<Iter_Extract> 	(engine, "List_extract");
+		addForeignFuncInstance<Iter_Replace>	(engine, "List_replace");
 	}
-	foreach->deref();
 }
 
 Node::Node(Object* pElem)
@@ -189,12 +189,26 @@ bool Iter::go_down() {
 	return false;
 }
 
-void Iter::get_elem(RefPtr<Object>& result) {
+void Iter::get_elem(
+	RefPtr<Object>& result
+) {
 	if ( isNull(node) ) {
 		result.setWithoutRef(new FunctionContainer());
 	} else {
 		result.set(node->getElem());
 	}
+}
+
+void Iter::set_result_to_elem(
+	FFIServices& ffi
+) {
+	if ( notNull(node) ) {
+		ffi.setResult(node->getElem());
+	}
+	// else | Result-defaulting-to-empty-function is automatically handled by the engine.
+	//Object* result = new FunctionContainer();
+	//ffi.setResult(result);
+	//result->deref();
 }
 
 bool Iter::insert_above(Object* pData) {
@@ -405,81 +419,87 @@ bool List::has() {
 	return notNull(bottom);
 }
 
-bool getList( const util::List<Object*>::ConstIter& paramsIter, List*& list, Logger* logger, const char* failMsg ) {
-	if ( !paramsIter.has() ) {
-		FFI::printWarning(logger, failMsg);
+bool getList(
+	FFIServices& ffi,
+	List*& list
+) {
+	if ( ! ffi.hasMoreArgs() ) {
 		return false;
 	}
-	if ( ! isList(**paramsIter) ) {
-		FFI::printWarning(logger, failMsg);
+	Object* arg = ffi.getNextArg();
+	if ( ! isList(*arg) ) {
 		return false;
 	}
-	list = ((List*)*paramsIter);
+	list = (List*)arg;
 	return true;
 }
 
-bool getIter( const util::List<Object*>::ConstIter& paramsIter, Iter*& iter, Logger* logger, const char* failMsg ) {
-	if ( !paramsIter.has() ) {
-		FFI::printWarning(logger, failMsg);
+bool getIter(
+	FFIServices& ffi,
+	Iter*& iter
+) {
+	if ( ! ffi.hasMoreArgs() ) {
 		return false;
 	}
-	if ( ! isIterator(**paramsIter) ) {
-		FFI::printWarning(logger, failMsg);
+	Object* arg = ffi.getNextArg();
+	if ( ! isIterator(*arg) ) {
 		return false;
 	}
-	iter = ((Iter*)*paramsIter);
+	iter = (Iter*)arg;
 	return true;
 }
 
-bool areList( const util::List<Object*>& params, RefPtr<Object>& result ) {
-	if ( ! params.has() ) {
-		result.setWithoutRef(new ObjectBool(true));
-		return true;
+bool
+AreList::call(
+	FFIServices& ffi
+) {
+	bool result = true;
+	while( ffi.hasMoreArgs() ) {
+		result = isList( *(ffi.getNextArg()) );
+		if ( !result ) break;
 	}
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	bool is = true;
-	do {
-		is = isList(**paramsIter);
-		if ( !is ) break;
-	} while (++paramsIter);
-	result.setWithoutRef(new ObjectBool(is));
+	ObjectBool* out = new ObjectBool(result);
+	ffi.setResult(out);
+	out->deref();
 	return true;
 }
 
-bool create( const util::List<Object*>& params, RefPtr<Object>& result ) {
-	if ( ! params.has() ) {
-		result.setWithoutRef(new List());
-		return true;
-	}
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+Create::call(
+	FFIServices& ffi
+) {
 	List* list = new List();
-	do {
-		list->push_top(**paramsIter);
-	} while (++paramsIter);
-	result.setWithoutRef(list);
+	while( ffi.hasMoreArgs() ) {
+		list->push_top(ffi.getNextArg());
+	}
+	ffi.setResult(list);
+	list->deref();
 	return true;
 }
 
-bool build( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	if ( ! params.has() ) {
-		result.setWithoutRef(new List());
-		return true;
-	}
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+Build::call(
+	FFIServices& ffi
+) {
 	List* list = new List();
-	List* cmpList; // Component list
-	do {
-		if ( isList(**paramsIter) ) {
-			build_appendList(list, (List*)(*paramsIter));
+	Object* arg = REAL_NULL;
+	while( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( isList(*arg) ) {
+			build_appendList(list, (List*)arg);
 		} else {
-			FFI::printWarning(logger, "List build function ignoring non-list param.");
+			ffi.printWarning("List-build function received non-list argument. Ignoring...");
 		}
-	} while (++paramsIter);
-	result.setWithoutRef(list);
+	}
+	ffi.setResult(list);
+	list->deref();
 	return true;
-}
+};
 
-void build_appendList( List* outList, List* src ) {
+void build_appendList(
+	List* outList,
+	List* src
+) {
 	if ( ! src->has() )
 		return;
 	Iter srcIter(src, false);
@@ -494,87 +514,235 @@ void build_appendList( List* outList, List* src ) {
 	} while( srcIter.go_up() );
 }
 
-bool length( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	// Only one parameter is used
-	if ( ! params.size() == 1 ) {
-		FFI::printWarning(logger, "List length function only takes 1 parameter.");
-		result.setWithoutRef(new ObjectNumber());
-	}
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	if ( isList(**paramsIter) ) {
-		result.setWithoutRef(new ObjectNumber( ((List*)*paramsIter)->getSize() ));
-	} else {
-		FFI::printWarning(logger, "List length function requires list as parameter.");
-		result.setWithoutRef(new ObjectNumber());
-	}
+bool
+Length::call(
+	FFIServices& ffi
+) {
+	List* list = (List*)ffi.getNextArg();
+	ObjectNumber* result = new ObjectNumber( list->getSize() );
+	ffi.setResult(result);
+	result->deref();
 	return true;
 }
 
-bool has_nodes( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	if ( ! params.size() == 1 ) {
-		FFI::printWarning(logger, "List has_nodes function only takes 1 parameter.");
-		result.setWithoutRef(new ObjectNumber());
-	}
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	if ( isList(**paramsIter) ) {
-		result.setWithoutRef(new ObjectBool( ((List*)*paramsIter)->has() ));
-	} else {
-		FFI::printWarning(logger, "List has_nodes function requires list as parameter.");
-		result.setWithoutRef(new ObjectBool(false));
-	}
+bool
+HasNodes::call(
+	FFIServices& ffi
+) {
+	List* list = (List*)ffi.getNextArg();
+	ObjectBool* result = new ObjectBool( list->has() );
+	ffi.setResult(result);
+	result->deref();
 	return true;
 }
 
-bool push_top( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+PushTop::call(
+	FFIServices& ffi
+) {
 	List* list;
-	if (!getList(paramsIter, list, logger, "List push_top function requires a list as the first parameter."))
+	if (!getList(ffi, list))
 	{
+		ffi.printError("List push_top function requires a list as the first parameter.");
 		return false;
 	}
-	while( ++paramsIter ) {
-		list->push_top( *paramsIter );
+	while( ffi.hasMoreArgs() ) {
+		list->push_top( ffi.getNextArg() );
 	}
-	result.set(list);
+	ffi.setResult(list);
 	return true;
 }
 
-bool push_bottom( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+PushBottom::call(
+	FFIServices& ffi
+) {
 	List* list;
-	if (!getList(paramsIter, list, logger, "List push_bottom function requires a list as the first parameter."))
+	if (!getList(ffi, list))
 	{
+		ffi.printError("List push_bottom function requires a list as the first parameter.");
 		return false;
 	}
-	while( ++paramsIter ) {
-		list->push_bottom( *paramsIter );
+	while( ffi.hasMoreArgs() ) {
+		list->push_top( ffi.getNextArg() );
 	}
-	result.set(list);
+	ffi.setResult(list);
 	return true;
 }
 
-bool pop_top( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+PopTop::call(
+	FFIServices& ffi
+) {
 	List* list;
-	if (!getList(paramsIter, list, logger, "List pop_top function requires a list as the first parameter."))
+	if (!getList(ffi, list))
 	{
+		ffi.printError("List pop_top function requires a list as the first parameter.");
 		return false;
 	}
-	list->pop_top( result );
+	RefPtr<Object> result;
+	list->pop_top(result);
+	ffi.setResult(result.raw());
 	return true;
 }
 
-bool pop_bottom( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
+bool
+PopBottom::call(
+	FFIServices& ffi
+) {
 	List* list;
-	if (!getList(paramsIter, list, logger, "List pop_bottom function requires a list as the first parameter."))
+	if (!getList(ffi, list))
 	{
+		ffi.printError("List pop_bottom function requires a list as the first parameter.");
 		return false;
 	}
-	list->pop_bottom( result );
+	RefPtr<Object> result;
+	list->pop_bottom(result);
+	ffi.setResult(result.raw());
 	return true;
 }
 
+	// TODO - Implement
+/*bool
+Foreach::call(
+	FFIServices& ffi
+) {
+};*/
+
+bool
+Iter_Top::call(
+	FFIServices& ffi
+) {
+	List* list = (List*)ffi.getNextArg();
+	Iter* out = new Iter(list, true);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Iter_Bottom::call(
+	FFIServices& ffi
+) {
+	List* list = (List*)ffi.getNextArg();
+	Iter* out = new Iter(list, false);
+	ffi.setResult(out);
+	out->deref();
+	return true;
+}
+
+bool
+Iter_Tied::call(
+	FFIServices& ffi
+) {
+	List* list = (List*)ffi.getNextArg();
+	bool areTied = true;
+	Iter* iter;
+	while( ffi.hasMoreArgs() ) {
+		if ( getIter(ffi, iter) ) {
+			areTied = iter->tied(list);
+			if ( !areTied )
+				break;
+		} else {
+			ffi.printError("List/Iter-are-tied function was given non-iterator. Defaulting to false.");
+			areTied = false;
+			break;
+		}
+	}
+	ObjectBool* result = new ObjectBool(areTied);
+	ffi.setResult(result);
+	result->deref();
+	return true;
+}
+
+bool
+Iter_GoUp::call(
+	FFIServices& ffi
+) {
+	Iter* iter = (Iter*)ffi.getNextArg();
+	bool moved = iter->go_up();
+	ObjectBool* result = new ObjectBool(moved);
+	ffi.setResult(result);
+	result->deref();
+	return true;
+}
+
+bool
+Iter_GoDown::call(
+	FFIServices& ffi
+) {
+	Iter* iter = (Iter*)ffi.getNextArg();
+	bool moved = iter->go_down();
+	ObjectBool* result = new ObjectBool(moved);
+	ffi.setResult(result);
+	result->deref();
+	return true;
+}
+
+bool
+Iter_Elem::call(
+	FFIServices& ffi
+) {
+	Iter* iter = (Iter*)ffi.getNextArg();
+	iter->set_result_to_elem(ffi);
+	return true;
+}
+
+bool
+Iter_InsertAbove::call(
+	FFIServices& ffi
+) {
+	Iter* iter = (Iter*)ffi.getNextArg();
+	bool jobDone = true;
+	while ( ffi.hasMoreArgs() ) {
+		jobDone = iter->insert_above( ffi.getNextArg() );
+		if ( ! jobDone ) break;
+	}
+	ObjectBool* result = new ObjectBool(jobDone);
+	ffi.setResult(result);
+	result->deref();
+	return true;
+}
+
+bool
+Iter_InsertBelow::call(
+	FFIServices& ffi
+) {
+	Iter* iter = (Iter*)ffi.getNextArg();
+	bool jobDone = true;
+	while ( ffi.hasMoreArgs() ) {
+		jobDone = iter->insert_below( ffi.getNextArg() );
+		if ( ! jobDone ) break;
+	}
+	ObjectBool* result = new ObjectBool(jobDone);
+	ffi.setResult(result);
+	result->deref();
+	return true;
+}
+
+bool
+Iter_Extract::call(
+	FFIServices& ffi
+) {
+	Iter* iter = (Iter*)ffi.getNextArg();
+	iter->extract();
+	return true;
+}
+
+bool
+Iter_Replace::call(
+	FFIServices& ffi
+) {
+	Iter* iter = (Iter*)ffi.getNextArg();
+	if ( ! ffi.hasMoreArgs() ) {
+		ffi.printError("Iter-replace function requires two arguments.");
+		return false;
+	}
+	iter->replace( ffi.getNextArg() );
+	return true;
+}
+
+/*
 bool Foreach::call( const util::List<Object*>& params, RefPtr<Object>& result ) {
 	// Requires a list and an action function
 	if ( params.size() != 2 ) {
@@ -612,156 +780,6 @@ bool Foreach::call( const util::List<Object*>& params, RefPtr<Object>& result ) 
 	} while ( listContentIter.go_up() );
 	return false;
 }
-
-bool iter_bottom( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	// Only one parameter is used
-	if ( ! params.size() == 1 ) {
-		FFI::printWarning(logger, "Iterator function only takes 1 parameter.");
-		return false;
-	}
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	if ( isList(**paramsIter) ) {
-		result.setWithoutRef( new Iter((List*)*paramsIter, false) );
-		return true;
-	}
-	return false;
-}
-
-bool iter_top( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	// Only one parameter is used
-	if ( ! params.size() == 1 ) {
-		FFI::printWarning(logger, "Iterator function only takes 1 parameter.");
-		return false;
-	}
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	if ( isList(**paramsIter) ) {
-		result.setWithoutRef( new Iter((List*)*paramsIter, true) );
-		return true;
-	}
-	return false;
-}
-
-bool iter_tied( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	// Requires 2 or more parameters
-	if ( params.size() < 2 ) {
-		FFI::printWarning(logger, "List/Iter tied function requires 2 or more parameters.");
-	}
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	List* list;
-	if ( ! getList(paramsIter, list, logger, "List/Iter tied function requires list as first parameter.") )
-	{
-		result.setWithoutRef(new ObjectBool(false));
-		return true;
-	}
-	bool tied = true;
-	Iter* iter;
-	while( ++paramsIter ) {
-		if ( getIter(paramsIter, iter, logger, "List/Iter tied function was passed non-iter. Skipping...") )
-		{
-			tied = iter->tied(list);
-			if ( !tied ) break;
-		}
-	}
-	result.setWithoutRef(new ObjectBool(tied));
-	return true;
-}
-
-bool iter_go_up( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	Iter* iter;
-	if ( ! getIter(paramsIter, iter, logger, "Iter go_up function requires iterator as first parameter.") )
-	{
-		result.setWithoutRef(new ObjectBool(false));
-		return true;
-	}
-	bool moved = iter->go_up();
-	result.setWithoutRef(new ObjectBool(moved));
-	return true;
-}
-
-bool iter_go_down( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	Iter* iter;
-	if ( ! getIter(paramsIter, iter, logger, "Iter go_down function requires iterator as first parameter.") )
-	{
-		result.setWithoutRef(new ObjectBool(false));
-		return true;
-	}
-	bool moved = iter->go_down();
-	result.setWithoutRef(new ObjectBool(moved));
-	return true;
-}
-
-bool iter_elem( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	Iter* iter;
-	if ( ! getIter(paramsIter, iter, logger, "Iter elem function requires iterator as first parameter.") )
-	{
-		result.setWithoutRef(new ObjectBool(false));
-		return true;
-	}
-	iter->get_elem(result);
-	return true;
-}
-
-bool iter_insert_above( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	Iter* iter;
-	if ( ! getIter(paramsIter, iter, logger, "Iter insert_above function requires iterator as first parameter.") )
-	{
-		result.setWithoutRef(new ObjectBool(false));
-		return true;
-	}
-	bool jobdone = true;
-	while( ++paramsIter ) {
-		jobdone = iter->insert_above(*paramsIter);
-	}
-	result.setWithoutRef(new ObjectBool(jobdone));
-	return true;
-}
-
-bool iter_insert_below( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	Iter* iter;
-	if (!getIter(paramsIter,iter,logger,"Iter insert_below function requires iterator as first parameter."))
-	{
-		result.setWithoutRef(new ObjectBool(false));
-		return true;
-	}
-	bool jobdone = true;
-	while( ++paramsIter ) {
-		jobdone = iter->insert_below(*paramsIter);
-	}
-	result.setWithoutRef(new ObjectBool(jobdone));
-	return true;
-}
-
-bool iter_extract( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	Iter* iter;
-	if ( ! getIter(paramsIter, iter, logger, "Iter extract function requires iterator as first parameter.") )
-	{
-		return false;
-	}
-	// Could be wrapped in an if-statement if that had any meaning
-	iter->extract();
-	return false;
-}
-
-bool iter_replace( const util::List<Object*>& params, RefPtr<Object>& result, Logger* logger ) {
-	if ( params.size() != 2 ) {
-		FFI::printWarning(logger, "Iter replace function requires 2 parameters.");
-		return false;
-	}
-	util::List<Object*>::ConstIter paramsIter = params.constStart();
-	Iter* iter;
-	if ( ! getIter(paramsIter, iter, logger, "Iter replace function requires iterator as first parameter.") )
-	{
-		return false;
-	}
-	++paramsIter;
-	iter->replace(*paramsIter);
-	return false;
-}
+*/
 
 }}

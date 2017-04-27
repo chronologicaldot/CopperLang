@@ -26,6 +26,13 @@
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
 #include <cstdio>
 
+//#define COPPER_SPEED_PROFILE
+
+#ifdef COPPER_SPEED_PROFILE
+#include <ctime>
+// Also requires cstdio
+#endif
+
 
 // ******* Null *******
 
@@ -63,7 +70,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.19
+#define COPPER_INTERPRETER_VERSION 0.191
 #define COPPER_INTERPRETER_BRANCH 3
 
 // ******* Language version *******
@@ -1363,6 +1370,8 @@ struct Data : public Object {
 class ObjectBool : public Data {
 	bool value;
 public:
+	static const char* StaticTypeName() { return "bool"; }
+
 	explicit ObjectBool(bool b)
 		: Data()
 		, value(b)
@@ -1377,7 +1386,7 @@ public:
 	}
 
 	virtual const char* typeName() const {
-		return "bool";
+		return StaticTypeName();
 	}
 
 	virtual void writeToString(String& out) const {
@@ -1386,11 +1395,19 @@ public:
 };
 
 
-static const char* OBJECTSTRING_TYPENAME = "string";
+//static const char* STRING_TYPENAME = "string";
 
 class ObjectString : public Data {
 	String value;
+
 public:
+	static const char* StaticTypeName() { return "string"; }
+
+	ObjectString()
+		: Data()
+		, value()
+	{}
+
 	explicit ObjectString(const String& pValue)
 		: Data()
 		, value(pValue)
@@ -1401,7 +1418,7 @@ public:
 	}
 
 	virtual const char* typeName() const {
-		return OBJECTSTRING_TYPENAME;
+		return StaticTypeName();
 	}
 
 	String& getString() {
@@ -1433,7 +1450,7 @@ public:
 	to bignum classes.
 	I guess I could use writeToString for that, but it would be slow. hm...
 */
-static const char* NUMBER_TYPENAME = "number";
+//static const char* NUMBER_TYPENAME = "number";
 
 //struct Number : public Data {
 //	virtual ~Number() {}
@@ -1453,6 +1470,8 @@ class ObjectNumber : public Data /*Number*/ {
 	String value; // Numeric-only string
 
 public:
+	static const char* StaticTypeName() { return "number"; }
+
 	 // TODO: A constructor using CharList
 
 	ObjectNumber()
@@ -1493,10 +1512,14 @@ public:
 		return new ObjectNumber(value);
 	}
 
+	// May be deprecated
 	unsigned int getDigitCount() const {
+		// // Debating on this:
+		// if ( contains(value, '.') ) return value.size() - 1;
 		return value.size();
 	}
 
+	// May be deprecated
 	unsigned char getDigit(unsigned int index) const {
 		// // Debating on this:
 		// if ( value[index] == '.' ) ++index;
@@ -1516,7 +1539,7 @@ public:
 	}
 
 	virtual const char* typeName() const {
-		return NUMBER_TYPENAME;
+		return StaticTypeName();
 	}
 };
 
@@ -1542,12 +1565,15 @@ struct AppendObjectInterface {
 
 //*********** FOREIGN FUNCTION HANDLING *********
 
-class ForeignFunctionInterface; // predeclaration
+class FFIServices; // predeclaration
+
+// Shows up when the user tries to add a null pointer as a foreign function
+class NullForeignFunctionException {};
 
 	// External/Foreign Functions
 /*
 For integrating libraries with this language, classes can directly inherit this interface.
-If the function returns, use ForeignFunctionInterface::setResult(), which automatically calls
+If the function returns, use FFIServices::setResult(), which automatically calls
 ref() on the passed object.
 */
 class ForeignFunc : public Ref {
@@ -1555,15 +1581,13 @@ public:
 	virtual ~ForeignFunc() {}
 
 	// Calls the function. Return "false" on error.
-	virtual bool call( ForeignFunctionInterface& ffi )=0;
+	virtual bool call( FFIServices& ffi )=0;
 
 	virtual bool isVariadic() { return false; }
 
-	//virtual List<String>& getParameterNames()=0;
+	virtual const char* getParameterName( unsigned int index ) { return ""; }
 
-	virtual const char* getParameterName( unsigned int index )=0;
-
-	virtual unsigned int getParameterCount()=0;
+	virtual unsigned int getParameterCount() { return 0; }
 
 	//operator ForeignFunc* () {
 	//	return (ForeignFunc*)(*this);
@@ -1605,6 +1629,41 @@ public:
 		return data.raw();
 	}
 };
+
+// Wrapper for performing generic foreign-function tasks.
+// TODO: Finish when you decide how to handle args.
+/*
+class ForeignFunctionWrapper : public ForeignFunc {
+	bool (*function)( FFIServices& );
+	bool variadic;
+	// HOW ARE ARGS STORED?
+
+public:
+	ForeignFunctionWrapper(
+		bool (*pFunction)( FFIServices& ),
+		bool pIsVariadic
+	)
+		: function( pFunction )
+		, variadic( pIsVariadic )
+	{}
+
+	virtual bool call( FFIServices& ffi ) {
+		return function(ffi);
+	}
+
+	virtual bool isVariadic() {
+		return variadic;
+	}
+
+	virtual const char* getParameterName( unsigned int index ) {
+		return "";
+	}
+
+	virtual unsigned int getParameterCount() {
+		return 0;
+	}
+};
+*/
 
 //-------------------
 
@@ -1846,6 +1905,7 @@ typedef List<ParseTaskContainer>::Iter ParseTaskIter;
 // Thrown when attempting to get a token when no token source was set
 // or the source is empty
 class ParserContextEmptySourceException {};
+class BadParserStateException {};
 
 
 struct ParseResult {
@@ -2137,19 +2197,19 @@ class FFIMisuseException {};
 
 // class Engine was declared before this
 
-class ForeignFunctionInterface {
+class FFIServices {
 	Engine&			engine;
 	ParamsIter		paramsIter;
-	bool			done;		// Indicates parameter iteration is complete
+	bool			done;		// Indicates parameter/arguments iteration is complete
 
 public:
-	ForeignFunctionInterface( Engine& enginePtr, ParamsIter paramsStart );
+	FFIServices( Engine& enginePtr, ParamsIter paramsStart );
 
-	// Returns each successive parameter sent to the function
-	Object* getNextParam();
+	// Returns each successive argument sent to the function
+	Object* getNextArg();
 
-	// Indicates more parameters are available (which is useful for variadic functions)
-	bool hasMoreParams();
+	// Indicates more arguments are available (which is useful for variadic functions)
+	bool hasMoreArgs();
 
 	// Wrapper for Engine::print(LogLevel::info, const char*)
 	void printInfo(const char* message);
@@ -2163,7 +2223,6 @@ public:
 	// Sets the Engine lastObject.
 	void setResult(Object* obj);
 };
-
 
 // ********** HELPER FUNCTIONS **********
 
@@ -2201,7 +2260,7 @@ You can use process() directly if you know what you are doing.
 */
 
 class Engine {
-	friend ForeignFunctionInterface; // Not needed if you don't require the FFI to directly set the lastObject
+	friend FFIServices; // Not needed if you don't require the FFI to directly set the lastObject
 
 	Logger* logger;
 	Stack stack;
@@ -2261,7 +2320,22 @@ public:
 	\param pName - The alias within Copper by which this function can be called.
 	\param pFunction - Pointer to the function to be called.
 	*/
-	void addForeignFunction( const String& pName, ForeignFunc* pFunction );
+	void addForeignFunctionInstance(
+		const String&	pName,
+		ForeignFunc*	pFunction
+	);
+
+	/* Add an external/foreign function to the virtual machine, accessible from within Copper.
+	\param pName - The alias within Copper by which this function can be called.
+	\param pFunction - Pointer to the function to be called.
+	*/
+	/*
+	void addForeignFunction(
+		const String&	pName,
+		bool			(*pFunction)( FFIServices& ),
+		bool			pIsVariadic
+	);
+	*/
 
 	/* Run Copper code.
 	This accepts bytes from a byte stream and treats it as Copper code. */
@@ -2345,18 +2419,6 @@ protected:
 		CharList& collectedValue
 	);
 
-	void
-	opStrandAddNewOperation(
-		OpStrand*	strand,
-		Opcode*		newOp	// passed directly after creation with "new"
-	);
-
-	void
-	opStrandAddOperation(
-		OpStrand*	strand,
-		Opcode*		op
-	);
-
 	void setupSystemFunctions();
 
 	// ----- PARSING SYSTEM -----
@@ -2386,8 +2448,7 @@ protected:
 
 	ParseResult::Value
 	interpretToken(
-		ParserContext&	context,
-		bool			srcDone
+		ParserContext&	context
 	);
 
 	ParseTask::Result::Value
@@ -2420,7 +2481,7 @@ protected:
 
 	ParseTask::Result::Value
 	ParseFunctionBuild_FromExecBody(
-		FuncBuildParseTask*	task,
+		//FuncBuildParseTask*	task,
 		ParserContext&		context,
 		bool				srcDone
 	);
@@ -2435,15 +2496,13 @@ protected:
 	ParseTask::Result::Value
 	ParseFuncFound_ValidateAssignment(
 		FuncFoundParseTask*	task,
-		ParserContext&		context,
-		bool				srcDone
+		ParserContext&		context
 	);
 
 	ParseTask::Result::Value
 	ParseFuncFound_ValidatePointerAssignment(
 		FuncFoundParseTask*	task,
-		ParserContext&		context,
-		bool				srcDone
+		ParserContext&		context
 	);
 
 	ParseTask::Result::Value
@@ -2564,8 +2623,7 @@ protected:
 	FuncExecReturn::Value
 	setupFunctionExecution(
 		FuncFoundTask& task,
-		OpStrandStackIter&	opStrandStackIter,
-		OpStrandIter&		opIter
+		OpStrandStackIter&	opStrandStackIter
 	);
 
 	FuncExecReturn::Value
@@ -2581,8 +2639,7 @@ protected:
 	FuncExecReturn::Value
 	setupUserFunctionExecution(
 		FuncFoundTask& task,
-		OpStrandStackIter&	opStrandStackIter,
-		OpStrandIter&		opIter
+		OpStrandStackIter&	opStrandStackIter
 	);
 
 	Variable*
@@ -2631,6 +2688,16 @@ protected:
 	FuncExecReturn::Value	process_sys_are_number(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
 };
+
+// Function for automatically creating foreign function instances and assigning them to the engine
+// NOTE: Must be after the definition of Engine.
+// WARNING: The typename MUST be of a type inheriting ForeignFunc.
+template<typename ForeignFuncClass>
+void addForeignFuncInstance( Engine& engine, const String& name ) {
+	ForeignFunc* f = new ForeignFuncClass();
+	engine.addForeignFunctionInstance(name, f);
+	f->deref();
+}
 
 }
 

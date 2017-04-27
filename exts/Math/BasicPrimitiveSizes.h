@@ -7,18 +7,40 @@ namespace Cu {
 namespace Numeric {
 namespace Sizes {
 
-void addFunctionsToEngine(Engine& engine, Logger& logger, bool useShortNames);
+void addFunctionsToEngine(Engine& engine, bool useShortNames);
 
-bool getSizeofInt( const util::List<Object*>& params, RefPtr<Object>& result );
-bool getSizeofULong( const util::List<Object*>& params, RefPtr<Object>& result );
-bool getSizeofFloat( const util::List<Object*>& params, RefPtr<Object>& result );
-bool getSizeofDouble( const util::List<Object*>& params, RefPtr<Object>& result );
+struct GetSizeofInt : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
 
-bool getMaxofInt( const util::List<Object*>& params, RefPtr<Object>& result );
-bool getMaxofULong( const util::List<Object*>& params, RefPtr<Object>& result );
-bool getMaxofFloat( const util::List<Object*>& params, RefPtr<Object>& result );
-bool getMaxofDouble( const util::List<Object*>& params, RefPtr<Object>& result );
+struct GetSizeofULong : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
 
+struct GetSizeofFloat : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct GetSizeofDouble : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct GetMaxofInt : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct GetMaxofULong : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
+/*
+struct GetMaxofFloat : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct GetMaxofDouble : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
+*/
 }}}
 
 #endif
