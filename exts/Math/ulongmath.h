@@ -91,9 +91,9 @@ struct Unimplemented : public ForeignFunc {
 struct IsZero : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 
-	virtual const char* getParameterName( unsigned int index );
+	virtual const char* getParameterName( unsigned int index ) const;
 
-	virtual unsigned int getParameterCount();
+	virtual unsigned int getParameterCount() const;
 };
 
 struct AreEqual : public ForeignFunc {
@@ -180,9 +180,9 @@ struct Avg : public ForeignFunc {
 struct Get_abs : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 
-	virtual const char* getParameterName( unsigned int index );
+	virtual const char* getParameterName( unsigned int index ) const;
 
-	virtual unsigned int getParameterCount();
+	virtual unsigned int getParameterCount() const;
 };
 
 struct Incr : public ForeignFunc {

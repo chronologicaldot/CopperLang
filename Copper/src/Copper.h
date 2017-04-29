@@ -26,7 +26,7 @@
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
 #include <cstdio>
 
-//#define COPPER_SPEED_PROFILE
+#define COPPER_SPEED_PROFILE
 
 #ifdef COPPER_SPEED_PROFILE
 #include <ctime>
@@ -70,7 +70,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.191
+#define COPPER_INTERPRETER_VERSION 0.192
 #define COPPER_INTERPRETER_BRANCH 3
 
 // ******* Language version *******
@@ -1585,9 +1585,9 @@ public:
 
 	virtual bool isVariadic() { return false; }
 
-	virtual const char* getParameterName( unsigned int index ) { return ""; }
+	virtual const char* getParameterName( unsigned int index ) const { return ""; }
 
-	virtual unsigned int getParameterCount() { return 0; }
+	virtual unsigned int getParameterCount() const { return 0; }
 
 	//operator ForeignFunc* () {
 	//	return (ForeignFunc*)(*this);
@@ -2687,6 +2687,10 @@ protected:
 	FuncExecReturn::Value	process_sys_are_string(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_number(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
+
+#ifdef COPPER_SPEED_PROFILE
+	time_t fullTime;
+#endif
 };
 
 // Function for automatically creating foreign function instances and assigning them to the engine

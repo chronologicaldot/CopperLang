@@ -73,13 +73,13 @@ struct Create : public ForeignFunc {
 struct ToNumber : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 
-	virtual const char* getParameterName( unsigned int index ) {
+	virtual const char* getParameterName( unsigned int index ) const {
 		if ( index == 0 )
 			return MSecTime::StaticTypeName();
 		return "";
 	}
 
-	virtual unsigned int getParameterCount() {
+	virtual unsigned int getParameterCount() const {
 		return 1;
 	}
 };

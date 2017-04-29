@@ -641,7 +641,8 @@ void Scope::setVariableFrom(const String& pName, Object* pObject, bool pReuseSto
 			// Save directly
 			var->setFunc( (FunctionContainer*)pObject, pReuseStorage );
 			break;
-		case ObjectType::Data:
+		//case ObjectType::Data:
+		default:
 			// Save as the return of a function
 			var->setFuncReturn(pObject);
 			break;
@@ -683,7 +684,7 @@ void Scope::copyMembersFrom(Scope& pOther) {
 	newScope = pOther;
 	robinHoodTable->appendCopyOf(*(newScope.robinHoodTable));
 
-	// ^ I don't think this will work.
+	// ^ I don't think this will work, but it might.
 /*
 	// Creating a new scope is required for proper copy construction to delink pointers
 	// Use a list version to make it easier to copy
@@ -1420,6 +1421,7 @@ addressToString(
 #ifdef COPPER_DEBUG_ADDRESS_MESSAGES
 	std::printf("[DEBUG: Engine::addressToString\n");
 #endif
+	// This is EXTREMELY SLOW
 	VarAddressConstIter addrIter = address.constStart();
 	CharList builder;
 	if ( addrIter.has() )
@@ -1799,7 +1801,8 @@ Engine::setVariableByAddress(
 			var->setFunc((FunctionContainer*)obj, reuseStorage);
 			lastObject.set(var->getRawContainer());
 			break;
-		case ObjectType::Data:
+		//case ObjectType::Data:
+		default:
 			var->setFuncReturn( obj );
 			lastObject.set(var->getRawContainer());
 			break;
@@ -3926,6 +3929,7 @@ Engine::execute() {
 	std::printf("PROFILE Engine::execute() start\n");
 	time_t endTime;
 	time_t startTime = clock();
+	fullTime = 0;
 #endif
 
 	// Note: When adding a list of operations, also set currOp.
@@ -4019,6 +4023,7 @@ Engine::execute() {
 #ifdef COPPER_SPEED_PROFILE
 	endTime = clock();
 	std::printf("PROFILE Engine::execute() Normal time = %f\n", static_cast<double>((endTime - startTime) * 1000 / CLOCKS_PER_SEC));
+	std::printf("PROFILE Engine::execute() Section full time = %f\n", static_cast<double>(fullTime * 1000 / CLOCKS_PER_SEC));
 #endif
 
 	return EngineResult::Ok;
@@ -4031,6 +4036,9 @@ Engine::operate(
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::operate");
+#endif
+#ifdef COPPER_SPEED_PROFILE
+	//time_t startTime, endTime;
 #endif
 	const Opcode* opcode = opIter->getOp();
 	Task* task;
@@ -4131,7 +4139,14 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_access");
 #endif
+#ifdef COPPER_SPEED_PROFILE
+		//startTime = clock();
+#endif
 		variable = resolveVariableAddress( *(opcode->getAddressData()) );
+#ifdef COPPER_SPEED_PROFILE
+		//endTime = clock();
+		//fullTime += (endTime - startTime);
+#endif
 		if ( notNull(variable) ) {
 			lastObject.set( variable->getRawContainer() );
 		} else {
@@ -4334,6 +4349,9 @@ Engine::setupFunctionExecution(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupFunctionExecution");
 #endif
+#ifdef COPPER_SPEED_PROFILE
+	//time_t endTime=0, startTime = clock();
+#endif
 	// Protect from polution and allow for functions to have a default return.
 	lastObject.setWithoutRef(new FunctionContainer());
 	FuncExecReturn::Value result;
@@ -4343,15 +4361,30 @@ Engine::setupFunctionExecution(
 
 	result = setupBuiltinFunctionExecution(task);
 	if ( result != FuncExecReturn::NoMatch ) {
+#ifdef COPPER_SPEED_PROFILE
+		//endTime = clock();
+		//fullTime += (endTime - startTime);
+#endif
 		return result;
 	}
 
 	result = setupForeignFunctionExecution(task);
 	if ( result != FuncExecReturn::NoMatch ) {
+#ifdef COPPER_SPEED_PROFILE
+		//endTime = clock();
+		//fullTime += (endTime - startTime);
+#endif
 		return result;
 	}
 
+#ifdef COPPER_SPEED_PROFILE
+	result = setupUserFunctionExecution(task, opStrandStackIter);
+	//endTime = clock();
+	//fullTime += (endTime - startTime);
+	return result;
+#else
 	return setupUserFunctionExecution(task, opStrandStackIter);
+#endif
 }
 
 FuncExecReturn::Value
@@ -4367,13 +4400,15 @@ Engine::setupBuiltinFunctionExecution(
 	// b) Using a virtual function
 	// Based on time tests, the first one. Using a switch is basically a manual lookup-table.
 
-	VarAddressConstIter addrIter = task.varAddress.constStart();
+	//VarAddressConstIter addrIter = task.varAddress.constStart();
+	//RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
+	//	= builtinFunctions.getBucketData(*addrIter);
 
 	RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
-		= builtinFunctions.getBucketData(*addrIter);
+		= builtinFunctions.getBucketData(task.varAddress.getConstFirst());
 
 	// No matching function found
-	if ( bucketData == 0 )
+	if ( ! bucketData )
 		return FuncExecReturn::NoMatch;
 	// Else, bucketData found...
 
@@ -4482,13 +4517,11 @@ Engine::setupForeignFunctionExecution(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupForeignFunctionExecution");
 #endif
-	// Assemble a string from the address
-	String addr = addressToString(task.varAddress);
 
 	RobinHoodHash<ForeignFuncContainer>::BucketData* bucketData
-		= foreignFunctions.getBucketData(addr);
+		= foreignFunctions.getBucketData(task.varAddress.getConstFirst());
 
-	if ( bucketData == 0 ) {
+	if ( ! bucketData ) {
 		return FuncExecReturn::NoMatch;
 	}
 
@@ -4510,6 +4543,9 @@ Engine::setupForeignFunctionExecution(
 	// For example, a list function might be Top(List, Iter, Iter...) so it's constant parameter is
 	// the first one: Top(List...) meaning it should return a parameter count of 1 and have
 	// getParameterName() return the typename for the List.
+#ifdef COPPER_SPEED_PROFILE
+	time_t endTime=0, startTime = clock();
+#endif
 	while ( ffhIndex < foreignFunc->getParameterCount() ) {
 		if ( ! taskArgsIter.has() ) {
 			break; // For variadic functions
@@ -4529,6 +4565,10 @@ Engine::setupForeignFunctionExecution(
 			break;
 		}
 	}
+#ifdef COPPER_SPEED_PROFILE
+	endTime = clock();
+	fullTime += (endTime - startTime);
+#endif
 
 	FFIServices ffi(*this, task.params.start());
 	bool result = foreignFunc->call( ffi );
@@ -4557,6 +4597,10 @@ Engine::setupUserFunctionExecution(
 	// If there is a super, resolve it.
 	// Furthermore, you need only open its scope to get the variable whose function is called.
 	// If there is NO super, you must resolve the entire address for just the function being called.
+/*
+	// Original method, which only works for local scope. KEEP!
+	// You may later require access to globals via a "global" keyword.
+
 	Variable* callVariable = REAL_NULL;
 	Variable* super = REAL_NULL;
 	Scope* scope = &getCurrentTopScope();
@@ -4568,6 +4612,59 @@ Engine::setupUserFunctionExecution(
 		func = callVariable->getFunction(logger);
 		scope = &(func->getPersistentScope());
 	} while ( addrIter.next() );
+*/
+
+//----------
+
+	// Search local, then global, then create in local if not found.
+	// Code modified from resolveVariableAddress().
+
+	Variable* callVariable = REAL_NULL;
+	Variable* super = REAL_NULL;
+	Scope* scope = &getCurrentTopScope();
+	Function* func = REAL_NULL;
+	bool foundVar = false;
+	VarAddressConstIter addrIter = task.varAddress.constStart();
+	addrIter.reset(); // Restart
+	do {
+		super = callVariable;
+		if ( scope->findVariable(*addrIter, callVariable) ) {
+			func = callVariable->getFunction(logger);
+			scope = &(func->getPersistentScope());
+			foundVar = true;
+		} else {
+			break;
+		}
+	} while ( addrIter.next() );
+
+	if ( !foundVar ) {
+		addrIter.reset(); // Restart
+		scope = &getGlobalScope();
+		do {
+			super = callVariable;
+			if ( scope->findVariable(*addrIter, callVariable) ) {
+				func = callVariable->getFunction(logger);
+				scope = &(func->getPersistentScope());
+				foundVar = true;
+			} else {
+				break;
+			}
+		} while ( addrIter.next() );
+	}
+
+	if ( !foundVar ) {
+		addrIter.reset(); // Restart
+		scope = &getCurrentTopScope();
+		do {
+			super = callVariable;
+			// Create the variable if it doesn't exist
+			scope->getVariable(*addrIter, callVariable);
+			func = callVariable->getFunction(logger);
+			scope = &(func->getPersistentScope());
+		} while ( addrIter.next() );
+	}
+
+//----------
 
 	// Short-circuit for constant-return functions
 	if ( func->constantReturn ) {

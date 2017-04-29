@@ -684,4 +684,14 @@ bool String::isLiteralNumber() const {
 	return true;
 }
 
+uint String::keyValue() const {
+	uint i = 0;
+	uint key = 0;
+	char* s = str;
+	for ( ; i < len; ++i, ++s ) {
+		key += (uint)(*s);
+	}
+	return key;
+}
+
 }

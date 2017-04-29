@@ -208,14 +208,14 @@ IsZero::call(
 const char*
 IsZero::getParameterName(
 	unsigned int index
-) {
+) const {
 	if ( index == 0 )
 		return BasicPrimitive::StaticTypeName();
 	return "";
 }
 
 unsigned int
-IsZero::getParameterCount() {
+IsZero::getParameterCount() const {
 	return 1;
 };
 
@@ -574,14 +574,14 @@ Get_abs::call(
 const char*
 Get_abs::getParameterName(
 	unsigned int index
-) {
+) const {
 	if ( index == 0 )
 		return BasicPrimitive::StaticTypeName();
 	return "";
 }
 
 unsigned int
-Get_abs::getParameterCount() {
+Get_abs::getParameterCount() const {
 	return 1;
 }
 

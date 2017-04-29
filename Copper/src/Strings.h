@@ -70,6 +70,9 @@ public:
 
 	// Needs an equalsSubString( const String&, start, end )
 	// Needs a getSubString( start, end, String& )
+
+	// Creates a key-value to be used for hash-tables
+	uint keyValue() const;
 };
 
 }

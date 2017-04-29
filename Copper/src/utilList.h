@@ -510,6 +510,12 @@ public:
 		return tail->getItem();
 	}
 
+	const T& getConstFirst() const {
+		if ( !head )
+			throw NullListNodeException();
+		return head->getConstItem();
+	}
+
 	List& operator= ( const List& pOther )
 	{
 		clear();

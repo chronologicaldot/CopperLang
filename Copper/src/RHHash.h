@@ -128,12 +128,7 @@ void RobinHoodHash<T>::jump(uint& pIndex) {
 
 template<class T>
 uint RobinHoodHash<T>::getInitKey(const String& pName) {
-	uint	i=0,
-			total=0;
-	for ( ; i < pName.size(); ++i ) {
-		total += (uint)(pName[i]);
-	}
-	return total % size;
+	return pName.keyValue() % size;
 }
 
 template<class T>
@@ -141,13 +136,20 @@ typename RobinHoodHash<T>::BucketData* RobinHoodHash<T>::getBucketData(const Str
 	if ( occupancy == 0 ) // short-circuit
 		return 0;
 	uint idx = getInitKey(pName);
+	uint jumpCount = 0;
 	Bucket* initBucket = get(idx);
 	Bucket* bucket = initBucket;
 	while ( bucket->data != 0 || bucket->wasOccupied ) {
-		if ( bucket->data != 0 && bucket->data->name.equals(pName) ) {
+		if ( bucket->data->name.equals(pName) ) {
 			return bucket->data;
 		}
+		// This if-statement's safety unconfirmed
+		if ( bucket->data->delay < jumpCount ) {
+			// If the bucket existed, it would have been inserted earlier.
+			return 0;
+		}
 		jump(idx);
+		jumpCount++;
 		bucket = get(idx);
 		if ( bucket == initBucket ) // This is problematic if the jump doesn't cycle thru all open spots
 			return 0;

@@ -1,4 +1,22 @@
 ====================
+2017/4/27-29
+v 3-0.192
+
+- Fixed bug in Engine::setupUserFunctionExecution() that failed to check the global scope for the existence of a variable before creating it in the local scope.
+- Added method List::getConstFirst().
+- Changed Engine::setupForeignFunction() to use List::getConstFirst() for address accessing rather than addressToString().
+- Optimized RobinHoodHash<T>::getBucketData(String) to shortcut the search by keeping track of the jumps and quiting if the number of jumps exceeded the delay of the currently-examined bucket.
+- Added uint String::keyValue() const.
+- Changed RobinHoodHash<T>::getInitKey() to use String::keyValue() instead of calculating it on its own.
+- Changed Engine::setupBuiltinFunctionExecution() to use List::getConstFirst() for getting the function from the built-in function names hash table.
+- Appended const qualifier to ForeignFunc::getParameterName() and ForeignFunc::getParameterCount().
+- Changed case ObjectType::Data to "default" for switch cases where it is differentiated from ObjectType::Function.
+
+To do:
+- Replace RobinHoodHash usage of zero with nullptr.
+
+
+====================
 2017/4/8-10,23-26
 v 3-0.191
 
@@ -26,6 +44,8 @@ v 3-0.191
 - Added static const char* ObjectBool::StaticTypeName().
 
 - Fixed LoopStructureParseTask::State::CollectBody in Engine::parseLoopStructure().
+
+- Added speed profiling code. Enable with #define COPPER_SPEED_PROFILE.
 
 Printer.h
 - Removed Printer::getParameterName() and Printer::getParameterCount().
