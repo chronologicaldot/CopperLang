@@ -2067,18 +2067,17 @@ public:
 };
 
 
-typedef List<Object*>			ParamsList;
-typedef List<Object*>::Iter		ParamsIter;
+typedef List<Object*>			ArgsList;
+typedef List<Object*>::Iter		ArgsIter;
 
 struct FuncFoundTask : public Task {
 	const VarAddress varAddress; // MUST NOT BE A VarAddress&!!
-	ParamsList params;
+	ArgsList args;
 
 	explicit FuncFoundTask( const VarAddress& pVarAddress );
 	FuncFoundTask( const FuncFoundTask& pOther );
 	~FuncFoundTask();
-	void addParam( Object* p );
-	ParamsIter getParamsIter();
+	void addArg( Object* a );
 };
 
 struct AddressOpcode : public Opcode {
@@ -2214,11 +2213,11 @@ class FFIMisuseException {};
 
 class FFIServices {
 	Engine&			engine;
-	ParamsIter		paramsIter;
+	ArgsIter		paramsIter;
 	bool			done;		// Indicates parameter/arguments iteration is complete
 
 public:
-	FFIServices( Engine& enginePtr, ParamsIter paramsStart );
+	FFIServices( Engine& enginePtr, ArgsIter paramsStart );
 
 	// Returns each successive argument sent to the function
 	Object* getNextArg();

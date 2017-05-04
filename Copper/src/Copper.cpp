@@ -1112,7 +1112,7 @@ FuncFoundTask::FuncFoundTask(
 )
 	: Task(TaskName::FuncFound)
 	, varAddress(pVarAddress)
-	, params()
+	, args()
 {}
 
 FuncFoundTask::FuncFoundTask(
@@ -1120,31 +1120,26 @@ FuncFoundTask::FuncFoundTask(
 )
 	: Task(TaskName::FuncFound)
 	, varAddress(pOther.varAddress)
-	, params(pOther.params)
+	, args(pOther.args)
 {}
 
 FuncFoundTask::~FuncFoundTask() {
-	ParamsIter pi = params.start();
-	if ( pi.has() )
+	ArgsIter ai = args.start();
+	if ( ai.has() )
 	do {
-		(*pi)->deref();
-	} while ( pi.next() );
-	// params.clear(); // implicit
+		(*ai)->deref();
+	} while ( ai.next() );
+	// args.clear(); // implicit
 }
 
 void
-FuncFoundTask::addParam(
-	Object* p
+FuncFoundTask::addArg(
+	Object* a
 ) {
-	if ( notNull(p) ) {
-		p->ref();
-		params.push_back(p);
+	if ( notNull(a) ) {
+		a->ref();
+		args.push_back(a);
 	}
-}
-
-ParamsIter
-FuncFoundTask::getParamsIter() {
-	return params.start();
 }
 
 AddressOpcode::AddressOpcode(
@@ -1328,7 +1323,7 @@ LoopStructureParseTask::finalizeGotos(
 
 FFIServices::FFIServices(
 	Engine&			enginePtr,
-	ParamsIter		paramsStart
+	ArgsIter		paramsStart
 )
 	: engine(enginePtr)
 	, paramsIter(paramsStart)
@@ -4135,7 +4130,7 @@ Engine::operate(
 #endif
 		task = getLastTask();
 		if ( task->name == TaskName::FuncFound ) {
-			((FuncFoundTask*)task)->addParam( lastObject.raw() );
+			((FuncFoundTask*)task)->addArg( lastObject.raw() );
 		} else {
 			throw BadOpcodeException(Opcode::FuncFound_setParam);
 		}
@@ -4464,7 +4459,7 @@ Engine::setupForeignFunctionExecution(
 
 	ForeignFunc* foreignFunc = bucketData->item.getForeignFunction();
 
-	if ( (foreignFunc->getParameterCount() != task.params.size()) && ! foreignFunc->isVariadic() ) {
+	if ( (foreignFunc->getParameterCount() != task.args.size()) && ! foreignFunc->isVariadic() ) {
 		// Language specification says this should optionally be a warning
 		print(LogLevel::error, "Parameter count does not match foreign function header.");
 		if ( ignoreBadForeignFunctionCalls ) {
@@ -4475,7 +4470,7 @@ Engine::setupForeignFunctionExecution(
 	}
 
 	unsigned int ffhIndex = 0;
-	ParamsIter taskArgsIter = task.params.start();
+	ArgsIter taskArgsIter = task.args.start();
 	// This is for non-variadic functions. Variadic functions should only return a parameter count
 	// when they have a specific number of parameters that MUST be a certain type for any call.
 	// For example, a list function might be Top(List, Iter, Iter...) so it's constant parameter is
@@ -4501,7 +4496,7 @@ Engine::setupForeignFunctionExecution(
 		}
 	}
 
-	FFIServices ffi(*this, task.params.start());
+	FFIServices ffi(*this, task.args.start());
 	bool result = foreignFunc->call( ffi );
 
 	// lastObject is set by setResult() or setNewResult() of the FFI.
@@ -4650,7 +4645,7 @@ Engine::setupUserFunctionExecution(
 
 	// For each parameter that the function requires, take from the passed parameters and
 	// assign it by pointer to a parameter name within the newly added scope.
-	ParamsIter givenParamsIter = task.params.start();
+	ArgsIter givenParamsIter = task.args.start();
 	List<String>::Iter funcParamsIter = func->params.start();
 	bool done = false;
 	if ( funcParamsIter.has() ) {
@@ -4703,7 +4698,7 @@ Engine::setupUserFunctionExecution(
 */
 /*
 bool
-Engine::runFunction( FunctionContainer* function, ParamsList* parameters ) {
+Engine::runFunction( FunctionContainer* function, ArgsList* parameters ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::runFunction");
 #endif
@@ -4855,8 +4850,8 @@ Engine::process_sys_return(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_return");
 #endif
-	if ( task.params.has() ) {
-		lastObject.set( task.params.getFirst() );
+	if ( task.args.has() ) {
+		lastObject.set( task.args.getFirst() );
 	}
 	return FuncExecReturn::Return;
 }
@@ -4869,7 +4864,7 @@ Engine::process_sys_not(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_not");
 #endif
 	bool result = true;
-	ParamsIter pi = task.params.start();
+	ArgsIter pi = task.args.start();
 	if ( pi.has() ) {
 		result = ! getBoolValue(**pi);
 	}
@@ -4885,7 +4880,7 @@ Engine::process_sys_all(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_all");
 #endif
 	bool result = false;
-	ParamsIter pi = task.params.start();
+	ArgsIter pi = task.args.start();
 	if ( pi.has() )
 	do {
 		result = getBoolValue(**pi);
@@ -4904,7 +4899,7 @@ Engine::process_sys_any(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_any");
 #endif
 	bool result = false;
-	ParamsIter pi = task.params.start();
+	ArgsIter pi = task.args.start();
 	if ( pi.has() )
 	do {
 		result = getBoolValue(**pi);
@@ -4923,7 +4918,7 @@ Engine::process_sys_nall(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_nall");
 #endif
 	bool result = true;
-	ParamsIter pi = task.params.start();
+	ArgsIter pi = task.args.start();
 	if ( pi.has() )
 	do {
 		result = ! getBoolValue(**pi);
@@ -4942,7 +4937,7 @@ Engine::process_sys_none(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_none");
 #endif
 	bool result = true;
-	ParamsIter pi = task.params.start();
+	ArgsIter pi = task.args.start();
 	if ( pi.has() )
 	do {
 		result = ! getBoolValue(**pi);
@@ -4961,7 +4956,7 @@ Engine::process_sys_are_fn(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_fn");
 #endif
 	bool result = false;
-	ParamsIter pi = task.params.start();
+	ArgsIter pi = task.args.start();
 	if ( pi.has() )
 	do {
 		result = isObjectFunction(**pi);
@@ -4980,7 +4975,7 @@ Engine::process_sys_are_empty(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_empty");
 #endif
 	bool result = false;
-	ParamsIter pi = task.params.start();
+	ArgsIter pi = task.args.start();
 	if ( pi.has() )
 	do {
 		result = isObjectEmptyFunction(**pi);
@@ -5002,7 +4997,7 @@ Engine::process_sys_are_same(
 	// to the same function, but as data is copied by default anyways, it won't matter.
 	bool result = true;
 	Object* firstPtr = REAL_NULL;
-	ParamsIter pi = task.params.start();
+	ArgsIter pi = task.args.start();
 	if ( pi.has() ) {
 		firstPtr = *pi;
 		while( pi.next() && result ) {
@@ -5021,8 +5016,8 @@ Engine::process_sys_member(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_member");
 #endif
-	ParamsIter paramsIter = task.params.start();
-	if ( task.params.size() != 2 ) {
+	ArgsIter paramsIter = task.args.start();
+	if ( task.args.size() != 2 ) {
 		print(LogLevel::error, EngineMessage::MemberWrongParamCount);
 		return FuncExecReturn::ErrorOnRun;
 	}
@@ -5065,8 +5060,8 @@ Engine::process_sys_member_count(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_member_count");
 #endif
-	ParamsIter paramsIter = task.params.start();
-	if ( task.params.size() == 0 ) {
+	ArgsIter paramsIter = task.args.start();
+	if ( task.args.size() == 0 ) {
 		print(LogLevel::warning, EngineMessage::MemberCountWrongParamCount);
 		// Seems inefficient, but it's faster that ObjectNumber(0) because the class uses string representation
 		lastObject.setWithoutRef(new ObjectNumber(String("0")));
@@ -5098,8 +5093,8 @@ Engine::process_sys_is_member(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_is_member");
 #endif
-	ParamsIter paramsIter = task.params.start();
-	if ( task.params.size() != 2 ) {
+	ArgsIter paramsIter = task.args.start();
+	if ( task.args.size() != 2 ) {
 		print(LogLevel::error, EngineMessage::IsMemberWrongParamCount);
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::ErrorOnRun;
@@ -5136,8 +5131,8 @@ Engine::process_sys_set_member(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_set_member");
 #endif
-	ParamsIter paramsIter = task.params.start();
-	if ( task.params.size() != 3 ) {
+	ArgsIter paramsIter = task.args.start();
+	if ( task.args.size() != 3 ) {
 		print(LogLevel::error, EngineMessage::SetMemberWrongParamCount);
 		lastObject.setWithoutRef(new FunctionContainer());
 		return FuncExecReturn::ErrorOnRun;
@@ -5178,7 +5173,7 @@ Engine::process_sys_union(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_union");
 #endif
-	ParamsIter paramsIter = task.params.start();
+	ArgsIter paramsIter = task.args.start();
 	if ( !paramsIter.has() ) {
 		print(LogLevel::info, "Union function called without parameters. Default return is empty function.");
 		lastObject.setWithoutRef(new FunctionContainer());
@@ -5213,9 +5208,9 @@ Engine::process_sys_type(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_type");
 #endif
-	ParamsIter paramsIter = task.params.start();
+	ArgsIter paramsIter = task.args.start();
 	if ( !paramsIter.has() ) {
-		lastObject.setWithoutRef(new FunctionContainer());
+		lastObject.setWithoutRef(new ObjectString());
 		return FuncExecReturn::Ran;
 	}
 	// Get only the first parameter
@@ -5230,7 +5225,7 @@ Engine::process_sys_are_same_type(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_same_type");
 #endif
-	ParamsIter paramsIter = task.params.start();
+	ArgsIter paramsIter = task.args.start();
 	if ( !paramsIter.has() ) {
 		lastObject.setWithoutRef(new FunctionContainer());
 		return FuncExecReturn::Ran;
@@ -5259,7 +5254,7 @@ Engine::process_sys_are_bool(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_bool");
 #endif
-	ParamsIter paramsIter = task.params.start();
+	ArgsIter paramsIter = task.args.start();
 	if ( !paramsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::Ran;
@@ -5281,7 +5276,7 @@ Engine::process_sys_are_string(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_string");
 #endif
-	ParamsIter paramsIter = task.params.start();
+	ArgsIter paramsIter = task.args.start();
 	if ( !paramsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::Ran;
@@ -5304,7 +5299,7 @@ Engine::process_sys_are_number(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_number");
 #endif
-	ParamsIter paramsIter = task.params.start();
+	ArgsIter paramsIter = task.args.start();
 	if ( !paramsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::Ran;
@@ -5328,7 +5323,7 @@ Engine::process_sys_assert(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_assert");
 #endif
-	ParamsIter paramsIter = task.params.start();
+	ArgsIter paramsIter = task.args.start();
 	if ( !paramsIter.has() ) {
 		return FuncExecReturn::Ran;
 	}
