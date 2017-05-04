@@ -58,7 +58,7 @@ public:
 
 	virtual double getAsDouble() const;
 
-	void incr() {
+	virtual void incr() {
 		value++;
 	}
 };

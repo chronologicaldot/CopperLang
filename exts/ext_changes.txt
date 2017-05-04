@@ -1,4 +1,14 @@
 ===========
+2017/5/4
+
+intmath.cpp
+- Added AreZero to list of functions added in addFunctionsToEngine();
+
+ulongmath.cpp
+- Added AreZero to list of functions added in addFunctionsToEngine();
+
+
+===========
 2017/5/3-4
 
 intmath.cpp

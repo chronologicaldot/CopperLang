@@ -24,9 +24,9 @@
 //#define COPPER_STRICT_CHECKS
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-#include <cstdio>
+//#include <cstdio>
 
-#define COPPER_SPEED_PROFILE
+//#define COPPER_SPEED_PROFILE
 
 #ifdef COPPER_SPEED_PROFILE
 #include <ctime>
@@ -76,8 +76,8 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.2
-#define COPPER_INTERPRETER_BRANCH 3
+#define COPPER_INTERPRETER_VERSION 0.21
+#define COPPER_INTERPRETER_BRANCH 4
 
 // ******* Language version *******
 

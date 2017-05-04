@@ -44,6 +44,7 @@ void addFunctionsToEngine(
 	addForeignFuncInstance<Create>	(engine, "int");
 
 	if ( useShortNames ) {
+		addForeignFuncInstance<AreZero>					(engine, "are_zero");
 		addForeignFuncInstance<AreEqual>				(engine, "equal");
 		addForeignFuncInstance<IsGreaterThan>			(engine, "gt");
 		addForeignFuncInstance<IsLessThan>				(engine, "lt");
@@ -65,6 +66,7 @@ void addFunctionsToEngine(
 		addForeignFuncInstance<Unimplemented>			(engine, "cos");
 		addForeignFuncInstance<Unimplemented>			(engine, "tan");
 	} else {
+		addForeignFuncInstance<AreZero>					(engine, "int_are_zero");
 		addForeignFuncInstance<AreEqual>				(engine, "int_equal");
 		addForeignFuncInstance<IsGreaterThan>			(engine, "int_gt");
 		addForeignFuncInstance<IsLessThan>				(engine, "int_lt");

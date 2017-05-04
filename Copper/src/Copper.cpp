@@ -3885,10 +3885,6 @@ Engine::execute() {
 #ifdef COPPER_SPEED_PROFILE
 	std::printf("PROFILE Engine::execute() start\n");
 	fullTime = 0;
-	//sp_startTime = 0;
-	//sp_endTime = 0;
-	//timeval endTime;
-	//timeval startTime;
 	double elapsedTime = 0;
 	rusage startRusage, endRusage;
 	getrusage(RUSAGE_SELF, &startRusage);
@@ -3927,8 +3923,6 @@ Engine::execute() {
 					clearStacks();
 					signalEndofProcessing();
 #ifdef COPPER_SPEED_PROFILE
-	//elapsedTime = ( (endTime.tv_sec - startTime.tv_sec) * 1000.0 + (endTime.tv_usec - startTime.tv_usec) / 1000.0 );
-	//fullTime = sp_endTime - sp_startTime;
 	getrusage(RUSAGE_SELF, &endRusage);
 	elapsedTime = (endRusage.ru_utime.tv_sec - startRusage.ru_utime.tv_sec) * 1000.0
 					+ (endRusage.ru_utime.tv_usec - startRusage.ru_utime.tv_usec) / 1000.0;
@@ -3990,9 +3984,7 @@ Engine::execute() {
 	getrusage(RUSAGE_SELF, &endRusage);
 	elapsedTime = (endRusage.ru_utime.tv_sec - startRusage.ru_utime.tv_sec) * 1000.0
 					+ (endRusage.ru_utime.tv_usec - startRusage.ru_utime.tv_usec) / 1000.0;
-	//gettimeofday(&endTime, NULL);
-	//elapsedTime = ( (endTime.tv_sec - startTime.tv_sec) * 1000.0 + (endTime.tv_usec - startTime.tv_usec) / 1000.0 );
-	//fullTime = sp_endTime - sp_startTime;
+
 	std::printf("PROFILE Engine::execute() Normal time = %f\n", elapsedTime);
 	std::printf("PROFILE Engine::execute() Section full time = %f\n", fullTime);
 #endif
@@ -4007,9 +3999,6 @@ Engine::operate(
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::operate");
-#endif
-#ifdef COPPER_SPEED_PROFILE
-	//time_t startTime, endTime;
 #endif
 	const Opcode* opcode = opIter->getOp();
 	Task* task;
@@ -4315,9 +4304,6 @@ Engine::setupFunctionExecution(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupFunctionExecution");
 #endif
-#ifdef COPPER_SPEED_PROFILE
-	//time_t endTime=0, startTime = clock();
-#endif
 	// Protect from polution and allow for functions to have a default return.
 	lastObject.setWithoutRef(new FunctionContainer());
 	FuncExecReturn::Value result;
@@ -4327,30 +4313,15 @@ Engine::setupFunctionExecution(
 
 	result = setupBuiltinFunctionExecution(task);
 	if ( result != FuncExecReturn::NoMatch ) {
-#ifdef COPPER_SPEED_PROFILE
-		//endTime = clock();
-		//fullTime += (endTime - startTime);
-#endif
 		return result;
 	}
 
 	result = setupForeignFunctionExecution(task);
 	if ( result != FuncExecReturn::NoMatch ) {
-#ifdef COPPER_SPEED_PROFILE
-		//endTime = clock();
-		//fullTime += (endTime - startTime);
-#endif
 		return result;
 	}
 
-#ifdef COPPER_SPEED_PROFILE
-	result = setupUserFunctionExecution(task, opStrandStackIter);
-	//endTime = clock();
-	//fullTime += (endTime - startTime);
-	return result;
-#else
 	return setupUserFunctionExecution(task, opStrandStackIter);
-#endif
 }
 
 FuncExecReturn::Value
@@ -4577,8 +4548,6 @@ Engine::setupUserFunctionExecution(
 //----------
 
 #ifdef COPPER_SPEED_PROFILE
-	//clock_t endTime, startTime = clock();
-	//timeval endTime, startTime;
 	//rusage startTime, endTime;
 	//double elapsedTime = 0;
 	//getrusage(RUSAGE_SELF, &startTime);
@@ -4633,8 +4602,6 @@ Engine::setupUserFunctionExecution(
 	}
 
 #ifdef COPPER_SPEED_PROFILE
-	//double elapsedTime = ( (endTime.tv_sec - startTime.tv_sec) * 1000.0 + (endTime.tv_usec - startTime.tv_usec) / 1000.0 );
-
 	//getrusage(RUSAGE_SELF, &endTime);
 	//elapsedTime = (endTime.ru_utime.tv_sec - startTime.ru_utime.tv_sec) * 1000.0 + (endTime.ru_utime.tv_usec - startTime.ru_utime.tv_usec) / 1000.0;
 	//fullTime += elapsedTime;
@@ -5269,10 +5236,14 @@ Engine::process_sys_are_same_type(
 		return FuncExecReturn::Ran;
 	}
 	// First parameter, to which all other parameters are compared
+	ObjectType::Value firstType = (*paramsIter)->getType();
 	String first( (*paramsIter)->typeName() );
 	bool same = true;
 	do {
-		same = first.equals( (*paramsIter)->typeName() );
+		same = firstType == (*paramsIter)->getType();
+		if ( same ) {
+			same = first.equals( (*paramsIter)->typeName() );
+		}
 		if ( !same )
 			break;
 	} while( paramsIter.next() );

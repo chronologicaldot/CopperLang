@@ -38,6 +38,7 @@ void addFunctionsToEngine(
 	addForeignFuncInstance<Create>		(engine, "ulong");
 
 	if ( useShortNames ) {
+		addForeignFuncInstance<AreZero>					(engine, "are_zero");
 		addForeignFuncInstance<AreEqual>				(engine, "equal");
 		addForeignFuncInstance<IsGreaterThan>			(engine, "gt");
 		addForeignFuncInstance<IsLessThan>				(engine, "lt");
@@ -59,6 +60,7 @@ void addFunctionsToEngine(
 		addForeignFuncInstance<Unimplemented>			(engine, "cos");
 		addForeignFuncInstance<Unimplemented>			(engine, "tan");
 	} else {
+		addForeignFuncInstance<AreZero>					(engine, "ulong_are_zero");
 		addForeignFuncInstance<AreEqual>				(engine, "ulong_equal");
 		addForeignFuncInstance<IsGreaterThan>			(engine, "ulong_gt");
 		addForeignFuncInstance<IsLessThan>				(engine, "ulong_lt");
