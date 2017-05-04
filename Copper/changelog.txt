@@ -1,8 +1,32 @@
 ====================
+2017/4/30, 5/4
+v 4-0.2
+
+- Changed ObjectType enum to: Function, Bool, String, Number, UnknownData.
+- Changed isObjectFunction, isObjectEmptyFunction, isObjectBool, isObjectString, and isObjectNumber to use getType() only.
+- Deleted class Data.
+- Changed ObjectBool inheritance from Data to Object.
+- Changed ObjectString inheritance from Data to Object.
+- Changed ObjectNumber inheritance from Data to Object.
+- Replaced const char* ForeignFunc::getParameterName() with ObjectType::Value ForeignFunc::getParameterType().
+- Added static const char* FunctionContainer::StaticTypeName().
+- Added static ObjectType::Value FunctionContainer::StaticType().
+- Added static ObjectType::Value ObjectBool().
+- Added static ObjectType::Value ObjectString().
+- Added static ObjectType::Value ObjectNumber().
+- Removed moveToTokenResult and unsigned int openBodies in Engine::parseLoopStructure().
+- Modified FunctionContainer constructors to initialize with calling Object constructor.
+
+utilList.h
+- Changed Iter& Iter::set() to void Iter::set().
+
+
+====================
 2017/4/29
 v 4-0.192
 
 Welcome to branch Dolphin, the new master branch!
+
 
 ====================
 2017/4/27-29

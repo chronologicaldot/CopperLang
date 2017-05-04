@@ -9,17 +9,17 @@ namespace Numeric {
 namespace Int {
 
 bool isObjectInt(const Object* pObject) {
-	return ( isObjectOfType( *pObject, BasicPrimitive::StaticTypeName() )
+	return ( isBasicPrimitive( *pObject )
 		&& ((BasicPrimitive*)pObject)->isPrimitiveType( BasicPrimitive::Type::_int ) );
 }
 
 bool getInt(const Object* pObject, int& pValue) {
-	if ( isObjectOfType( *pObject, BasicPrimitive::StaticTypeName() ) ) {
+	if ( isBasicPrimitive( *pObject ) ) {
 		pValue = ((BasicPrimitive*)pObject)->getAsInt();
 		return true;
 	}
 	// If not a number, return false
-	if ( ! isObjectOfType( *pObject, ObjectNumber::StaticTypeName() ) ) {
+	if ( ! isObjectNumber( *pObject ) ) {
 		pValue = 0;
 		return false;
 	}
@@ -161,7 +161,7 @@ Create::call(
 	if ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
 		if ( ! getInt( *arg, value ) ) {
-			if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
+			if ( isObjectNumber(*arg) ) {
 				big = ((ObjectNumber*)arg)->getAsUnsignedLong();
 				value = big > INT_MAX ? INT_MAX : big;
 			} else {
@@ -184,40 +184,30 @@ Unimplemented::call(
 }
 
 bool
-IsZero::call(
+AreZero::call(
 	FFIServices& ffi
 ) {
-	Object* arg = ffi.getNextArg();
+	Object* arg;
 	int value = 0;
+	bool is_zero = false;
 	ObjectBool* out = REAL_NULL;
-	if ( getInt(*arg, value) ) {
-		out = new ObjectBool(value == 0);
-	} else if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
-		out = new ObjectBool( ((ObjectNumber*)arg)->getAsUnsignedLong() == 0 );
-	} else {
-		// Default return is an empty function
-		// Should this be a warning and default to true? Doesn't seem right.
-		ffi.printError("Int-is-zero was not given a parsable number.");
-		return false;
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getInt(*arg, value) ) {
+			is_zero = (value == 0);
+		} else {
+			// Default return is an empty function
+			// Should this be a warning and default to true? Doesn't seem right.
+			ffi.printError("Int-is-zero was not given a parsable number.");
+			return false;
+		}
+		if ( is_zero ) break;
 	}
+	out = new ObjectBool(is_zero);
 	ffi.setResult(out);
 	out->deref();
 	return true;
 }
-
-const char*
-IsZero::getParameterName(
-	unsigned int index
-) const {
-	if ( index == 0 )
-		return BasicPrimitive::StaticTypeName();
-	return "";
-}
-
-unsigned int
-IsZero::getParameterCount() const {
-	return 1;
-};
 
 bool
 AreEqual::call(
@@ -433,7 +423,8 @@ Divide::call(
 		if ( getInt(*arg, indie) ) {
 			if ( iszero(indie) ) {
 				ffi.printWarning("Int division divisor is zero. Returning maximized value instead.");
-				total = (total >= 0 ? INT_MAX : INT_MIN);
+				if ( total != 0 )
+					total = (total > 0 ? INT_MAX : INT_MIN);
 				break;
 			}
 			else if ( total == INT_MIN && indie == -1 ) {
@@ -571,13 +562,13 @@ Get_abs::call(
 	return true;
 }
 
-const char*
-Get_abs::getParameterName(
+ObjectType::Value
+Get_abs::getParameterType(
 	unsigned int index
 ) const {
 	if ( index == 0 )
-		return BasicPrimitive::StaticTypeName();
-	return "";
+		return BasicPrimitive::StaticType();
+	return ObjectType::Function;
 }
 
 unsigned int

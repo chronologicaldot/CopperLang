@@ -1,4 +1,7 @@
 // Copyright 2017 Nicolaus Anderson
+#ifndef CU_MS_TIME_H
+#define CU_MS_TIME_H
+#include "../ExtTypeValues.h"
 #include "../../Copper/src/Copper.h"
 #include <ctime>
 #include <limits.h>
@@ -16,12 +19,19 @@ class MSecTime : public Object {
 public:
   static const char* StaticTypeName() { return "mstime"; }
 
+  static ObjectType::Value
+  StaticType() {
+    return (ObjectType::Value)MSTIME_OBJECT_TYPE_VALUE;
+  }
+
   MSecTime()
-    : value(0)
+    : Object( StaticType() )
+	, value(0)
   {}
   
   MSecTime(const MSecTime& pOther)
-    : value(pOther.value)
+    : Object( StaticType() )
+    , value(pOther.value)
   {}
 
   void setRaw(ms_time p) {
@@ -73,13 +83,15 @@ struct Create : public ForeignFunc {
 struct ToNumber : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 
-	virtual const char* getParameterName( unsigned int index ) const {
+	virtual ObjectType::Value
+	getParameterType( unsigned int index ) const {
 		if ( index == 0 )
-			return MSecTime::StaticTypeName();
-		return "";
+			return MSecTime::StaticType();
+		return ObjectType::Function;
 	}
 
-	virtual unsigned int getParameterCount() const {
+	virtual unsigned int
+	getParameterCount() const {
 		return 1;
 	}
 };
@@ -110,3 +122,5 @@ struct ClockTime : public ForeignFunc {
 
   }
 }
+
+#endif

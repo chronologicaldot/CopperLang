@@ -1,8 +1,14 @@
 // Copyright 2017 Nicolaus Anderson
 #ifndef COPPER_OBJECT_LIST_H
 #define COPPER_OBJECT_LIST_H
+#include "../ExtTypeValues.h"
 #include "../../Copper/src/utilList.h"
 #include "../../Copper/src/Copper.h"
+
+// Require that an object type value be set
+#ifndef MANAGED_LIST_OBJECT_TYPE_VALUE
+0x3
+#endif
 
 namespace Cu {
 namespace ManagedList {
@@ -38,12 +44,17 @@ public:
 	void delink();
 };
 
-class Iter : public Data {
+class Iter : public Object {
 	List* list;
 	Node* node;
 
 public:
 	static const char* StaticTypeName() { return "mgditer"; }
+
+	static ObjectType::Value
+	StaticType() {
+		return (ObjectType::Value)(MANAGED_LIST_OBJECT_TYPE_VALUE + 1);
+	}
 
 	explicit Iter(List* pList, Node* pNode);
 	explicit Iter(List* pList, bool top);
@@ -67,7 +78,7 @@ public:
 	}
 };
 
-class List : public Data {
+class List : public Object {
 protected:
 	friend Iter;
 	Node* bottom;
@@ -76,9 +87,15 @@ protected:
 public:
 	static const char* StaticTypeName() { return "mgdlist"; }
 
+	static ObjectType::Value
+	StaticType() {
+		return (ObjectType::Value)MANAGED_LIST_OBJECT_TYPE_VALUE;
+	}
+
 	List()
-		: bottom(REAL_NULL)
-		, top(REAL_NULL)
+		: Object(	StaticType())
+		, bottom(	REAL_NULL	)
+		, top(		REAL_NULL	)
 	{}
 
 	~List();

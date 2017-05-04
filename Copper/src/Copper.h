@@ -30,8 +30,14 @@
 
 #ifdef COPPER_SPEED_PROFILE
 #include <ctime>
+#include <sys/time.h>
+#include <unistd.h> // for usleep
+#include <sys/resource.h> // for rusage and getrusage
 // Also requires cstdio
 #endif
+
+// Strict check for debug, ensuring variable scopes are never null
+//#define COMPILE_WITH_SCOPE_HASH_NULL_CHECKING
 
 
 // ******* Null *******
@@ -70,7 +76,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.192
+#define COPPER_INTERPRETER_VERSION 0.2
 #define COPPER_INTERPRETER_BRANCH 3
 
 // ******* Language version *******
@@ -495,15 +501,25 @@ struct EngineMessage {
 
 struct ObjectType {
 	enum Value {
-	Function, // Also handles pointers
-	Data
+		Function	= 0, // Also handles pointers
+
+		// Built-in data
+		Bool		= 1,
+		String		= 2,
+		Number		= 3,
+
+		// For non-usable data
+		UnknownData	= 4,
+
+		// Forces 32-bit compilation so that any user integer can be used to extend the enum
+		FORCE_32BIT = 0x7fffffff
 	};
 };
 
 struct Result {
 	enum Value {
-	Ok = 0,
-	Error = 1
+		Ok = 0,
+		Error = 1
 	};
 };
 
@@ -858,10 +874,11 @@ public:
 //--------------------
 class Object : public Ref {
 protected:
+	// Enumeration is intended to be extended to other types
 	ObjectType::Value type;
 public:
-	Object()
-		: type(ObjectType::Data)
+	Object( ObjectType::Value t = ObjectType::UnknownData )
+		: type(t)
 	{}
 
 	virtual ~Object() {}
@@ -987,6 +1004,7 @@ protected:
 	Value type;
 
 public:
+
 	Opcode(Opcode::Value pType)
 		: type(pType)
 	{}
@@ -1074,11 +1092,13 @@ public:
 		code->deref();
 	}
 
-	const Opcode* getOp() {
+	const Opcode*
+	getOp() {
 		return code;
 	}
 
-	static OpcodeContainer indie( Opcode* pCode ) {
+	static OpcodeContainer
+	indie( Opcode* pCode ) {
 		OpcodeContainer out(pCode);
 		pCode->deref();
 		return out;
@@ -1287,6 +1307,16 @@ public:
 		return "fn";
 	}
 
+	static const char*
+	StaticTypeName() {
+		return "fn";
+	}
+
+	static ObjectType::Value
+	StaticType() {
+		return ObjectType::Function;
+	}
+
 	unsigned int getID() {
 		return ID;
 	}
@@ -1351,29 +1381,11 @@ public:
 //-------------------
 // ****** DATA CLASSES ******
 
-struct Data : public Object {
-
-	Data()
-	{
-		type = ObjectType::Data;
-	}
-
-	virtual ~Data() {}
-
-#ifdef COPPER_USE_DEBUG_NAMES
-	virtual const char* getDebugName() const {
-		return "Data";
-	}
-#endif
-};
-
-class ObjectBool : public Data {
+class ObjectBool : public Object {
 	bool value;
 public:
-	static const char* StaticTypeName() { return "bool"; }
-
 	explicit ObjectBool(bool b)
-		: Data()
+		: Object(ObjectType::Bool)
 		, value(b)
 	{}
 
@@ -1389,6 +1401,16 @@ public:
 		return StaticTypeName();
 	}
 
+	static const char*
+	StaticTypeName() {
+		return "bool";
+	}
+
+	static ObjectType::Value
+	StaticType() {
+		return ObjectType::Bool;
+	}
+
 	virtual void writeToString(String& out) const {
 		out = value?"true":"false";
 	}
@@ -1397,19 +1419,17 @@ public:
 
 //static const char* STRING_TYPENAME = "string";
 
-class ObjectString : public Data {
+class ObjectString : public Object {
 	String value;
 
 public:
-	static const char* StaticTypeName() { return "string"; }
-
 	ObjectString()
-		: Data()
+		: Object( ObjectType::String )
 		, value()
 	{}
 
 	explicit ObjectString(const String& pValue)
-		: Data()
+		: Object( ObjectType::String )
 		, value(pValue)
 	{}
 
@@ -1419,6 +1439,16 @@ public:
 
 	virtual const char* typeName() const {
 		return StaticTypeName();
+	}
+
+	static const char*
+	StaticTypeName() {
+		return "string";
+	}
+
+	static ObjectType::Value
+	StaticType() {
+		return ObjectType::String;
 	}
 
 	String& getString() {
@@ -1466,26 +1496,27 @@ public:
 	Object numbers are base-10 numbers saved as strings.
 	This makes for easy integration with other libraries, like GNU MPC.
 */
-class ObjectNumber : public Data /*Number*/ {
+class ObjectNumber : public Object /*Number*/ {
 	String value; // Numeric-only string
 
 public:
-	static const char* StaticTypeName() { return "number"; }
-
 	 // TODO: A constructor using CharList
 
 	ObjectNumber()
-		: value()
+		: Object( ObjectType::Number )
+		, value()
 	{}
 
 	explicit ObjectNumber(const unsigned long pValue)
-		: value()
+		: Object( ObjectType::Number )
+		, value()
 	{
 		value = CharList(pValue);
 	}
 
 	explicit ObjectNumber(const String& pValue)
-		: value()
+		: Object( ObjectType::Number )
+		, value()
 	{
 		// Slow constructor for long numbers, otherwise I have to create a filter in Engine::run()
 		// TODO: It should throw optional errors or print some warning message for debug,
@@ -1541,6 +1572,16 @@ public:
 	virtual const char* typeName() const {
 		return StaticTypeName();
 	}
+
+	static const char*
+	StaticTypeName() {
+		return "number";
+	}
+
+	static ObjectType::Value
+	StaticType() {
+		return ObjectType::Number;
+	}
 };
 
 //struct NumberObjectFactory : public Ref {
@@ -1583,11 +1624,20 @@ public:
 	// Calls the function. Return "false" on error.
 	virtual bool call( FFIServices& ffi )=0;
 
-	virtual bool isVariadic() { return false; }
+	virtual bool
+	isVariadic() {
+		return false;
+	}
 
-	virtual const char* getParameterName( unsigned int index ) const { return ""; }
+	virtual ObjectType::Value
+	getParameterType( unsigned int index ) const {
+		return ObjectType::UnknownData;
+	}
 
-	virtual unsigned int getParameterCount() const { return 0; }
+	virtual unsigned int
+	getParameterCount() const {
+		return 0;
+	}
 
 	//operator ForeignFunc* () {
 	//	return (ForeignFunc*)(*this);
@@ -1629,41 +1679,6 @@ public:
 		return data.raw();
 	}
 };
-
-// Wrapper for performing generic foreign-function tasks.
-// TODO: Finish when you decide how to handle args.
-/*
-class ForeignFunctionWrapper : public ForeignFunc {
-	bool (*function)( FFIServices& );
-	bool variadic;
-	// HOW ARE ARGS STORED?
-
-public:
-	ForeignFunctionWrapper(
-		bool (*pFunction)( FFIServices& ),
-		bool pIsVariadic
-	)
-		: function( pFunction )
-		, variadic( pIsVariadic )
-	{}
-
-	virtual bool call( FFIServices& ffi ) {
-		return function(ffi);
-	}
-
-	virtual bool isVariadic() {
-		return variadic;
-	}
-
-	virtual const char* getParameterName( unsigned int index ) {
-		return "";
-	}
-
-	virtual unsigned int getParameterCount() {
-		return 0;
-	}
-};
-*/
 
 //-------------------
 
@@ -2235,14 +2250,65 @@ VarAddress createAddress( const char* textAddress );
 String addressToString( const VarAddress& address );
 
 
-bool isObjectFunction( const Object& pObject );
-bool isObjectEmptyFunction( const Object& pObject );
-bool isObjectBool( const Object& pObject );
-bool getBoolValue( const Object& pObject );
-bool isObjectString( const Object& pObject );
-bool isObjectNumber( const Object& pObject );
-	// Use this for checking your own types
-bool isObjectOfType( const Object& pObject, const char* pTypeName );
+inline bool
+isObjectFunction(
+	const Object& pObject
+) {
+	return ( pObject.getType() == ObjectType::Function );
+}
+
+inline bool
+isObjectEmptyFunction(
+	const Object& pObject
+) {
+	if ( pObject.getType() != ObjectType::Function ) {
+		return false;
+	}
+	Function* function;
+	if ( !((FunctionContainer&)pObject).getFunction(function) ) {
+		return false;
+	}
+	if ( function->constantReturn ) {
+		if ( notNull(function->result.raw()) )
+			return false;
+	}
+	return (
+		function->body.raw()->isEmpty()
+		&& function->params.size() == 0
+		&& function->getPersistentScope().occupancy() == 0
+	);
+}
+
+inline bool
+isObjectBool(
+	const Object& pObject
+) {
+	return ( pObject.getType() == ObjectBool::StaticType() );
+}
+
+inline bool
+getBoolValue(
+	const Object& pObject
+) {
+	if ( isObjectBool( pObject ) ) {
+		return ((ObjectBool&)pObject).getValue();
+	}
+	return false;
+}
+
+inline bool
+isObjectString(
+	const Object& pObject
+) {
+	return ( pObject.getType() == ObjectString::StaticType() );
+}
+
+inline bool
+isObjectNumber(
+	const Object& pObject
+) {
+	return ( pObject.getType() == ObjectNumber::StaticType() );
+}
 
 //--------------------------------
 
@@ -2593,18 +2659,18 @@ protected:
 
 	// ----- EXECUTION SYSTEM -----
 
-	void
+	inline void
 	addNewTaskToStack(
 		Task* t
 	);
 
-	Task*
+	inline Task*
 	getLastTask();
 
-	void
+	inline void
 	popLastTask();
 
-	void
+	inline void
 	addOpStrandToStack(
 		OpStrand*	strand
 	);
@@ -2689,7 +2755,8 @@ protected:
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
 
 #ifdef COPPER_SPEED_PROFILE
-	time_t fullTime;
+	timeval sp_startTime, sp_endTime;
+	double fullTime;
 #endif
 };
 

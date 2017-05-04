@@ -9,16 +9,16 @@ namespace Numeric {
 namespace ULong {
 
 bool isObjectULong(const Object* pObject) {
-	return ( isObjectOfType( *pObject, BasicPrimitive::StaticTypeName() )
+	return ( isBasicPrimitive( *pObject )
 		&& ((BasicPrimitive*)pObject)->isPrimitiveType( BasicPrimitive::Type::_ulong ) );
 }
 
 bool getULong(const Object* pObject, ulong& pValue) {
-	if ( isObjectOfType( *pObject, BasicPrimitive::StaticTypeName() ) ) {
+	if ( isBasicPrimitive( *pObject ) ) {
 		pValue = ((BasicPrimitive*)pObject)->getAsUnsignedLong();
 		return true;
 	} else
-	if ( ! isObjectOfType( *pObject, ObjectNumber::StaticTypeName() ) ) {
+	if ( ! isObjectNumber( *pObject ) ) {
 		pValue = 0;
 		return false;
 	}
@@ -104,13 +104,10 @@ int ULong::getAsInt() const {
 }
 
 unsigned int ULong::getAsUnsignedInt() const {
-	if ( value >= 0 ) {
-		if ( value > (ulong)UINT_MAX ) {
-			return UINT_MAX;
-		}
-		return (unsigned int)value;
+	if ( value > (ulong)UINT_MAX ) {
+		return UINT_MAX;
 	}
-	return 0;
+	return (unsigned int)value;
 }
 
 unsigned long ULong::getAsUnsignedLong() const {
@@ -152,7 +149,7 @@ Create::call(
 	if ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
 		if ( ! getULong( *arg, value ) ) {
-			if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
+			if ( isObjectNumber(*arg) ) {
 				value = ((ObjectNumber*)arg)->getAsUnsignedLong();
 			} else {
 				ffi.printWarning("ULong-creation argument was not a compatible number type.");
@@ -174,40 +171,30 @@ Unimplemented::call(
 }
 
 bool
-IsZero::call(
+AreZero::call(
 	FFIServices& ffi
 ) {
-	Object* arg = ffi.getNextArg();
+	Object* arg;
 	ulong value = 0;
+	bool is_zero = true;
 	ObjectBool* out = REAL_NULL;
-	if ( getULong(*arg, value) ) {
-		out = new ObjectBool(value == 0);
-	} else if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
-		out = new ObjectBool( ((ObjectNumber*)arg)->getAsUnsignedLong() == 0 );
-	} else {
-		// Default return is an empty function
-		// Should this be a warning and default to true? Doesn't seem right.
-		ffi.printError("ULong-is-zero was not given a parsable number.");
-		return false;
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( getULong(*arg, value) ) {
+			is_zero = (value == 0);
+		} else {
+			// Default return is an empty function
+			// Should this be a warning and default to true? Doesn't seem right.
+			ffi.printError("ULong-is-zero was not given a parsable number.");
+			return false;
+		}
+		if ( !is_zero ) break;
 	}
+	out = new ObjectBool(is_zero);
 	ffi.setResult(out);
 	out->deref();
 	return true;
 }
-
-const char*
-IsZero::getParameterName(
-	unsigned int index
-) const {
-	if ( index == 0 )
-		return BasicPrimitive::StaticTypeName();
-	return "";
-}
-
-unsigned int
-IsZero::getParameterCount() const {
-	return 1;
-};
 
 bool
 AreEqual::call(
@@ -410,12 +397,7 @@ Divide::call(
 		if ( getULong(*arg, indie) ) {
 			if ( iszero(indie) ) {
 				ffi.printWarning("ULong division divisor is zero. Returning maximized value instead.");
-				total = (total >= 0 ? ULONG_MAX : 0);
-				break;
-			}
-			else if ( total == 0 && indie == -1 ) {
-				ffi.printWarning("ULong division is integer min over -1. Returning max positive integer value instead.");
-				total = INT_MAX;
+				total = (total > 0 ? ULONG_MAX : 0);
 				break;
 			}
 			// else
@@ -546,13 +528,13 @@ Get_abs::call(
 	return true;
 }
 
-const char*
-Get_abs::getParameterName(
+ObjectType::Value
+Get_abs::getParameterType(
 	unsigned int index
 ) const {
 	if ( index == 0 )
-		return BasicPrimitive::StaticTypeName();
-	return "";
+		return BasicPrimitive::StaticType();
+	return ObjectType::Function;
 }
 
 unsigned int

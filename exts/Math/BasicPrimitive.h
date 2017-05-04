@@ -1,6 +1,7 @@
 // Copyright 2016-2017 Nicolaus Anderson
 #ifndef COPPER_BASIC_PRIMITIVES_TYPE_H
 #define COPPER_BASIC_PRIMITIVES_TYPE_H
+#include "../ExtTypeValues.h"
 #include "../../Copper/src/Copper.h"
 
 /*
@@ -25,73 +26,101 @@ struct BasicPrimitive : public Object {
 		};
 	};
 
-	static const char* StaticTypeName() { return "bp#"; }
+	static const char*
+	StaticTypeName() { return "bp#"; }
+
+	static ObjectType::Value
+	StaticType() {
+		return (ObjectType::Value)BASIC_PRIMITIVE_OBJECT_TYPE_VALUE;
+	}
 
 protected:
-	Type::Value type;
+	Type::Value primitiveType;
 
 public:
-	BasicPrimitive(Type::Value t)
-		: type(t)
+	BasicPrimitive(
+		Type::Value			pPrimitiveTypeValue
+	)
+		: Object(			StaticType()	)
+		, primitiveType(	pPrimitiveTypeValue	)
 	{}
 
 	virtual ~BasicPrimitive() {}
 
-	bool isPrimitiveType(const Type::Value t) const {
-		return type == t;
+	bool
+	isPrimitiveType(
+		const Type::Value t
+	) const {
+		return primitiveType == t;
 	}
 
-	Type::Value getPrimitiveType() const {
-		return type;
+	Type::Value
+	getPrimitiveType() const {
+		return primitiveType;
 	}
 
-	virtual const char* typeName() const {
+	virtual const char*
+	typeName() const {
 		return StaticTypeName();
 	}
 
-	static const char* realName() {
-		return StaticTypeName();
-	}
-
-	virtual char getAsChar() const {
+	virtual char
+	getAsChar() const {
 		return 0;
 	}
 
-	virtual int getAsInt() const {
+	virtual int
+	getAsInt() const {
 		return 0;
 	}
 
-	virtual unsigned int getAsUnsignedInt() const {
+	virtual unsigned int
+	getAsUnsignedInt() const {
 		return 0;
 	}
 
-	virtual unsigned long getAsUnsignedLong() const {
+	virtual unsigned long
+	getAsUnsignedLong() const {
 		return 0;
 	}
 
-	virtual float getAsFloat() const {
+	virtual float
+	getAsFloat() const {
 		return 0;
 	}
 
-	virtual double getAsDouble() const {
+	virtual double
+	getAsDouble() const {
 		return 0;
 	}
 };
 
+inline bool
+isBasicPrimitive(
+	const Object& pObject
+) {
+	return pObject.getType() == BasicPrimitive::StaticType();
+}
+
 // Meant to be the base for any function with two basic primitive arguments
 struct TwoArgBase : public ForeignFunc {
-	virtual const char* getParameterName( unsigned int index ) {
+
+	virtual ObjectType::Value
+	getParameterType(
+		unsigned int index
+	) {
 		switch( index ) {
 		case 0:
 		case 1:
-			return BasicPrimitive::StaticTypeName();
+			return BasicPrimitive::StaticType();
 
 		default:
-			return "";
+			return ObjectType::Function;
 		}
 	}
 
-	virtual unsigned int getParameterCount() {
+	virtual unsigned int
+	getParameterCount() {
 		return 2;
 	}
 };

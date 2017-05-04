@@ -188,11 +188,10 @@ public:
 		}
 
 		// REQUIRED
-		Iter& set( Iter pOther )
+		void set( Iter pOther )
 		{
 			list = pOther.list;
 			node = pOther.node;
-			return *this;
 		}
 
 		bool prev()	// previous node

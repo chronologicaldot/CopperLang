@@ -1,4 +1,47 @@
 ===========
+2017/5/3-4
+
+intmath.cpp
+- Changed IsZero::call() by removing excessive code and making it loop over parameters.
+- Changed IsZero to AreZero, made it variadic, and removed getParameterType() and getParameterCount() methods.
+- Fixed bug in Divide::call() that checked if total >= 0 and made it total > 0.
+
+ulongmath.cpp
+- Changed IsZero::call() by removing excessive code and making it loop over parameters.
+- Changed IsZero to AreZero, made it variadic, and removed getParameterType() and getParameterCount() methods.
+- Removed excessive code from ULong::getAsUnsignedInt().
+- Fixed bug in Divide::call() that checked if total >= 0 and made it total > 0.
+- Removed excessive code from Divide::call().
+
+timemath.cpp
+- Removed excessive MSecTime from Add::call().
+
+
+===========
+2017/4/30
+
+- Added static ObjectType::Value BasicPrimitive::StaticType().
+- Modified BasicPrimitive to set a basic object type value from StaticType().
+- Added inline bool isBasicPrimitive().
+- Changed TwoArgBase::getParameterName() to TwoArgBase::getParameterType() and set it to return BasicPrimitive::StaticType().
+- Changed isObjectInt() to use isBasicPrimitive().
+- Changed getInt() to use isBasicPrimitive() and isObjectNumber().
+- Changed Int::Create::call() to use isObjectNumber().
+- Changed Int::IsZero::call() to use isObjectNumber().
+- Changed Int::Get_abs::call() to return BasicPrimitive::StaticType().
+- Changed isObjectULong() to use isBasicPrimitive().
+- Changed getULong() to use isBasicPrimitive() and isObjectNumber().
+- Changed ULong::Create::call() to use isObjectNumber().
+- Changed ULong::IsZero::call() to use isObjectNumber().
+- Changed ULong::Get_abs::call() to return BasicPrimitive::StaticType().
+- Changed ManagedList.h to use the new type system (including adding List::StaticType() and Iter::StaticType()).
+- Changed timemath.h to use the new type system.
+- Added #define CU_MS_TIME_H check to the beginning of timemath.h.
+
+- Created ExtTypeValues.h (used in BasicPrimitive.h and ManagedList.h).
+
+
+===========
 2017/4/10-13,23-25
 
 - Rewrote timemath.h and timemath.cpp functions as structs implementing Cu::ForeignFunc.

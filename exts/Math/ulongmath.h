@@ -88,12 +88,12 @@ struct Unimplemented : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct IsZero : public ForeignFunc {
+struct AreZero : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 
-	virtual const char* getParameterName( unsigned int index ) const;
-
-	virtual unsigned int getParameterCount() const;
+	virtual bool isVariadic() {
+		return true;
+	}
 };
 
 struct AreEqual : public ForeignFunc {
@@ -180,9 +180,11 @@ struct Avg : public ForeignFunc {
 struct Get_abs : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 
-	virtual const char* getParameterName( unsigned int index ) const;
+	virtual ObjectType::Value
+	getParameterType( unsigned int index ) const;
 
-	virtual unsigned int getParameterCount() const;
+	virtual unsigned int
+	getParameterCount() const;
 };
 
 struct Incr : public ForeignFunc {

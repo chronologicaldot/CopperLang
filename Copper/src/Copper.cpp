@@ -163,11 +163,11 @@ Function::addParam( const String pName ) {
 //--------------------------------------
 
 FunctionContainer::FunctionContainer(Function* pFunction, unsigned int id)
-	: funcBox()
+	: Object(ObjectType::Function)
+	, funcBox()
 	, owner(REAL_NULL)
 	, ID(id)
 {
-	type = ObjectType::Function;
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer constructor (Function*) [%p]\n", (void*)this);
 #endif
@@ -176,11 +176,11 @@ FunctionContainer::FunctionContainer(Function* pFunction, unsigned int id)
 }
 
 FunctionContainer::FunctionContainer()
-	: funcBox()
+	: Object(ObjectType::Function)
+	, funcBox()
 	, owner(REAL_NULL)
 	, ID(0)
 {
-	type = ObjectType::Function;
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer constructor 2 [%p]\n", (void*)this);
 #endif
@@ -189,11 +189,11 @@ FunctionContainer::FunctionContainer()
 }
 
 FunctionContainer::FunctionContainer(const FunctionContainer& pOther)
-	: funcBox()
+	: Object(ObjectType::Function)
+	, funcBox()
 	, owner(REAL_NULL)
 	, ID(pOther.ID)
 {
-	type = ObjectType::Function;
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer constructor 3 (const FunctionContainer&) [%p]\n", (void*)this);
 #endif
@@ -1434,59 +1434,6 @@ addressToString(
 	return String(builder);
 }
 
-bool
-isObjectFunction( const Object& pObject ) {
-	return ( pObject.getType() == ObjectType::Function );
-}
-
-bool
-isObjectEmptyFunction( const Object& pObject ) {
-	if ( pObject.getType() != ObjectType::Function ) {
-		return false;
-	}
-	Function* function;
-	if ( !((FunctionContainer&)pObject).getFunction(function) ) {
-		return false;
-	}
-	if ( function->constantReturn ) {
-		if ( notNull(function->result.raw()) )
-			return false;
-	}
-	return (
-		function->body.raw()->isEmpty()
-		&& function->params.size() == 0
-		&& function->getPersistentScope().occupancy() == 0
-	);
-}
-
-bool
-isObjectBool( const Object& pObject ) {
-	return ( pObject.getType() == ObjectType::Data && util::equals( ((Data&)pObject).typeName(), "bool") );
-}
-
-bool
-getBoolValue( const Object& pObject ) {
-	if ( isObjectBool( pObject ) ) {
-		return ((ObjectBool&)pObject).getValue();
-	}
-	return false;
-}
-
-bool
-isObjectString( const Object& pObject ) {
-	return ( pObject.getType() == ObjectType::Data && util::equals( ((Data&)pObject).typeName(), "string") );
-}
-
-bool
-isObjectNumber( const Object& pObject ) {
-	return ( pObject.getType() == ObjectType::Data && util::equals( ((Data&)pObject).typeName(), "number") );
-}
-
-bool
-isObjectOfType( const Object& pObject, const char* pTypeName ) {
-	return ( pObject.getType() == ObjectType::Data && util::equals( pObject.typeName(), pTypeName ) );
-}
-
 
 //--------------------------------------
 
@@ -1719,7 +1666,7 @@ Engine::lexAndParse(
 
 #ifdef COPPER_SPEED_PROFILE
 	endTime = clock();
-	std::printf("PROFILE Engine::lexAndParse() time = %f\n", static_cast<double>((endTime - startTime) * 1000 / CLOCKS_PER_SEC));
+	std::printf("PROFILE Engine::lexAndParse() time = %f\n", static_cast<double>(endTime - startTime) * 1000.0 / (double)CLOCKS_PER_SEC);
 #endif
 
 	if ( ! bufferedTokens.has() ) {
@@ -2205,11 +2152,17 @@ Engine::parse(
 				switch( result )
 				{
 				case ParseTask::Result::need_more:
+#ifdef COPPER_SPEED_PROFILE
+	endTime = clock();
+	std::printf("PROFILE Engine::parse()=More time = %f\n", static_cast<double>(endTime - startTime) * 1000.0 / (double)CLOCKS_PER_SEC);
+#endif
 					return ParseResult::More;
+
 				case ParseTask::Result::task_done:
 					context.taskStack.pop();
 					parseIter.makeLast();
 					break;
+
 				case ParseTask::Result::interpret_token:
 					// Tasks requiring another token that won't exist will gum up the works.
 					if ( context.isFinished() ) {
@@ -2217,10 +2170,15 @@ Engine::parse(
 							print(LogLevel::error, "Token source finished before parsing.");
 							return ParseResult::Error;
 						} else {
+#ifdef COPPER_SPEED_PROFILE
+	endTime = clock();
+	std::printf("PROFILE Engine::parse()=More time = %f\n", static_cast<double>(endTime - startTime) * 1000.0 / (double)CLOCKS_PER_SEC);
+#endif
 							return ParseResult::More;
 						}
 					}
 					break;
+
 				case ParseTask::Result::syntax_error:
 				default:
 					context.onError();
@@ -2239,6 +2197,7 @@ Engine::parse(
 			context.onError();
 			return ParseResult::Error;
 		case ParseResult::Done:
+		default:
 			// All up-front processing for this token has been done, so continue to next token.
 			break;
 		}
@@ -2254,7 +2213,7 @@ Engine::parse(
 #endif
 #ifdef COPPER_SPEED_PROFILE
 	endTime = clock();
-	std::printf("PROFILE Engine::parse() time = %f\n", static_cast<double>((endTime - startTime) * 1000 / CLOCKS_PER_SEC));
+	std::printf("PROFILE Engine::parse() time = %f\n", static_cast<double>(endTime - startTime) * 1000.0 / (double)CLOCKS_PER_SEC);
 #endif
 
 	//outStrand.append(context.buildStrand); // Should be saved in the context anyways
@@ -3623,8 +3582,6 @@ Engine::parseLoopStructure(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::parseLoopStructure");
 #endif
-	unsigned int openBodies = 1;
-	ParseTask::Result::Value moveToTokenResult;
 
 	switch( task->state ) {
 
@@ -3927,9 +3884,14 @@ Engine::execute() {
 #endif
 #ifdef COPPER_SPEED_PROFILE
 	std::printf("PROFILE Engine::execute() start\n");
-	time_t endTime;
-	time_t startTime = clock();
 	fullTime = 0;
+	//sp_startTime = 0;
+	//sp_endTime = 0;
+	//timeval endTime;
+	//timeval startTime;
+	double elapsedTime = 0;
+	rusage startRusage, endRusage;
+	getrusage(RUSAGE_SELF, &startRusage);
 #endif
 
 	// Note: When adding a list of operations, also set currOp.
@@ -3965,8 +3927,12 @@ Engine::execute() {
 					clearStacks();
 					signalEndofProcessing();
 #ifdef COPPER_SPEED_PROFILE
-	endTime = clock();
-	std::printf("PROFILE Engine::execute() Done time = %f\n", static_cast<double>((endTime - startTime) * 1000 / CLOCKS_PER_SEC));
+	//elapsedTime = ( (endTime.tv_sec - startTime.tv_sec) * 1000.0 + (endTime.tv_usec - startTime.tv_usec) / 1000.0 );
+	//fullTime = sp_endTime - sp_startTime;
+	getrusage(RUSAGE_SELF, &endRusage);
+	elapsedTime = (endRusage.ru_utime.tv_sec - startRusage.ru_utime.tv_sec) * 1000.0
+					+ (endRusage.ru_utime.tv_usec - startRusage.ru_utime.tv_usec) / 1000.0;
+	std::printf("PROFILE Engine::execute() Done time = %f\n", elapsedTime);
 #endif
 					return EngineResult::Done;
 
@@ -4021,9 +3987,14 @@ Engine::execute() {
 	opcodeStrandStack.start()->removeAllUpToCurrentCode();
 
 #ifdef COPPER_SPEED_PROFILE
-	endTime = clock();
-	std::printf("PROFILE Engine::execute() Normal time = %f\n", static_cast<double>((endTime - startTime) * 1000 / CLOCKS_PER_SEC));
-	std::printf("PROFILE Engine::execute() Section full time = %f\n", static_cast<double>(fullTime * 1000 / CLOCKS_PER_SEC));
+	getrusage(RUSAGE_SELF, &endRusage);
+	elapsedTime = (endRusage.ru_utime.tv_sec - startRusage.ru_utime.tv_sec) * 1000.0
+					+ (endRusage.ru_utime.tv_usec - startRusage.ru_utime.tv_usec) / 1000.0;
+	//gettimeofday(&endTime, NULL);
+	//elapsedTime = ( (endTime.tv_sec - startTime.tv_sec) * 1000.0 + (endTime.tv_usec - startTime.tv_usec) / 1000.0 );
+	//fullTime = sp_endTime - sp_startTime;
+	std::printf("PROFILE Engine::execute() Normal time = %f\n", elapsedTime);
+	std::printf("PROFILE Engine::execute() Section full time = %f\n", fullTime);
 #endif
 
 	return EngineResult::Ok;
@@ -4139,14 +4110,8 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_access");
 #endif
-#ifdef COPPER_SPEED_PROFILE
-		//startTime = clock();
-#endif
 		variable = resolveVariableAddress( *(opcode->getAddressData()) );
-#ifdef COPPER_SPEED_PROFILE
-		//endTime = clock();
-		//fullTime += (endTime - startTime);
-#endif
+
 		if ( notNull(variable) ) {
 			lastObject.set( variable->getRawContainer() );
 		} else {
@@ -4249,6 +4214,7 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode ConditionalGoto");
 #endif
+
 		Object* obj; // Needs to be declared at the beginning of this method
 		if ( lastObject.obtain(obj) ) {
 			if ( isObjectBool(*obj) ) {
@@ -4536,6 +4502,7 @@ Engine::setupForeignFunctionExecution(
 			return FuncExecReturn::ErrorOnRun;
 		}
 	}
+
 	unsigned int ffhIndex = 0;
 	ParamsIter taskArgsIter = task.params.start();
 	// This is for non-variadic functions. Variadic functions should only return a parameter count
@@ -4543,14 +4510,11 @@ Engine::setupForeignFunctionExecution(
 	// For example, a list function might be Top(List, Iter, Iter...) so it's constant parameter is
 	// the first one: Top(List...) meaning it should return a parameter count of 1 and have
 	// getParameterName() return the typename for the List.
-#ifdef COPPER_SPEED_PROFILE
-	time_t endTime=0, startTime = clock();
-#endif
 	while ( ffhIndex < foreignFunc->getParameterCount() ) {
 		if ( ! taskArgsIter.has() ) {
 			break; // For variadic functions
 		}
-		if ( ! util::equals(foreignFunc->getParameterName(ffhIndex), (*taskArgsIter)->typeName()) )
+		if ( ! foreignFunc->getParameterType(ffhIndex) == (*taskArgsIter)->getType() )
 		{
 			// Language specification says this should optionally be a warning
 			print(LogLevel::error, "Argument types do not match foreign function header.");
@@ -4565,10 +4529,6 @@ Engine::setupForeignFunctionExecution(
 			break;
 		}
 	}
-#ifdef COPPER_SPEED_PROFILE
-	endTime = clock();
-	fullTime += (endTime - startTime);
-#endif
 
 	FFIServices ffi(*this, task.params.start());
 	bool result = foreignFunc->call( ffi );
@@ -4615,6 +4575,14 @@ Engine::setupUserFunctionExecution(
 */
 
 //----------
+
+#ifdef COPPER_SPEED_PROFILE
+	//clock_t endTime, startTime = clock();
+	//timeval endTime, startTime;
+	//rusage startTime, endTime;
+	//double elapsedTime = 0;
+	//getrusage(RUSAGE_SELF, &startTime);
+#endif
 
 	// Search local, then global, then create in local if not found.
 	// Code modified from resolveVariableAddress().
@@ -4663,6 +4631,17 @@ Engine::setupUserFunctionExecution(
 			scope = &(func->getPersistentScope());
 		} while ( addrIter.next() );
 	}
+
+#ifdef COPPER_SPEED_PROFILE
+	//double elapsedTime = ( (endTime.tv_sec - startTime.tv_sec) * 1000.0 + (endTime.tv_usec - startTime.tv_usec) / 1000.0 );
+
+	//getrusage(RUSAGE_SELF, &endTime);
+	//elapsedTime = (endTime.ru_utime.tv_sec - startTime.ru_utime.tv_sec) * 1000.0 + (endTime.ru_utime.tv_usec - startTime.ru_utime.tv_usec) / 1000.0;
+	//fullTime += elapsedTime;
+	//static int cycle = 1;
+	//cycle++;
+	//std::printf("section time = %f, %s", elapsedTime, (cycle % 6 == 0 ? "\n":"") );
+#endif
 
 //----------
 
@@ -4740,6 +4719,7 @@ Engine::setupUserFunctionExecution(
 	//opStrandStackIter.makeLast();
 	// Since the iterator in the OpStrand container is separately defined from the list, there is no
 	// need to reset it and getCurrOp() should return the first opcode every time the function is called.
+
 	return FuncExecReturn::Reset;
 }
 

@@ -7,11 +7,11 @@ namespace Cu {
 namespace ManagedList {
 
 bool isList(const Object& pObject) {
-	return util::equals(pObject.typeName(), List::StaticTypeName());
+	return (pObject.getType() == List::StaticType());
 }
 
 bool isIterator(const Object& pObject) {
-	return util::equals(pObject.typeName(), Iter::StaticTypeName());
+	return (pObject.getType() == Iter::StaticType());
 }
 
 void addFunctionsToEngine(
@@ -102,8 +102,9 @@ void Node::delink() {
 }
 
 Iter::Iter(List* pList, Node* pNode)
-	: list(pList)
-	, node(pNode)
+	: Object(	StaticType())
+	, list(		pList		)
+	, node(		pNode		)
 {
 	if ( list )
 		list->ref();
@@ -112,8 +113,9 @@ Iter::Iter(List* pList, Node* pNode)
 }
 
 Iter::Iter(List* pList, bool top)
-	: list(pList)
-	, node(REAL_NULL)
+	: Object(	StaticType())
+	, list(		pList		)
+	, node(		REAL_NULL	)
 {
 	if ( list )
 		list->ref();

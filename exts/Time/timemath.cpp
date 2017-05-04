@@ -71,7 +71,7 @@ void addFunctionsToEngine(
 bool isObjectMSecTime(
 	Object* obj
 ) {
-	return isObjectOfType(*obj, MSecTime::StaticTypeName());
+	return (obj->getType() == MSecTime::StaticType());
 }
 
 bool
@@ -82,7 +82,7 @@ Create::call(
 	Object* arg;
 	if ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
-		if ( isObjectOfType(*arg, ObjectNumber::StaticTypeName()) ) {
+		if ( isObjectNumber(*arg) ) {
 			m = new MSecTime();
 			m->setRaw( (long long int) ((ObjectNumber*)arg)->getAsUnsignedLong() );
 		} else {
@@ -115,7 +115,6 @@ bool
 Add::call(
 	FFIServices& ffi
 ) {
-	MSecTime* m;
 	MSecTime* firstM;
 	MSecTime* secondM;
 	Object* arg;
