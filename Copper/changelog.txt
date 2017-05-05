@@ -1,5 +1,21 @@
 ====================
 2017/5/4
+v 4-0.22
+
+- Changed Engine::addForeignFunctionInstance() to addForeignFunction().
+- Updated template void addForeignFuncInstance() to use Engine::addForeignFunction().
+- Changed profiling code.
+- Corrected comparison of parameter count and arg count in Engine::setupForeignFunctionExecution(). Both go to uint now.
+
+console.cpp (both Copper/console.cpp and console.cpp)
+- Changed call to addForeignFunctionInstance() to addForeignFunction().
+
+InterpreterUsageGuide.html
+- Updated text on foreign functions.
+
+
+====================
+2017/5/4
 v 4-0.21
 
 - Changed Engine::process_sys_are_same_type() to compare ObjectType::Value first before comparing with typeName().

@@ -163,12 +163,7 @@ Create::call(
 	if ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
 		if ( ! getInt( *arg, value ) ) {
-			if ( isObjectNumber(*arg) ) {
-				big = ((ObjectNumber*)arg)->getAsUnsignedLong();
-				value = big > INT_MAX ? INT_MAX : big;
-			} else {
-				ffi.printWarning("Int-creation argument was not a compatible number type.");
-			}
+			ffi.printWarning("Int-creation argument was not a compatible number type.");			
 		}
 	}
 	Int* out = new Int(value);
@@ -219,20 +214,20 @@ AreEqual::call(
 	bool are_equal = true;
 	int startValue = 0;
 	int value = 0;
-	bool hasFirstValue = false;
-	while( ffi.hasMoreArgs() ) {
+	if ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( ! getInt(*arg, startValue) ) {
+			ffi.printWarning("Int are-equal function given non-numeric argument. Cancelling calculation...");
+			return false;
+		}
+	}
+	while ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
 		if ( getInt(*arg, value) ) {
-			if ( hasFirstValue ) {
-				are_equal &= (startValue == value);
-				if ( ! are_equal )
-					break;
-			} else {
-				startValue = value;
-				hasFirstValue = true;
-			}
+			are_equal = startValue == value;
+			if ( !are_equal )
+				break;
 		} else {
-			are_equal = false;
 			ffi.printWarning("Int are-equal function given non-numeric argument. Cancelling calculation...");
 			return false;
 		}

@@ -108,7 +108,7 @@ struct TwoArgBase : public ForeignFunc {
 	virtual ObjectType::Value
 	getParameterType(
 		unsigned int index
-	) {
+	) const {
 		switch( index ) {
 		case 0:
 		case 1:
@@ -120,7 +120,7 @@ struct TwoArgBase : public ForeignFunc {
 	}
 
 	virtual unsigned int
-	getParameterCount() {
+	getParameterCount() const {
 		return 2;
 	}
 };

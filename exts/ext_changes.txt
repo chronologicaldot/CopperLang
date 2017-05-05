@@ -3,9 +3,19 @@
 
 intmath.cpp
 - Added AreZero to list of functions added in addFunctionsToEngine();
+- Removed excessive code from Create::call().
+- Moved saving of first value outside loop of AreEqual::call().
 
 ulongmath.cpp
 - Added AreZero to list of functions added in addFunctionsToEngine();
+- Removed excessive code from Create::call().
+- Moved saving of first value outside loop of AreEqual::call().
+
+floatmath.h, floatmath.cpp, doublemath.h, doublemath.cpp
+- Commented out / declared obsolete
+
+BasicPritive.h
+- Fixed bug in TwoArgBase: methods were not const, and therefore did not override originals.
 
 
 ===========

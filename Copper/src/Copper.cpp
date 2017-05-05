@@ -1512,7 +1512,7 @@ void Engine::print(const LogLevel::Value& logLevel, const EngineMessage::Value& 
 }
 
 void
-Engine::addForeignFunctionInstance(
+Engine::addForeignFunction(
 	const String&	pName,
 	ForeignFunc*	pFunction
 ) {
@@ -1523,22 +1523,6 @@ Engine::addForeignFunctionInstance(
 		throw NullForeignFunctionException();
 	foreignFunctions.insert(pName, ForeignFuncContainer(pFunction));
 }
-
-/*
-void
-Engine::addForeignFunction(
-	const String&	pName,
-	bool			(*pFunction)( FFIServices& ),
-	bool			pIsVariadic
-) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::addForeignFunction");
-#endif
-	ForeignFunctionWrapper* ffw = new ForeignFunctionWrapper(pFunction, pIsVariadic );
-	foreignFunctions.insert(pName, ForeignFuncContainer(ffw));
-	ffw->deref();
-}
-*/
 
 EngineResult::Value
 Engine::run(
@@ -1586,11 +1570,6 @@ Engine::lexAndParse(
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::lexAndParse");
-#endif
-#ifdef COPPER_SPEED_PROFILE
-	std::printf("PROFILE Engine::lexAndParse() start\n");
-	time_t endTime;
-	time_t startTime = clock();
 #endif
 	char c;
 	CharList tokenValue; // Since I have to build with it, it's an easy-to-append-to list
@@ -1658,11 +1637,6 @@ Engine::lexAndParse(
 		default: break;
 		}
 	}
-
-#ifdef COPPER_SPEED_PROFILE
-	endTime = clock();
-	std::printf("PROFILE Engine::lexAndParse() time = %f\n", static_cast<double>(endTime - startTime) * 1000.0 / (double)CLOCKS_PER_SEC);
-#endif
 
 	if ( ! bufferedTokens.has() ) {
 		return ParseResult::More;
@@ -2117,11 +2091,6 @@ Engine::parse(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::parse");
 #endif
-#ifdef COPPER_SPEED_PROFILE
-	std::printf("PROFILE Engine::parse() start\n");
-	time_t endTime;
-	time_t startTime = clock();
-#endif
 	// IMPORTANT NOTE: You cannot short-circuit this function by merely checking for if the context
 	// is finished. There may be unfinished tasks that prevent valid processing.
 
@@ -2147,10 +2116,6 @@ Engine::parse(
 				switch( result )
 				{
 				case ParseTask::Result::need_more:
-#ifdef COPPER_SPEED_PROFILE
-	endTime = clock();
-	std::printf("PROFILE Engine::parse()=More time = %f\n", static_cast<double>(endTime - startTime) * 1000.0 / (double)CLOCKS_PER_SEC);
-#endif
 					return ParseResult::More;
 
 				case ParseTask::Result::task_done:
@@ -2165,10 +2130,6 @@ Engine::parse(
 							print(LogLevel::error, "Token source finished before parsing.");
 							return ParseResult::Error;
 						} else {
-#ifdef COPPER_SPEED_PROFILE
-	endTime = clock();
-	std::printf("PROFILE Engine::parse()=More time = %f\n", static_cast<double>(endTime - startTime) * 1000.0 / (double)CLOCKS_PER_SEC);
-#endif
 							return ParseResult::More;
 						}
 					}
@@ -2205,10 +2166,6 @@ Engine::parse(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	context.outputStrand->validate();
 	print(LogLevel::debug, "[DEBUG: Engine::parse validated output strand.");
-#endif
-#ifdef COPPER_SPEED_PROFILE
-	endTime = clock();
-	std::printf("PROFILE Engine::parse() time = %f\n", static_cast<double>(endTime - startTime) * 1000.0 / (double)CLOCKS_PER_SEC);
 #endif
 
 	//outStrand.append(context.buildStrand); // Should be saved in the context anyways
@@ -3880,9 +3837,8 @@ Engine::execute() {
 #ifdef COPPER_SPEED_PROFILE
 	std::printf("PROFILE Engine::execute() start\n");
 	fullTime = 0;
-	double elapsedTime = 0;
-	rusage startRusage, endRusage;
-	getrusage(RUSAGE_SELF, &startRusage);
+	timespec startTime, endTime;
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &startTime);
 #endif
 
 	// Note: When adding a list of operations, also set currOp.
@@ -3918,10 +3874,8 @@ Engine::execute() {
 					clearStacks();
 					signalEndofProcessing();
 #ifdef COPPER_SPEED_PROFILE
-	getrusage(RUSAGE_SELF, &endRusage);
-	elapsedTime = (endRusage.ru_utime.tv_sec - startRusage.ru_utime.tv_sec) * 1000.0
-					+ (endRusage.ru_utime.tv_usec - startRusage.ru_utime.tv_usec) / 1000.0;
-	std::printf("PROFILE Engine::execute() Done time = %f\n", elapsedTime);
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &endTime);
+	std::printf("done time sec(%ld) ns(%ld)\n", (endTime.tv_sec - startTime.tv_sec), (endTime.tv_nsec - startTime.tv_nsec) );
 #endif
 					return EngineResult::Done;
 
@@ -3976,12 +3930,10 @@ Engine::execute() {
 	opcodeStrandStack.start()->removeAllUpToCurrentCode();
 
 #ifdef COPPER_SPEED_PROFILE
-	getrusage(RUSAGE_SELF, &endRusage);
-	elapsedTime = (endRusage.ru_utime.tv_sec - startRusage.ru_utime.tv_sec) * 1000.0
-					+ (endRusage.ru_utime.tv_usec - startRusage.ru_utime.tv_usec) / 1000.0;
-
-	std::printf("PROFILE Engine::execute() Normal time = %f\n", elapsedTime);
-	std::printf("PROFILE Engine::execute() Section full time = %f\n", fullTime);
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &endTime);
+	std::printf("\nPROFILE\n\tEngine::execute() final time sec(%ld) ns(%ld)\n\tsection full time = %f\n",
+				(endTime.tv_sec - startTime.tv_sec), (endTime.tv_nsec - startTime.tv_nsec),
+				fullTime);
 #endif
 
 	return EngineResult::Ok;
@@ -4459,9 +4411,9 @@ Engine::setupForeignFunctionExecution(
 
 	ForeignFunc* foreignFunc = bucketData->item.getForeignFunction();
 
-	if ( (foreignFunc->getParameterCount() != task.args.size()) && ! foreignFunc->isVariadic() ) {
+	if ( ((uint)foreignFunc->getParameterCount() != task.args.size()) && ! foreignFunc->isVariadic() ) {
 		// Language specification says this should optionally be a warning
-		print(LogLevel::error, "Parameter count does not match foreign function header.");
+		print(LogLevel::error, "Argument count does not match foreign function header.");
 		if ( ignoreBadForeignFunctionCalls ) {
 			return FuncExecReturn::Ran; // Leaves the return as empty function
 		} else {
@@ -4497,7 +4449,24 @@ Engine::setupForeignFunctionExecution(
 	}
 
 	FFIServices ffi(*this, task.args.start());
+
+#ifdef COPPER_SPEED_PROFILE
+	double elapsedTime = 0;
+	timespec startTime, endTime;
+
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &startTime);
+#endif
+
 	bool result = foreignFunc->call( ffi );
+
+#ifdef COPPER_SPEED_PROFILE
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &endTime);
+	elapsedTime = (endTime.tv_sec - startTime.tv_sec) * 1000.0 + (endTime.tv_nsec - startTime.tv_nsec) / 1000000.0;
+	fullTime += elapsedTime;
+	static int cycle = 1;
+	cycle++;
+	std::printf("time sec(%ld) ns(%ld), \t%s", (endTime.tv_sec - startTime.tv_sec), (endTime.tv_nsec - startTime.tv_nsec), (cycle % 6 == 0 ? "\n":"") );
+#endif
 
 	// lastObject is set by setResult() or setNewResult() of the FFI.
 	return result ?
@@ -4541,12 +4510,6 @@ Engine::setupUserFunctionExecution(
 */
 
 //----------
-
-#ifdef COPPER_SPEED_PROFILE
-	//rusage startTime, endTime;
-	//double elapsedTime = 0;
-	//getrusage(RUSAGE_SELF, &startTime);
-#endif
 
 	// Search local, then global, then create in local if not found.
 	// Code modified from resolveVariableAddress().
@@ -4595,15 +4558,6 @@ Engine::setupUserFunctionExecution(
 			scope = &(func->getPersistentScope());
 		} while ( addrIter.next() );
 	}
-
-#ifdef COPPER_SPEED_PROFILE
-	//getrusage(RUSAGE_SELF, &endTime);
-	//elapsedTime = (endTime.ru_utime.tv_sec - startTime.ru_utime.tv_sec) * 1000.0 + (endTime.ru_utime.tv_usec - startTime.ru_utime.tv_usec) / 1000.0;
-	//fullTime += elapsedTime;
-	//static int cycle = 1;
-	//cycle++;
-	//std::printf("section time = %f, %s", elapsedTime, (cycle % 6 == 0 ? "\n":"") );
-#endif
 
 //----------
 
@@ -4698,7 +4652,7 @@ Engine::setupUserFunctionExecution(
 */
 /*
 bool
-Engine::runFunction( FunctionContainer* function, ArgsList* parameters ) {
+Engine::runFunction( FunctionContainer* function, ArgsList* pArgs ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::runFunction");
 #endif

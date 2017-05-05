@@ -38,7 +38,7 @@ int main() {
 	CuStd::Printer printer;
 	CuStd::InStreamLogger streamLogger;
 	engine.setLogger(&streamLogger);
-	engine.addForeignFunctionInstance(util::String("print"), &printer);
+	engine.addForeignFunction(util::String("print"), &printer);
 	//engine.setStackTracePrintingEnabled(true);
 
 	Cu::Numeric::Int::addFunctionsToEngine(engine, false);

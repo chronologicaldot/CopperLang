@@ -151,11 +151,7 @@ Create::call(
 	if ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
 		if ( ! getULong( *arg, value ) ) {
-			if ( isObjectNumber(*arg) ) {
-				value = ((ObjectNumber*)arg)->getAsUnsignedLong();
-			} else {
-				ffi.printWarning("ULong-creation argument was not a compatible number type.");
-			}
+			ffi.printWarning("ULong-creation argument was not a compatible number type.");
 		}
 	}
 	ULong* out = new ULong(value);
@@ -206,20 +202,20 @@ AreEqual::call(
 	bool are_equal = true;
 	ulong startValue = 0;
 	ulong value = 0;
-	bool hasFirstValue = false;
-	while( ffi.hasMoreArgs() ) {
+	if ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( ! getULong(*arg, startValue) ) {
+			ffi.printWarning("ULong are-equal function given non-numeric argument. Cancelling calculation...");
+			return false;
+		}
+	}
+	while ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
 		if ( getULong(*arg, value) ) {
-			if ( hasFirstValue ) {
-				are_equal &= (startValue == value);
-				if ( ! are_equal )
-					break;
-			} else {
-				startValue = value;
-				hasFirstValue = true;
-			}
+			are_equal = startValue == value;
+			if ( !are_equal )
+				break;
 		} else {
-			are_equal = false;
 			ffi.printWarning("ULong are-equal function given non-numeric argument. Cancelling calculation...");
 			return false;
 		}

@@ -154,7 +154,7 @@ By default, the engine filters out all non-ASCII names, but you can change this 
 <pre><code>
 <green>int</green> main<red>() {</red>
 	Cu::Engine engine;
-	CuStd::Printer printer;
+	CuStd::Printer printer;	<grey>// You will need to include Printer.h for this.</grey>
 	CuStd::InStreamLogger streamLogger; <grey>// You will need to include InStreamLogger.h for this.</grey>
 	engine.setLogger<red>(</red>&ampstreamLogger<red>)</red>;
 	engine.addForeignFunctionInstance<red>(</red>util::String<red>(</red><orange>"print"</orange><red>)</red>, &ampprinter<red>)</red>;
@@ -172,7 +172,7 @@ By default, the engine filters out all non-ASCII names, but you can change this 
 
 <h2 id="ext">Extending the Engine</h2>
 <p>
-The engine can be extended with functions in two ways: by implementations of the class <code>Cu::ForeignFunc</code>, passed into <code>Engine::addForeignFunctionInstance()</code>, and/or by functions with the prototype <code>bool <i>name</i>(FFIServices&amp)</code> passed into <code>Engine::addForeignFunction()</code>.
+The engine can be extended with functions in by implementations of the class <code>Cu::ForeignFunc</code>, passed into <code>Engine::addForeignFunction()</code>.
 </p>
 <p>
 ForeignFunc classes can be added to the engine via the template function: <code>Cu::addForeignFuncInstance&lt<i>my_foreign_func</i>&gt(Engine* engine, const String&amp pName)</code>
@@ -185,19 +185,25 @@ The interface for foreign functions is as follows:
 <green>virtual bool</green> call<red>(</red> FFIServices&amp ffi <red>)</red>=0;
 
 <grey>// Returns if the function can accept any number of parameters.</grey>
-<green>virtual bool</green> isVariadic<red>() {</red> <blue>return</blue> <green>false</green>; <red>}</red>
+<green>virtual bool</green> isVariadic<red>() {</red>
+	<blue>return</blue> <green>false</green>;
+<red>}</red>
 
 <grey>// Returns the typeName of the parameter expected at index "index".</grey>
-<green>virtual const char*</green> getParameterName<red>(</red> <green>unsigned int</green> index <red>) {</red> <blue>return</blue> ""; <red>}</red>
+<green>virtual ObjectType::Value</green> getParameterType<red>(</red> <green>unsigned int</green> index <red>) {</red>
+	<blue>return</blue> ObjectType::Function;
+<red>}</red>
 
 <grey>// Returns the total number of parameters the function accepts.</grey>
-<green>virtual unsigned int</green> getParameterCount<red>() {</red> <blue>return</blue> 0; <red>}</red>
+<green>virtual unsigned int</green> getParameterCount<red>() {</red>
+	<blue>return</blue> 0;
+<red>}</red>
 </code></pre>
 <p>
 Functions can be made to accept any number of functions. These are called "variadic functions", and they must return "true" from <code>ForeignFunc::isVariadic()</code>.
 </p>
 <p>
-Functions can be designed to accept a limited number of parameters by implementing <code>getParameterName()</code> and <code>getParameterCount()</code>. When a function call is made from within the Copper language, the engine will check to make sure the parameters match the results of <code>getParameterName()</code>. With this handled, the user does not need to check the type names of the objects being passed.
+Functions can be designed to accept a limited number of parameters by implementing <code>getParameterType()</code> and <code>getParameterCount()</code>. When a function call is made from within the Copper language, the engine will check to make sure the arguments match the results of <code>getParameterType()</code> up to the number of parameters given by <code>getParameterCount()</code>. With this handled, the user does not need to check the types of the objects being passed.
 </p>
 
 <h3 id="ext-use">Using the Foreign Function Interface</h3>
@@ -209,8 +215,16 @@ If you have created a variadic foreign function, you will need to use <code>Fore
 The following demonstrates a variadic function:
 </p>
 <pre><code>
+<green>bool</green> isObjectMyInt<red>(</red> ObjectType::Value pArgType <red>) {</red>
+	<blue>return</blue> pArgType == ObjectType::UnknownData + 100;
+<red>}</red>
+
 <green>struct</green> intAdd : <blue>public</blue> Cu::ForeignFunc <red>{</red>
 	<green>virtual bool</green> call<red>(</red> Cu::FFIServices&amp ffi <red>)</red>;
+
+	<green>virtual bool</green> isVariadic<red>() {</red>
+		<blue>return</blue> <green>true</green>;
+	<red>}</red>
 <red>}</red>;
 
 <green>bool</green> intAdd::call<red>(</red> FFIServices&amp ffi <red>) {</red>
@@ -219,8 +233,8 @@ The following demonstrates a variadic function:
 	<green><b>while</b></green> <red>(</red> ffi.hasMoreArgs<red>() ) {</red>
 		arg = ffi.getNextArg<red>()</red>;
 		<grey>// Presuming we have a class named "MyInt" with a type name of "my_int"</grey>
-		<green><b>if</b></green> <red>(</red> isObjectOfType<red>(</red>*arg, <orange>"my_int"</orange> <red>) ) {</red>
-			i += dynamic_cast&ltMyInt&gt<red>(</red>arg<red>)</red>-&gtgetValue<red>()</red>;
+		<green><b>if</b></green> <red>(</red> isObjectMyInt<red>(</red>arg->getType<red>()) ) {</red>
+			i += <b>dynamic_cast</b>&ltMyInt*&gt<red>(</red>arg<red>)</red>-&gtgetValue<red>()</red>;
 		} else {
 			ffi.printWarning<red>(</red><orange>"Argument to intAdd was not of type my_int. It will be ignored..."</orange><red>)</red>;
 		}
@@ -237,12 +251,20 @@ The following demonstrates a normal function. Note that in a normal function, th
 <pre><code>
 <green>struct</green> DrawImage : <blue>public</blue> Cu::ForeignFunc <red>{</red>
 	<green>virtual bool</green> call<red>(</red> Cu::FFIServices&amp ffi <red>)</red>;
+
+	<green>virtual ObjectType::Value</green> getParameterType<red>(</red> <green>unsigned int</green> index <red>)</red> <green>const</green> <red>{</red>
+		<blue>return</blue> ObjectType::UnknownData + 100;
+	<red>}</red>
+
+	<green>virtual unsigned int</green> getParameterCount<red>()</red> <green>const</green> <red>{</red>
+		<blue>return</blue> 2;
+	<red>}</red>
 <red>}</red>;
 
 <green>bool</green> DrawImage::call<red>(</red> FFIServices&amp ffi <red>) {</red>
-	MyImage* image = dynamic_cast&ltMyImage&gt<red>(</red> ffi.getNextParam<red>() )</red>;
-	int* startX = dynamic_cast&ltMyInt&gt<red>(</red> ffi.getNextArg<red>() )</red>-&gtgetValue<red>()</red>;
-	int* startY = dynamic_cast&ltMyInt&gt<red>(</red> ffi.getNextArg<red>() )</red>-&gtgetValue<red>()</red>;
+	MyImage* image = <b>dynamic_cast</b>&ltMyImage*&gt<red>(</red> ffi.getNextArg<red>() )</red>;
+	<green>int</green> startX = <b>dynamic_cast</b>&ltMyInt*&gt<red>(</red> ffi.getNextArg<red>() )</red>-&gtgetValue<red>()</red>;
+	<green>int</green> startY = <b>dynamic_cast</b>&ltMyInt*&gt<red>(</red> ffi.getNextArg<red>() )</red>-&gtgetValue<red>()</red>;
 
 	<green><b>if</b></green>  <red>(</red> image-&gtisCorrupt<red>() ) {</red>
 		ffi.printError<red>(</red><orange>"Image passed to drawImage is corrupt."</orange><red>)</red>;
@@ -254,7 +276,7 @@ The following demonstrates a normal function. Note that in a normal function, th
 </code></pre>
 
 <p>
-<b>All parameters from <code>getNextParam()</code> are passed as <code>Cu::Object*</code></b> - basic objects used in interpreter. The lifetime of such objects is only as long as the function call, so to keep them, you will need to call <code>Object::ref()</code> on the object. It is expected that you will cast the object to the datatype whose name is returned by <code>getParameterName()</code>.
+<b>All parameters from <code>getNextParam()</code> are passed as <code>Cu::Object*</code></b> - basic objects used in the interpreter. The lifetime of such objects is only as long as the function call, so to keep them, you will need to call <code>Object::ref()</code> on the object. It is expected that you will cast the object to the datatype whose type is returned by <code>getParameterType()</code>.
 </p>
 
 <h3 id="ext-newdt">Creating New Datatypes</h3>
@@ -286,17 +308,20 @@ Three of the virtual functions of <code>Cu::Object</code> need to be implemented
 <green>virtual const char*</green> typeName<red>()</red> <green>const</green> =0;
 </code></pre>
 <p>
-The engine uses the typeName() method when it needs to check if a type can be passed to a function. Therefore, the type-name MUST BE UNIQUE. Ideally, the type-name should be short because the longer the typename, the slower it is processed.
+The engine currently uses the <code>typeName()</code> method when it needs to check if two types are the same via <code>are_same_type()</code>. It is also used for printing. Therefore, the return from <code>typeName()</code> <b>should be unique</b>, but it can optionally be left blank.
 </p>
 <p>
-Example:
+The object type (not the type-name) is stored in the protected variable <code>type</code>. This value must be set, and you are to do so by passing in a unique value casted to <code>ObjectType::Value</code>.
 </p>
+<h4>
+Example:
+</h4>
 <pre><code>
 <green>class</green> MyInt : <blue>public</blue> Cu::Object <red>{</red>
 	<green>int</green> i;
 <blue>public:</blue>
 	MyInt<red>(</red>int p<red>)</red>
-		: Cu:Object<red>()</red>
+		: Cu:Object<red>(</red> ObjectType::UnknownData + 100 <red>)</red>
 		, i<red>(</red>p<red>)</red>
 	<red>{}</red>
 
@@ -330,7 +355,7 @@ Getting your objects into Copper processing is done by setting them to be the re
 <red>}</red>;
 
 <green>bool</green> CreateMyInt::call<red>(</red> Cu::FFIServices&amp ffi <red>) {</red>
-	MyInt* m = new MyInt<red>(</red>0<red>)</red>;
+	MyInt* m = <green>new</green> MyInt<red>(</red>0<red>)</red>;
 	ffi.setResult<red>(</red>m<red>)</red>;
 	m->deref<red>()</red>;
 	<blue>return</blue> <green>true</green>;
@@ -508,7 +533,7 @@ NOTE: The engine filters basic ASCII names by default and allows for numbers and
 </div>
 
 <div class="func">
-<h4><code><b>void</b> addForeignFunctionInstance( const String&amp pName, ForeignFunc* pFunction )</code></h4>
+<h4><code><b>void</b> addForeignFunction( const String&amp pName, ForeignFunc* pFunction )</code></h4>
 <p>
 Accepts a name for a foreign function and the class function whose call() method should be called when that name is found during Copper code execution.
 </p>

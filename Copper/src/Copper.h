@@ -24,15 +24,13 @@
 //#define COPPER_STRICT_CHECKS
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-//#include <cstdio>
+#include <cstdio>
 
 //#define COPPER_SPEED_PROFILE
 
 #ifdef COPPER_SPEED_PROFILE
 #include <ctime>
 #include <sys/time.h>
-#include <unistd.h> // for usleep
-#include <sys/resource.h> // for rusage and getrusage
 // Also requires cstdio
 #endif
 
@@ -2385,22 +2383,10 @@ public:
 	\param pName - The alias within Copper by which this function can be called.
 	\param pFunction - Pointer to the function to be called.
 	*/
-	void addForeignFunctionInstance(
+	void addForeignFunction(
 		const String&	pName,
 		ForeignFunc*	pFunction
 	);
-
-	/* Add an external/foreign function to the virtual machine, accessible from within Copper.
-	\param pName - The alias within Copper by which this function can be called.
-	\param pFunction - Pointer to the function to be called.
-	*/
-	/*
-	void addForeignFunction(
-		const String&	pName,
-		bool			(*pFunction)( FFIServices& ),
-		bool			pIsVariadic
-	);
-	*/
 
 	/* Run Copper code.
 	This accepts bytes from a byte stream and treats it as Copper code. */
@@ -2415,7 +2401,7 @@ public:
 	\return - Signal indicating the success (EngineResult::Ok) or failure (EngineResult::Error)
 		of processing. Return may also indicate the end of the VM running (EngineResult::Done).
 	*/
-	//runFunction( FunctionContainer* pFunction, const List<Object*>& pParams );
+	//runFunction( FunctionContainer* pFunction, const ArgsList& pArgs );
 
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	void
@@ -2765,7 +2751,7 @@ protected:
 template<typename ForeignFuncClass>
 void addForeignFuncInstance( Engine& engine, const String& name ) {
 	ForeignFunc* f = new ForeignFuncClass();
-	engine.addForeignFunctionInstance(name, f);
+	engine.addForeignFunction(name, f);
 	f->deref();
 }
 
