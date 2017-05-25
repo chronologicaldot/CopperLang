@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<style type="text/css">
+body {
+	background-color:#111111;
+	color:#dca;
+}
+.centering {
+	max-width: 900px;
+	margin:0 auto;
+}
+#main-menu {
+	position: relative;
+	left: 0;
+	right: 0;
+	width: 500px;
+	height: 40px;
+}
+#main-menu > a, #main-menu > div {
+	position: relative;
+	min-width: 100px;
+	height: 20px;
+	display:inline-block;
+	padding: 15px;
+	border-radius: 5px;
+	border: 1px solid #a97;
+	background-color: #864;
+	color: #eda;
+	text-decoration:none;
+}
+.toc {
+	background-color:#222200;
+	padding:20px 0px 20px 50px;
+	border-radius:5px;
+	border-top: 1px solid #838363;
+	border-bottom: 1px solid #000;
+	list-style-type:katakana-iroha; /*upper-roman;*/
+}
+.toc > a {
+	font-size:14pt;
+	color: #dd9;
+	/*text-decoration:none;*/
+}
+h1 {
+	background-color:#212120;
+	color:#e0e0e0;
+	padding:20px;
+	border-radius:5px;
+	border-top: 1px solid #838363;
+	border-bottom: 1px solid #000;
+}
+p {
+	/*color:#333;*/
+}
+h2 {
+	background-color:#212120;
+	padding:10px;
+	border-radius:5px;
+	border-top: 1px solid #838363;
+	border-bottom: 1px solid #000;
+}
+h3 {
+	background-color:#313130;
+	padding:5px;
+	border-radius:5px;
+	border-top: 1px solid #838363;
+	border-bottom: 1px solid #000;
+}
+h4 {
+	background-color:#414140;
+	padding:5px;
+	border-radius:5px;
+	border-top: 1px solid #838363;
+	border-bottom: 1px solid #000;
+}
+
+.func {
+	background-color:#212111;
+	margin-top:10px;
+	padding:10px;
+	border: 1px solid #606000;
+	border-radius:5px;
+}
+.func > h4 {
+	background-color:#414100;
+	border-radius:5px;
+	border-top: 1px solid #838363;
+	border-bottom: 1px solid #000;
+}
+
+pre {
+	padding:10px;
+	background-color:#414111;
+	border-radius:5px;
+}
+code {
+	font-size: 1.1em;
+}
+red { color:#e99; }
+orange { color:#fb0; }
+grey { color:#888; }
+green { color:#af4; }
+blue { color:#4af; }
+</style>
+</head>
+<body>
+<div class="centering">
+
+<div id="main-menu">
+	<a href="CopperLangGuide.html"><div>Language Guide</div></a>
+	<a href="InterpreterUsageGuide.html"><div>Interpreter Guide</div></a>
+	<!--<div>Syntax in 5mins</div>-->
+</div>
+
+<h1>Copper in 5 minutes</h1>
+
+<pre><code>
+<grey># Comments are between \#'s and multiline but a slash escapes characters. #</grey>
+
+<grey># Variables have stack-based lifetimes and only one type: function.
+Declaring a name makes a variable. #</grey>
+a
+
+<grey># Assignment (copies data and members) #</grey>
+a = 5
+
+<grey># Getting what's stored is done by calling the function in the variable. #</grey>
+a<red>()</red>
+
+<grey># Pointers (left hand side becomes pointer to right hand side) #</grey>
+b ~ a
+
+<grey># The included standard library has a print() function. Sorry, no built-in. #</grey>
+print<red>( b<orange>()</orange> )</red> <grey># Prints 5 #</grey>
+
+<grey># Lost pointers cause no memory errors or leaks. #</grey>
+a = 1
+print<red>( b<orange>()</orange> )</red> <grey># Prints "{fn}". #</grey>
+
+<grey># Strings are between double-quotes only. #</grey>
+c = "hello world"
+
+<grey># Members are auto-created #</grey>
+a.child = "woot"
+
+<grey># Shortcut parameterless function calls using ":" #</grey>
+print<red>( a.child: )</red>
+
+<grey># Getting and setting members can be done using their names. #</grey>
+name = "five" set_member<red>(d name: 5)</red>
+print<red>( type_of<orange>( member<green>(d name:)</green> )</orange> )</red> <grey># Prints "number" #</grey>
+
+<grey># Creating objects with members... #</grey>
+e = <red>[ my_member = 0 other_member = 1 ]</red>
+
+<grey># Create functions using {} #</grey>
+f = <red>{
+	x = <b>false</b>
+	<grey># if's and loop's require brackets #</grey>
+	<b>loop</b> <orange>{
+		<grey># not() takes only 1 parameter,
+		but all(), any(), nall(), and none() can take any number of parameters. #</grey>
+		<b>if</b> <green>( not<blue>(x:)</blue> ) {
+			x = <b>true</b>
+			<b>skip</b>	<grey># Restart the loop #</grey>
+
+		<grey># An elif could go here too #</grey>
+		}</green> <b>else</b> <green>{
+			<b>stop</b>	<grey># Escape the loop #</grey>
+		}</green>
+	}</orange>
+}</red>
+
+<grey># Object-funtions, having members and a body/block of executable code... #</grey>
+g = <red>[ a b=2 ] {
+	<grey># Access members inside a function via "this" pointer #</grey>
+	<b>ret</b><orange>( <green>[a=a, b=<b>this</b>.b]</green> )</orange>
+}</red>
+
+<grey># Commas are optional for separating expressions, parameters, or arguments. #</grey>
+h = g<red>(3)</red>, print<red>( h.a:, " ", h.b: )</red> <grey># Prints "3 2" #</grey>
+
+<grey># Parent of the variable whose function is being called can be accessed with "super" #</grey>
+i = <red>{
+	<b>super</b>.kid = 2
+}</red>
+<grey># ... and it doesn't matter who that parent is... #</grey>
+j.a = i
+j.a:
+print<red>(j.kid:)</red> <grey># Prints 2 #</grey>
+
+<grey># Combine object member sets with union #</grey>
+k = union<red>(h j <orange>[b=1]</orange>)</red>
+print<red>( k.a:, " ", k.kid:, " ", k.b:)</red> <grey># Prints "3 2 1" #</grey>
+</code></pre>
+
+</div>
+</body>
+</html>
