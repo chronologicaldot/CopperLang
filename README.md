@@ -1,5 +1,5 @@
-# Copper Virtual Machine (CopperVM)
-This repository contains an interpreter that runs code of the Copper language - a statically-typed, loose syntax programming language that uses stack-frame-based variable lifetimes (no GC needed). For more information, see the [blog](http://copperlang.wordpress.com).
+# Copper Lang Interpreter
+This repository contains an interpreter that runs code of the Copper language - a statically-typed, loose syntax programming language. For more information, see the [blog](http://copperlang.wordpress.com).
 
 ## Table of Contents
 1. Basic Introduction to the Language
@@ -9,102 +9,41 @@ This repository contains an interpreter that runs code of the Copper language - 
 
 ## Basic Introduction to the Language
 
-The language is described in Copper/docs/CopperLangGuide.html and on the [Copper blog](http://copperlang.wordpress.com). What follows here is an overview.
+The language is described in Copper/docs/CopperLangGuide.html and on the [Copper blog](http://copperlang.wordpress.com).
 
-Copper is a statically typed, loose-syntax language revolving around the concept of function-objects. All variables are instantiated upon declaration and can contain only functions, but functions can return any object. There is no nil/null/void, so the default return from a function is an empty function.
+Copper is a statically typed, loose-syntax language revolving around the concept of function-objects. All variables are instantiated upon declaration and can contain only functions, but functions can return any object. There is no nil/null/void, so the default return from a function is an empty function. The language uses if/elif/else and loop structures.
 
-Variables can be directly assigned functions and other kinds of objects. Internally, these are all saved as function-objects.
+Quick example:
 ```Copper
-a = 5
-b = { ret("Hello") }
-```
-
-Getting the object stored in a variable is also the same as calling a function.
-```Copper
-a = 5
-print( b() )
-```
-
-A short-cut for calling a parameter-less function is the colon :
-```Copper
-print( b: )
-```
-
-Functions can be copied to other variables or pointed-to by other variables.
-```Copper
-a = { print("hello") }
-b = a
-c ~ a
-```
-
-Functions can have member variables, saved to a "persistent scope", which are copied during the assignment process.
-These members can be accessed using the member operator (".").
-```Copper
-a.b = 12
-c = a
-print(c.a()) # Prints "12"
-```
-
-Function bodies are also copied to new functions during the assignment process.
-``` Copper
-a.b = { ret(5) }
-c = a.b
-print(c()) # Prints "5" #
-```
-
-Functions can take any parameters. They can optionally have a parameter body (where parameters are named) and can optionally have a body. One or the other must be present. The parameter body or the body can be empty.
-```Copper
-a = [p]{ ret(p:) }
-a = [p]
-a = { ret(5) }
-```
-
-To access the persistent scope of a function from inside the body, use the "this" pointer. Outside, use the parent variable's name.
-```Copper
-a = {
-	this.child = 5
+fibonacci = {
+	ret([a=0 b=1]{
+		me.peek = +(me.a: me.b:)
+		me.a = me.b
+		me.b = me.peek
+		ret(me.peek:)
+	})
 }
-a:
-print( a.child: )
-```
-
-The "super" pointer can be used within a function to access the parent function of the one whose scope is open.
-```Copper
-a.b = {
-	super.c = 10
-}
-a.b:
-print( a.c: ) # Prints 10 #
-```
-
-Data terminates an expression, so there is no need for an end-statement token, but for the sake of avoiding ambiguity, you can use "comma".
-```Copper
-a b = 5, c, d
-```
-
-If-structures allow for "elif" and "else" blocks but must be surrounded by curly brackets.
-```Copper
-i = true
-if ( not(i:) ) {
-	print("not i")
-} elif ( i: ) {
-	print("is i")
-} else {
-	print("not happening")
-}
-```
-
-Loop structures begin with "loop", are stopped using "stop", and are forced to repeat using "skip".
-```Copper
-i = true
+fibber = fibonacci()
 loop {
-	if ( i: ) {
-		i = false
-		skip
+	a = fibber()
+	if ( gte(a: 100) ) {
+		stop
 	}
-	stop
+	if ( eq(a: 13) ) {
+		skip
+	} elif ( eq(a:, 21) ) {
+		print("Still young!")
+	}
+	print("Value", a: "\n")
 }
 ```
+
+
+## Interpreter Features
+
+This is a tiny, light-weight interpreter (roughly 250kb) providing only certain basic features essential to the language. The bare-bones interpreter includes functions for boolean comparisons but does not include functions for numbers or strings. Some extensions have been provided for numbers. Many features have been deliberately excluded from the engine to keep it small and also to allow users to have more control over the permitted flow of data. For example, basic strings are merely byte strands, but the user may create a separate object type to enforce Unicode.
+
+The interpreter does not use a garbage collector. The language doesn't require one.
 
 
 ## Project Structure and Building
@@ -124,10 +63,8 @@ The following files must be included for the basic interpreter (without the prin
 * Copper.h
 * Copper.cpp
 
-
-In addition, there is a EngMsgToStr.h file that contains useful string translations of the engine messages (and it is used in InStreamLogger.h).
-
 These files themselves have no dependencies, as opposed to the Printer and InStreamLogger files.
+In addition, there is a file called EngMsgToStr.h that contains useful string translations of the messages from the interpreter (and it is used in InStreamLogger.h).
 
 The basic console application could be build with sh using a build.sh file containing:
 ```bash
@@ -139,7 +76,7 @@ For debugging on ARM, you may need to add -funwind-tables to your gcc compiler f
 
 ### Extensions Build Notes
 
-A primitives (number) extension group has been provided. The specific classes (intmath.h, floatmath.h, etc.) are dependent on BasicPrimitive.h but do not all need to be included with each other in the project. (They each only depend on BasicPrimitive.h.)
+A primitives (number) extension group has been provided. The specific classes (intmath.h, ulongmath.h, etc.) are dependent on BasicPrimitive.h but do not all need to be included with each other in the project. (They each only depend on BasicPrimitive.h.)
 
 The integer extension provided ("intmath.h") can optionally be compiled using the flag #define ENABLE_COPPER_INTEGER_BOUNDS_CHECKS for ensuring numbers don't exceed their cap and produce undefined behavior. Compiling without this flag creates a warning that the logger in the function is not used. This is not an error nor does it affect functionality, but if you are picky about having clean builds, you should use the aforementioned flag.
 
@@ -164,17 +101,22 @@ Optionally, you may define the compiler flag COMPILE_COPPER_FOR_C_PLUS_PLUS_11. 
 * Defining UNDEF_COPPER_ENABLE_NUMERIC_NAMES prevents names from being allowed to contain numbers.
 
 
+### Build Warnings
+
+This project has been compiled with -Wall and -Wfatal-errors on GCC. However, when compiled with foreign functions, it warns of the unused variable "index". This variable is used within foreign functions and is sometimes needed, sometimes not. To eradicate this warning will require removing and not using certain sections of the foreign function handling code. This code is not necessary but a great convenience.
+
+
 #### Extension Flags
 
-* Defining ENABLE_COPPER_INTEGER_BOUNDS_CHECKS enableds bounds checks for the unsigned long extension.
-* Defining ENABLE_COPPER_ULONG_BOUNDS_CHECKS enableds bounds checks for the unsigned long extension.
+* Defining ENABLE_COPPER_INTEGER_BOUNDS_CHECKS enables bounds checks for the unsigned long extension.
+* Defining ENABLE_COPPER_ULONG_BOUNDS_CHECKS enables bounds checks for the unsigned long extension.
 
 
 ## Incorporating into other Projects
 
 You need to include the core interpreter files, as given in section <i>Project Structure and Building</i>.
 
-All interaction with the virtual occurs through the small Cu::Engine API.
+All interaction with the interpreter occurs through the small Cu::Engine API.
 A normal process is as follows:
 * creating the engine
 * setting the logger

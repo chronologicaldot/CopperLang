@@ -9,25 +9,29 @@ body {
 	background: linear-gradient(to right, #210, #320, #210);
 	color:#dca;
 }
-h1 {
-	background-color:#212120;
-	color:#e0e0e0;
-	padding:20px;
-	border-radius:5px;
-	border-top: 1px solid #838363;
-	border-bottom: 1px solid #000;
-}
-p {
-	/*color:#333;*/
-}
-a {
-	color: #dd9;
-}
 .centering {
 	max-width: 900px;
 	margin:0 auto;
 }
-
+#main-menu {
+	position: relative;
+	left: 0;
+	right: 0;
+	width: 500px;
+	height: 40px;
+}
+#main-menu > a, #main-menu > div {
+	position: relative;
+	min-width: 100px;
+	height: 20px;
+	display:inline-block;
+	padding: 15px;
+	border-radius: 5px;
+	border: 1px solid #a97;
+	background-color: #864;
+	color: #eda;
+	text-decoration:none;
+}
 .toc {
 	background-color:#221100; /*222200*/
 	padding:20px 0px 20px 50px;
@@ -45,7 +49,20 @@ a {
 .toc > li > ol > li > a {
 	color: #dd9;
 }
-
+h1 {
+	background-color:#212120;
+	color:#e0e0e0;
+	padding:20px;
+	border-radius:5px;
+	border-top: 1px solid #838363;
+	border-bottom: 1px solid #000;
+}
+p {
+	/*color:#333;*/
+}
+a {
+	color: #dd9;
+}
 h2 {
 	background-color:#212120;
 	padding:10px;
@@ -99,6 +116,11 @@ blue { color:#4af; }
 </head>
 <body>
 <div class="centering">
+
+<div id="main-menu">
+	<a href="CopperLangGuide.html"><div>Language Guide</div></a>
+	<a href="CopperIn5mins.html"><div>Syntax in 5mins</div></a>
+</div>
 
 <h1>Copper Interpreter Usage Guide</h1>
 <ol class="toc">
@@ -450,7 +472,7 @@ The following is a list of objects in the interpreter. These can be passed to <c
 		<th>Constructor</th>
 		<td>
 		<code>ObjectNumber()</code><br>
-		<code>explicit ObjectNumber(const unsigned long pValue)</code><br>
+		<code>ObjectNumber(const unsigned long pValue)</code><br>
 		<code>explicit ObjectNumber(const String&amp pValue)</code></td>
 		</tr>
 	<tr>

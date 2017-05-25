@@ -1,4 +1,13 @@
 ====================
+2017/5/25
+v 4-0.221
+
+docs:
+- Added menus to docs in Copper/docs.
+- Revised text in README.md
+
+
+====================
 2017/5/4, 5/24
 v 4-0.221
 

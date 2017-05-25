@@ -9,22 +9,29 @@ body {
 	background: linear-gradient(to right, #210, #320, #210);
 	color:#dca;
 }
-h1 {
-	background-color:#212120;
-	color:#e0e0e0;
-	padding:20px;
-	border-radius:5px;
-	border-top: 1px solid #838363;
-	border-bottom: 1px solid #000;
-}
-p {
-	/*color:#333;*/
-}
 .centering {
 	max-width: 900px;
 	margin:0 auto;
 }
-
+#main-menu {
+	position: relative;
+	left: 0;
+	right: 0;
+	width: 500px;
+	height: 40px;
+}
+#main-menu > a, #main-menu > div {
+	position: relative;
+	min-width: 100px;
+	height: 20px;
+	display:inline-block;
+	padding: 15px;
+	border-radius: 5px;
+	border: 1px solid #a97;
+	background-color: #864;
+	color: #eda;
+	text-decoration:none;
+}
 .toc {
 	background-color:#221100;
 	padding:20px 0px 20px 50px;
@@ -38,7 +45,17 @@ p {
 	color: #dd9;
 	/*text-decoration:none;*/
 }
-
+h1 {
+	background-color:#212120;
+	color:#e0e0e0;
+	padding:20px;
+	border-radius:5px;
+	border-top: 1px solid #838363;
+	border-bottom: 1px solid #000;
+}
+p {
+	/*color:#333;*/
+}
 h2 {
 	background-color:#212120;
 	padding:10px;
@@ -90,13 +107,18 @@ orange { color:#fb0; }
 <body>
 <div class="centering">
 
+<div id="main-menu">
+	<a href="InterpreterUsageGuide.html"><div>Interpreter Guide</div></a>
+	<a href="CopperIn5mins.html"><div>Syntax in 5mins</div></a>
+</div>
+
 <pre style="display:none;">
   [][][]  [][][]  []`\\  []`\\  [][][]  []`\\  []       //\\   []\ []  []====
   []      []  []  []_//  []_//  []===   []_//  []      []==[]  []\\[]  []  TT
   [][][]  [][][]  []     []     [][][]  [] \\  [][][]  []  []  [] \[]  [][][]
 </pre>
 <!--<img src="copperlang.png" />-->
-<img src="../art/Cu_fractal.png">
+<!--<img src="../art/Cu_fractal.png">-->
 
 <h1>Copper Programming Language Documentation</h1>
 
