@@ -1,11 +1,70 @@
 ====================
-2017/5/4
-v 4-0.22
+2017/5/4, 5/24
+v 4-0.221
 
 - Changed Engine::addForeignFunctionInstance() to addForeignFunction().
 - Updated template void addForeignFuncInstance() to use Engine::addForeignFunction().
 - Changed profiling code.
 - Corrected comparison of parameter count and arg count in Engine::setupForeignFunctionExecution(). Both go to uint now.
+- Changed Engine::process_sys_member_count to accept only one parameter.
+- Fixed bug in ObjectNumber that was using a numeric constructor for CharList that had been removed. Value was casted to pointer.
+-- Added String::appendULong()
+- Fixed bug in Engine::process_sys_are_empty() that was returning different results based on argument order.
+- Fixed bug for own(), is_ptr(), and is_owner() that failed to collect the parameters correctly.
+- Fixed bug in Engine::ParseFuncFound_CollectParams() that did not allow passing execution bodies as parameters.
+- Fixed bug in Engine::ParseFunctionBuild_CollectParameters() that failed to properly terminate short object bodies when stream did not end.
+- Changed EngineMessage::StreamInterruptedInComment to EngineMessage::StreamHaltedInComment.
+- Changed EngineMessage::StreamInterruptedInString to EngineMessage::StreamHaltedInString.
+- Added new values to EngineMessage:
+-- StreamHaltedParsingNotDone
+-- ObjectBodyInvalid
+-- ObjectBodyInvalidParamAsgn
+-- ObjectBodyInvalidParamPtrAsgn
+-- ExecBodyUnfinished
+-- ArgBodyIncomplete
+-- SystemFuncInvalidAccess
+-- ForeignFuncInvalidAccess
+-- IfConditionContaminated
+-- UselessLoopStopper
+-- UselessLoopSkipper
+-- SystemFunctionBadArg
+-- SystemFunctionWrongArgCount
+-- ForeignFunctionWrongArgCount
+-- ForeignFunctionBadArg
+-- UserFunctionBodyError
+-- MemberWrongArgCount
+-- IsMemberWrongArgCount
+-- SetMemberWrongArgCount
+-- replacements of ones saying "Param" to those saying "Arg"
+
+- Removed unused values from EngineMessage:
+-- InvalidTokenAtFunctionStart
+-- UnusedAsgnInFunctionBuildParams
+-- UnusedPtrAsgnInFunctionBuildParams
+-- UnusedTokenInFunctionBuildParams
+-- PtrAssignedNonName
+-- TaskVarIsNull
+-- OpeningSystemFuncScope
+-- OpeningExtensionFuncScope
+-- AttemptToOverrideBuiltinFunc
+-- AttemptToOverrideExternalFunc
+-- SystemFunctionBadParam
+-- SystemFunctionWrongParamCount
+-- MemberWrongParamCount
+-- IsMemberWrongParamCount
+-- SetMemberWrongParamCount
+-- and remaining ones saying "Param"
+
+- Limited execution bodies to only containing up to PARSER_OPENBODY_MAX_COUNT-1 (349) number of bodies.
+- Removed excessive code from Engine::ParseFuncFound_CollectParams().
+- Fixed bug in Engine::ParseLoop_AddEndLoop() that failed to check for tasks in the task stack before using it/them.
+- Fixed bug in Engine::parseSRPS() that incorrectly ignored the token immediately after the SRPS function name.
+- Added and set Engine::interpretToken() to use new string constants for "own", "is_own", and "is_ptr" to make them customizable.
+- Reimplemented Engine::setOwnershipChangingEnabled().
+- Removed bool srcDone param from Engine::ParseFuncFound_CollectParams(). It did nothing.
+
+EngMsgToStr.cpp
+- Updated.
 
 console.cpp (both Copper/console.cpp and console.cpp)
 - Changed call to addForeignFunctionInstance() to addForeignFunction().

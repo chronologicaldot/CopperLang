@@ -1,5 +1,5 @@
 # Copper Virtual Machine (CopperVM)
-The virtual machine runs code of the Copper language, a statically-typed, loose syntax programming language and DOES NOT USE A GARBAGE COLLECTOR. For more information, see the [blog](http://copperlang.wordpress.com).
+This repository contains an interpreter that runs code of the Copper language - a statically-typed, loose syntax programming language that uses stack-frame-based variable lifetimes (no GC needed). For more information, see the [blog](http://copperlang.wordpress.com).
 
 ## Table of Contents
 1. Basic Introduction to the Language
@@ -9,14 +9,14 @@ The virtual machine runs code of the Copper language, a statically-typed, loose 
 
 ## Basic Introduction to the Language
 
-The language is described in docs/docs.html and on the [Copper blog](http://copperlang.wordpress.com). What follows here is merely an overview.
+The language is described in Copper/docs/CopperLangGuide.html and on the [Copper blog](http://copperlang.wordpress.com). What follows here is an overview.
 
-Copper is a statically typed, loose-syntax language revolving around the concept of function-objects. All variables are instantiated upon declaration and can contain only functions, but functions can return any object. There is no nil, so the default return from a function is an empty function.
+Copper is a statically typed, loose-syntax language revolving around the concept of function-objects. All variables are instantiated upon declaration and can contain only functions, but functions can return any object. There is no nil/null/void, so the default return from a function is an empty function.
 
-Variables can be directly assigned both objects and functions. Internally, these are saved in functions.
+Variables can be directly assigned functions and other kinds of objects. Internally, these are all saved as function-objects.
 ```Copper
 a = 5
-b = { ret("Hello") } # Function, created with only a body #
+b = { ret("Hello") }
 ```
 
 Getting the object stored in a variable is also the same as calling a function.
@@ -25,7 +25,7 @@ a = 5
 print( b() )
 ```
 
-A short-cut for calling a parameter-less function is the colon:
+A short-cut for calling a parameter-less function is the colon :
 ```Copper
 print( b: )
 ```
@@ -37,22 +37,29 @@ b = a
 c ~ a
 ```
 
-Functions can have member variables, saved to a "persistent scope", which are copied with them whenever copied to a new function.
+Functions can have member variables, saved to a "persistent scope", which are copied during the assignment process.
+These members can be accessed using the member operator (".").
+```Copper
+a.b = 12
+c = a
+print(c.a()) # Prints "12"
+```
+
+Function bodies are also copied to new functions during the assignment process.
 ``` Copper
 a.b = { ret(5) }
 c = a.b
 print(c()) # Prints "5" #
 ```
 
-Functions can take any parameters. They can optionally have a parameter body (where parameters are named) and can optionally have a body. One or the other must be present.
+Functions can take any parameters. They can optionally have a parameter body (where parameters are named) and can optionally have a body. One or the other must be present. The parameter body or the body can be empty.
 ```Copper
-a = fn(p){ print(p:) }
-a = fn(p)
-a = fn{ print(5) }
-a = { print(5) }
+a = [p]{ ret(p:) }
+a = [p]
+a = { ret(5) }
 ```
 
-Functions have a persistent scope of variables, which can be accessed within them by the "this" pointer and accessed outside of them by the member operator (".").
+To access the persistent scope of a function from inside the body, use the "this" pointer. Outside, use the parent variable's name.
 ```Copper
 a = {
 	this.child = 5
@@ -61,13 +68,13 @@ a:
 print( a.child: )
 ```
 
-The "super" pointer can be used with a function to access the parent function of the one whose scope is open.
+The "super" pointer can be used within a function to access the parent function of the one whose scope is open.
 ```Copper
 a.b = {
 	super.c = 10
 }
-a:
-print( a.c: )
+a.b:
+print( a.c: ) # Prints 10 #
 ```
 
 Data terminates an expression, so there is no need for an end-statement token, but for the sake of avoiding ambiguity, you can use "comma".
@@ -102,13 +109,13 @@ loop {
 
 ## Project Structure and Building
 
-There are two layers of folders: The inner folder "Copper" contains the basic virtual machine itself (with basic printer and logger extensions). The outer folder includes this and the "ext" folder where you can store your extensions to the virtual machine.
+There are two layers of folders: The inner folder "Copper" contains the basic interpreter itself (with basic printer and logger extensions). The outer folder includes this and the "ext" folder where you can store your extensions to the interpreter.
 
-There are Premake files provided for making project files for the basic console application and debugging. You don't need them, but they may be helpful. A premake file is provided in the Copper folder. From Premake files, you can create a g++ make file or a Visual Studio file (2015 at highest; see the Premake documentation for other supported versions). The one inside the "Copper" folder can create make and VS project files for the basic virtual machine. The one in the outer folder can create make and VS project files for the virtual machine with all of the extensions provided in the "ext" folder. You may add your files without modifying the Premake file, but you must rerun the Premake file if you want to create the project files (make or VS) with these new files added (that is, if you don't want to manually add them yourself).
+There are Premake files provided for making project files for the basic console application and debugging. You don't need them, but they may be helpful. A premake file is provided in the Copper folder. From Premake files, you can create a g++ make file or a Visual Studio file (2015 at highest; see the Premake documentation for other supported versions). The one inside the "Copper" folder can create make and VS project files for the basic interpreter. The one in the outer folder can create make and VS project files for the interpreter with all of the extensions provided in the "ext" folder. You may add your files without modifying the Premake file, but you must rerun the Premake file if you want to create the project files (make or VS) with these new files added (that is, if you don't want to manually add them yourself).
 
 The Premake files are not necessary for the project as it is simply enough to include the necessary files manually.
 
-The following files must be included for the basic virtual machine (without the printer):
+The following files must be included for the basic interpreter (without the printer):
 
 * utilList.h
 * RRHash.h
@@ -165,7 +172,7 @@ Optionally, you may define the compiler flag COMPILE_COPPER_FOR_C_PLUS_PLUS_11. 
 
 ## Incorporating into other Projects
 
-You need to include the core virtual machine files, as given in section <i>Project Structure and Building</i>.
+You need to include the core interpreter files, as given in section <i>Project Structure and Building</i>.
 
 All interaction with the virtual occurs through the small Cu::Engine API.
 A normal process is as follows:
@@ -191,14 +198,8 @@ New functionality can be added through objects inheriting the class Cu::ForeignF
 
 The method "call()" is called whenever the name associated with the function (the string passed to Engine::addForeignFunction()) is called in Copper.
 
-To add simply functions, there are two shortcut functions in ext/FFIBase that automatically create wrappers.
-* simpleFunctionAdd(Engine&, const String& name, bool (*callable)( [...] ))
-* simpleFunctionAdd(Engine&, const String& name, bool (*callable)( [...] ), Logger* )
-
-Note: "callable" parameters are the same as those of Cu::ForeignFunc::call().
-
 
 ## Legal
 
 The Copper Virtual Machine as given in the files included are copyright 2017 Nicolaus Anderson.
-
+License details are provided in license.txt.

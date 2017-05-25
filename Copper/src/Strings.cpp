@@ -285,6 +285,22 @@ bool CharList::equalsIgnoreCase( const CharList& pOther )
 	return true;
 }
 
+void
+CharList::appendULong( const unsigned long pValue )
+{
+	// FIXME: This may be slow.
+	unsigned long v = pValue;
+	unsigned long part;
+	while( v > 0 ) {
+		part = v % 10;
+		push_front('0' + part);
+		v = (v - part) / 10;
+	}
+	if ( pValue == 0 ) {
+		push_front('0');
+	}
+}
+
 //---------------------------------------------
 String::String()
 	: str(0)

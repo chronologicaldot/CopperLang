@@ -18,6 +18,9 @@ static const char* CONSTANT_TOKEN_ENDLOOP = "stop";
 static const char* CONSTANT_TOKEN_LOOPSKIP = "skip";
 static const char* CONSTANT_TOKEN_TRUE = "true";
 static const char* CONSTANT_TOKEN_FALSE = "false";
+static const char* CONSTANT_TOKEN_OWN = "own";
+static const char* CONSTANT_TOKEN_IS_OWNER = "is_owner";
+static const char* CONSTANT_TOKEN_IS_PTR = "is_ptr";
 // Single character constants
 static const char CONSTANT_COMMENT_TOKEN = '#';
 static const char CONSTANT_STRING_TOKEN = '"';
@@ -254,7 +257,7 @@ void FunctionContainer::changeOwnerTo(Variable* pNewOwner) {
 		owner = pNewOwner;
 	} else {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[ERROR: Attempting to change owner to variable that doesn't own the container.\n");
+		std::printf("[ERROR: Attempting to change function owner to variable that doesn't point to this container.\n");
 #endif
 		throw BadFunctionContainerOwnerException();
 	}
@@ -683,19 +686,6 @@ void Scope::copyMembersFrom(Scope& pOther) {
 	Scope newScope;
 	newScope = pOther;
 	robinHoodTable->appendCopyOf(*(newScope.robinHoodTable));
-
-	// ^ I don't think this will work, but it might.
-/*
-	// Creating a new scope is required for proper copy construction to delink pointers
-	// Use a list version to make it easier to copy
-	Scope newScope(false);
-	newScope = pOther;
-	List<ListVariableStorage>::Iter li = newScope.listTable->start();
-	if ( li.has() )
-	do {
-		setVariable( (*li).name, &((*li).getVariable()), false );
-	} while( li.next() );
-*/
 }
 
 unsigned int Scope::occupancy() {
@@ -1798,7 +1788,7 @@ Engine::tokenize( CharList& tokenValue, List<Token>& tokens ) {
 	const String tokenName(tokenValue);
 	TokenType tokenType = resolveTokenType( tokenName );
 
-//std::printf("[DEBUG: token id =%u\n", (unsigned int)tokenType);
+	//std::printf("[DEBUG: token id =%u\n", (unsigned int)tokenType);
 
 	if ( isValidToken(tokenType) ) {
 		tokens.push_back( Token(tokenType, tokenName) );
@@ -1951,7 +1941,6 @@ Engine::isValidNameCharacter( const char c ) const {
 #endif
 				;
 	}
-	//return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
 bool
@@ -2001,7 +1990,7 @@ Engine::scanComment(
 		}
 	}
 	//print(LogLevel::error, "ERROR: Stream halted before comment ended.");
-	print( LogLevel::error, EngineMessage::StreamInteruptedInComment );
+	print( LogLevel::error, EngineMessage::StreamHaltedInComment );
 	return Result::Error;
 }
 
@@ -2010,7 +1999,6 @@ Engine::collectString(
 	ByteStream& stream,
 	CharList& collectedValue
 ) {
-
 	char c = '`';
 	while ( ! stream.atEOS() ) {
 		c = stream.getNextByte();
@@ -2040,7 +2028,7 @@ Engine::collectString(
 		collectedValue.push_back(c);
 	}
 	//print(LogLevel::error, "ERROR: Stream halted before string ended.");
-	print( LogLevel::error, EngineMessage::StreamInteruptedInString );
+	print( LogLevel::error, EngineMessage::StreamHaltedInString );
 	return Result::Error;
 }
 
@@ -2127,7 +2115,7 @@ Engine::parse(
 					// Tasks requiring another token that won't exist will gum up the works.
 					if ( context.isFinished() ) {
 						if ( srcDone ) {
-							print(LogLevel::error, "Token source finished before parsing.");
+							print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 							return ParseResult::Error;
 						} else {
 							return ParseResult::More;
@@ -2179,7 +2167,7 @@ Engine::moveToFirstUnusedToken(
 ) {
 	if ( ! context.moveToFirstUnusedToken() ) {
 		if ( srcDone ) {
-			print(LogLevel::error, "Unfinished parsing.");
+			print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 			return ParseTask::Result::syntax_error;
 		} else {
 			return ParseTask::Result::need_more;
@@ -2324,27 +2312,30 @@ Engine::interpretToken(
 		// by parsing them as unique tasks.
 
 		// Special names
-		if ( context.peekAtToken().name.equals("own") ) {
+		if ( context.peekAtToken().name.equals(CONSTANT_TOKEN_OWN) ) {
 			addNewParseTask(
 				context.taskStack,
 				new SRPSParseTask(Opcode::Own)
 			);
+			context.commitTokenUsage();
 			return ParseResult::More;
 		}
 		// else
-		if ( context.peekAtToken().name.equals("is_owner") ) {
+		if ( context.peekAtToken().name.equals(CONSTANT_TOKEN_IS_OWNER) ) {
 			addNewParseTask(
 				context.taskStack,
 				new SRPSParseTask(Opcode::Is_owner)
 			);
+			context.commitTokenUsage();
 			return ParseResult::More;
 		}
 		// else
-		if ( context.peekAtToken().name.equals("is_ptr") ) {
+		if ( context.peekAtToken().name.equals(CONSTANT_TOKEN_IS_PTR) ) {
 			addNewParseTask(
 				context.taskStack,
 				new SRPSParseTask(Opcode::Is_pointer)
 			);
+			context.commitTokenUsage();
 			return ParseResult::More;
 		}
 		// else
@@ -2514,7 +2505,8 @@ Engine::ParseFunctionBuild_FromObjectBody(
 
 	if ( ! context.moveToNextToken() ) {
 		if ( srcDone ) {
-			print(LogLevel::error, "Unfinished object body.");
+			//print(LogLevel::error, "Unfinished object body.");
+			print(LogLevel::error, EngineMessage::OrphanObjectBodyOpener);
 			return ParseTask::Result::syntax_error;
 		} else {
 			return ParseTask::Result::need_more;
@@ -2539,9 +2531,6 @@ Engine::ParseFunctionBuild_FromObjectBody(
 				// All done
 				context.moveToFirstUnusedToken();
 #ifdef COPPER_STRICT_CHECKS
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-std::printf("[DEBUG: Engine::ParseFunctionBuild_FromObjectBody -> CollectParams, token.type == %u\n", (unsigned int)context.peekAtToken().type);
-#endif
 				if ( context.peekAtToken().type != TT_objectbody_open )
 					throw ParserTokenException( context.peekAtToken() );
 #endif
@@ -2560,7 +2549,8 @@ std::printf("[DEBUG: Engine::ParseFunctionBuild_FromObjectBody -> CollectParams,
 	} while ( context.moveToNextToken() );
 
 	if ( srcDone ) {
-		print(LogLevel::error, "Unfinished object body.");
+		//print(LogLevel::error, "Unfinished object body.");
+		print(LogLevel::error, EngineMessage::OrphanObjectBodyOpener);
 		return ParseTask::Result::syntax_error;
 	} else {
 		return ParseTask::Result::need_more;
@@ -2617,10 +2607,12 @@ Engine::ParseFunctionBuild_CollectParameters(
 				return ParseTask::Result::interpret_token;
 
 			case TT_objectbody_close:
-				print(LogLevel::error, "Unfinished parameter assignment in object body.");
+				//print(LogLevel::error, "Unfinished parameter assignment in object body.");
+				print(LogLevel::error, EngineMessage::ObjectBodyInvalidParamAsgn);
 				return ParseTask::Result::syntax_error;
 			default:
-				print(LogLevel::error, "Stray token encountered while collecting names.");
+				//print(LogLevel::error, "Stray token encountered while collecting names in object body.");
+				print(LogLevel::error, EngineMessage::ObjectBodyInvalidParamAsgn);
 				return ParseTask::Result::syntax_error;
 			}
 
@@ -2655,14 +2647,17 @@ Engine::ParseFunctionBuild_CollectParameters(
 				// a~[], a~[]{}, a~{} not implemented.
 				// They could be resolved correctly if I implemented such parsing,
 				// so they should be permitted but discouraged.
-				print(LogLevel::error, "Stray token encountered while collecting names.");
+				//print(LogLevel::error, "Invalid token following pointer assignment in object body.");
+				print(LogLevel::error, EngineMessage::ObjectBodyInvalidParamPtrAsgn);
 				return ParseTask::Result::syntax_error;
 
 			case TT_objectbody_close:
-				print(LogLevel::error, "Unfinished parameter pointer assignment in object body.");
+				//print(LogLevel::error, "Unfinished parameter pointer assignment in object body.");
+				print(LogLevel::error, EngineMessage::ObjectBodyInvalidParamPtrAsgn);
 				return ParseTask::Result::syntax_error;
+
 			default:
-				print(LogLevel::error, "Stray token encountered while collecting names.");
+				print(LogLevel::error, EngineMessage::ObjectBodyInvalidParamPtrAsgn);
 				return ParseTask::Result::syntax_error;
 			}
 			break;
@@ -2677,7 +2672,7 @@ Engine::ParseFunctionBuild_CollectParameters(
 			break;
 
 		default:
-			print(LogLevel::error, "Stray token encountered while collecting names.");
+			print(LogLevel::error, EngineMessage::ObjectBodyInvalid);
 			return ParseTask::Result::syntax_error;
 		}
 
@@ -2692,18 +2687,23 @@ Engine::ParseFunctionBuild_CollectParameters(
 
 	if ( context.peekAtToken().type == TT_objectbody_close ) {
 		// Check if there is another token, which may be the execution body
-		if ( context.moveToNextToken() && context.peekAtToken().type == TT_execbody_open ) {
-			context.moveToFirstUnusedToken();
-#ifdef COPPER_STRICT_CHECKS
-std::printf("[DEBUG: Engine::ParseFunctionBuild_CollectParams -> FromExecBody, token.type == %u\n", (unsigned int)context.peekAtToken().type);
+		if ( context.moveToNextToken() ) {
 
-			if ( context.peekAtToken().type != TT_objectbody_close )
-				throw ParserTokenException( context.peekAtToken() );
-#endif
-			context.commitTokenUsage(); // Keep object-body-close token
-			task->state = FuncBuildParseTask::State::FromExecBody;
-			context.moveToNextToken(); // Move back to execbody open token
-			return ParseFunctionBuild_FromExecBody(context, srcDone);
+			if ( context.peekAtToken().type == TT_execbody_open ) {
+				// State is []{
+				context.moveToPreviousToken(); // Go back to object-body-close token
+				context.commitTokenUsage(); // Keep object-body-close token
+				task->state = FuncBuildParseTask::State::FromExecBody;
+				context.moveToNextToken(); // Move back to execbody open token
+				return ParseFunctionBuild_FromExecBody(context, srcDone);
+			} else {
+				// No execution body, so end here
+				context.moveToPreviousToken(); // Go back to object-body-close-token
+				context.addNewOperation( new Opcode( Opcode::FuncBuild_end ) );
+				context.commitTokenUsage(); // Keep the object-body close
+				return ParseTask::Result::task_done;
+			}
+
 		} else {
 			// No execution body, so end here
 			context.addNewOperation( new Opcode( Opcode::FuncBuild_end ) );
@@ -2714,7 +2714,7 @@ std::printf("[DEBUG: Engine::ParseFunctionBuild_CollectParams -> FromExecBody, t
 
 	// else
 	// Error
-	print(LogLevel::error, "Invalid token found! Object bodies may have only named parameters.");
+	print(LogLevel::error, EngineMessage::ObjectBodyInvalid);
 	return ParseTask::Result::syntax_error;
 }
 
@@ -2744,7 +2744,7 @@ Engine::ParseFunctionBuild_FromExecBody(
 		// Start inside the execbody open token
 		if ( ! context.moveToNextToken() ) {
 			if ( srcDone ) {
-				print(LogLevel::error, "Function execution body not finished before token stream ended.");
+				print(LogLevel::error, EngineMessage::ExecBodyUnfinished);
 				return ParseTask::Result::syntax_error;
 			}
 			return ParseTask::Result::need_more;
@@ -2754,6 +2754,10 @@ Engine::ParseFunctionBuild_FromExecBody(
 		{
 		case TT_execbody_open:
 			++openBrackets;
+			if ( openBrackets == PARSER_OPENBODY_MAX_COUNT ) {
+				print(LogLevel::error, EngineMessage::ExceededBodyCountLimit);
+				return ParseTask::Result::syntax_error;
+			}
 			break;
 
 		case TT_execbody_close:
@@ -2795,10 +2799,6 @@ Engine::ParseFunctionBuild_FromExecBody(
 		if ( openBrackets > 0 ) {
 			// Add token to body
 			bodyOpcode->addToken(context.peekAtToken());
-#ifdef COPPER_PARSER_LEVEL_MESSAGES
-			std::printf("[DEBUG: Engine::ParseFunctionBuild_FromExecBody - added body token(%s, %u)\n",
-				context.peekAtToken().name.c_str(), (unsigned int)(context.peekAtToken().type) );
-#endif
 		}
 
 	} while ( openBrackets > 0 );	
@@ -2863,12 +2863,13 @@ Engine::parseFuncFoundTask(
 						return ParseTask::Result::need_more;
 					}
 				} else {
-					print(LogLevel::error, "Member access followed by invalid token.");
+					print(LogLevel::error, EngineMessage::InvalidTokenAfterMemberAccessor);
 					return ParseTask::Result::syntax_error;
 				}
 			} else {
 				if ( srcDone ) {
-					print(LogLevel::error, "Member access incomplete.");
+					//print(LogLevel::error, "Member access incomplete.");
+					print(LogLevel::error, EngineMessage::InvalidTokenAfterMemberAccessor);
 					return ParseTask::Result::syntax_error;
 				} else {
 					return ParseTask::Result::need_more;
@@ -2884,7 +2885,8 @@ Engine::parseFuncFoundTask(
 				return ParseFuncFound_ValidateAssignment(task, context);
 			} else {
 				if ( srcDone ) {
-					print(LogLevel::error, "Variable assignment incomplete.");
+					//print(LogLevel::error, "Variable assignment incomplete.");
+					print(LogLevel::error, EngineMessage::InvalidAsgn);
 					return ParseTask::Result::syntax_error;
 				} else {
 					return ParseTask::Result::need_more;
@@ -2898,7 +2900,8 @@ Engine::parseFuncFoundTask(
 				return ParseFuncFound_ValidatePointerAssignment(task, context);
 			} else {
 				if ( srcDone ) {
-					print(LogLevel::error, "Variable pointer assignment incomplete.");
+					//print(LogLevel::error, "Variable pointer assignment incomplete.");
+					print(LogLevel::error, EngineMessage::InvalidPtrAsgn);
 					return ParseTask::Result::syntax_error;
 				} else {
 					return ParseTask::Result::need_more;
@@ -2974,7 +2977,7 @@ Engine::parseFuncFoundTask(
 			return r;
 		// Need to collect parameters until the parameter body closing is found.
 		// This means keeping track of brackets.
-		return ParseFuncFound_CollectParams(task, context, srcDone);
+		return ParseFuncFound_CollectParams(task, context);
 
 	default:
 		throw BadParserStateException();
@@ -3006,7 +3009,8 @@ Engine::ParseFuncFound_ValidateAssignment(
 		return ParseTask::Result::interpret_token;
 
 	default:
-		print(LogLevel::error, "Invalid token following assignment.");
+		//print(LogLevel::error, "Invalid token following assignment.");
+		print(LogLevel::error, EngineMessage::InvalidAsgn);
 		return ParseTask::Result::syntax_error;
 	}
 }
@@ -3030,7 +3034,8 @@ Engine::ParseFuncFound_ValidatePointerAssignment(
 		return ParseTask::Result::interpret_token;
 
 	default:
-		print(LogLevel::error, "Invalid token following pointer assignment.");
+		//print(LogLevel::error, "Invalid token following pointer assignment.");
+		print(LogLevel::error, EngineMessage::InvalidPtrAsgn);
 		return ParseTask::Result::syntax_error;
 	}
 }
@@ -3043,7 +3048,7 @@ Engine::ParseFuncFound_VerifyParams(
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::ParseFuncFound_VerifyParams");
-	std::printf("[ currToken.name = %s\n", context.peekAtToken().name.c_str());
+	//std::printf("[ currToken.name = %s\n", context.peekAtToken().name.c_str());
 #endif
 	// Only for scanning
 	unsigned int openBodies = 1;
@@ -3063,7 +3068,7 @@ Engine::ParseFuncFound_VerifyParams(
 				task->state = FuncFoundParseTask::CollectParams;
 				task->openBodies = 1;
 				context.moveToFirstUnusedToken(); // Start from the beginning
-				return ParseFuncFound_CollectParams(task, context, srcDone);
+				return ParseFuncFound_CollectParams(task, context);
 			}
 			break;
 		default: // Ignore
@@ -3073,7 +3078,8 @@ Engine::ParseFuncFound_VerifyParams(
 
 	//( openBodies > 0 )
 	if ( srcDone ) {
-		print(LogLevel::error, "Function call parameter collection incomplete.");
+		//print(LogLevel::error, "Function call argument collection incomplete.");
+		print(LogLevel::error, EngineMessage::ArgBodyIncomplete);
 		return ParseTask::Result::syntax_error;
 	} else {
 		return ParseTask::Result::need_more;
@@ -3083,12 +3089,11 @@ Engine::ParseFuncFound_VerifyParams(
 ParseTask::Result::Value
 Engine::ParseFuncFound_CollectParams(
 	FuncFoundParseTask*	task,
-	ParserContext&		context,
-	bool				srcDone
+	ParserContext&		context
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::ParseFuncFound_CollectParams");
-	std::printf("[ currToken.name = %s\n", context.peekAtToken().name.c_str());
+	//std::printf("[ currToken.name = %s\n", context.peekAtToken().name.c_str());
 #endif
 	// Current parsing state: After the first parameter-body-opener token.
 
@@ -3102,14 +3107,7 @@ Engine::ParseFuncFound_CollectParams(
 	// Ignore end-segment tokens
 	while ( context.peekAtToken().type == TT_end_segment ) {
 		context.commitTokenUsage();
-		if ( ! context.moveToNextToken() ) {
-			if (srcDone) {
-				print(LogLevel::error, "Function call parameter parsing incomplete.");
-				return ParseTask::Result::syntax_error;
-			} else {
-				return ParseTask::Result::need_more;
-			}
-		}
+		context.moveToNextToken();
 	}
 
 	switch( context.peekAtToken().type ) {
@@ -3128,6 +3126,7 @@ Engine::ParseFuncFound_CollectParams(
 		return ParseTask::Result::interpret_token;
 
 	case TT_objectbody_open:
+	case TT_execbody_open:
 	case TT_name:
 	case TT_boolean_true:
 	case TT_boolean_false:
@@ -3137,7 +3136,8 @@ Engine::ParseFuncFound_CollectParams(
 		return ParseTask::Result::interpret_token;
 
 	default:
-		print(LogLevel::error, "Invalid token in function call parameter parsing.");
+		//print(LogLevel::error, "Invalid token in function call parameter parsing.");
+		print(LogLevel::error, EngineMessage::InvalidFunctionArguments);
 		return ParseTask::Result::syntax_error;
 	}
 }
@@ -3185,7 +3185,7 @@ Engine::parseIfStructure(
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::parseIfStructure");
-	std::printf("[DEBUG: Engine::parseIfStructure state = %u\n", (unsigned)(task->state));
+	//std::printf("[DEBUG: Engine::parseIfStructure state = %u\n", (unsigned)(task->state));
 #endif
 
 	// If the stream ends, the if-statement can quit.
@@ -3234,7 +3234,8 @@ Engine::ParseIfStructure_InitScan(
 
 	// Get the opening of the condition body, which should be the current token
 	if ( context.peekAtToken().type != TT_parambody_open ) {
-		print(LogLevel::error, "If-structure must have parameter body.");
+		//print(LogLevel::error, "If-structure must have parameter body.");
+		print(LogLevel::error, EngineMessage::InvalidTokenAtIfStart);
 		return ParseTask::Result::syntax_error;
 	}
 
@@ -3252,7 +3253,8 @@ Engine::ParseIfStructure_InitScan(
 			case TT_name:
 				break;
 			default:
-				print(LogLevel::error, "If-structure conditional must start with boolean value or name.");
+				//print(LogLevel::error, "If-structure conditional must start with boolean value or name.");
+				print(LogLevel::error, EngineMessage::IfConditionContaminated);
 				return ParseTask::Result::syntax_error;
 			}
 			firstParamFound = true;
@@ -3280,7 +3282,8 @@ Engine::ParseIfStructure_InitScan(
 		}
 	}
 	if ( srcDone ) {
-		print(LogLevel::error, "Incomplete if-structure condition.");
+		//print(LogLevel::error, "Incomplete if-structure condition.");
+		print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 		return ParseTask::Result::syntax_error;
 	} else {
 		return ParseTask::Result::need_more;
@@ -3306,14 +3309,16 @@ Engine::ParseIfStructure_ScanExecBody(
 	// Move from ")"/"else" to "{"
 	if ( !context.moveToNextToken() ) {
 		if ( srcDone ) {
-			print(LogLevel::error, "Incomplete if-structure body.");
+			//print(LogLevel::error, "Incomplete if-structure body.");
+			print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 			return ParseTask::Result::syntax_error;
 		} else {
 			return ParseTask::Result::need_more;
 		}
 	}
 	if ( context.peekAtToken().type != TT_execbody_open ) {
-		print(LogLevel::error, "Illegal token following if-structure condition or start of else-section.");
+		//print(LogLevel::error, "Illegal token following if-structure condition or start of else-section.");
+		print(LogLevel::error, EngineMessage::StrayTokenInLoopHead);
 		return ParseTask::Result::syntax_error;
 	}
 
@@ -3356,7 +3361,8 @@ Engine::ParseIfStructure_ScanExecBody(
 	std::printf("[DEBUG: Engine::ParseIfStructure_ScanExecBody: Incomplete body, ending in token: %s, %u\n", t.name.c_str(), t.type);
 #endif
 	if ( srcDone ) {
-		print(LogLevel::error, "Incomplete if-structure body.");
+		//print(LogLevel::error, "Incomplete if-structure body.");
+		print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 		return ParseTask::Result::syntax_error;
 	} else {
 		return ParseTask::Result::need_more;
@@ -3489,7 +3495,8 @@ Engine::ParseIfStructure_PostBody(
 		task->state = IfStructureParseTask::Start;
 		if ( ! context.moveToNextToken() ) {
 			if ( srcDone ) {
-				print(LogLevel::error, "Elif structure is incomplete.");
+				//print(LogLevel::error, "Elif structure is incomplete.");
+				print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 			} else {
 				return ParseTask::Result::need_more;
 			}
@@ -3546,11 +3553,13 @@ Engine::parseLoopStructure(
 		// All loops must begin with "loop" + execution body token opener and end with the body closer
 		// Check for the starting body token:
 		if ( !context.moveToNextToken() && srcDone ) {
-			print(LogLevel::error, "Loop-structure not complete before stream end.");
+			//print(LogLevel::error, "Loop-structure not complete before stream end.");
+			print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 			return ParseTask::Result::syntax_error;
 		}
 		if ( context.peekAtToken().type != TT_execbody_open ) {
-			print(LogLevel::error, "Loop-structure encountered bad token before body.");
+			//print(LogLevel::error, "Loop-structure encountered bad token before body.");
+			print(LogLevel::error, EngineMessage::StrayTokenInLoopHead);
 			return ParseTask::Result::syntax_error;
 		}
 		// Loop head found
@@ -3588,7 +3597,8 @@ Engine::parseLoopStructure(
 		}
 
 		if ( srcDone ) {
-			print(LogLevel::error, "Stream ended before loop structure was completed.");
+			//print(LogLevel::error, "Stream ended before loop structure was completed.");
+			print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 			return ParseTask::Result::syntax_error;
 		} else {
 			return ParseTask::Result::need_more;
@@ -3646,7 +3656,7 @@ Engine::ParseLoop_AwaitFinish(
 
 ParseResult::Value
 Engine::ParseLoop_AddEndLoop(
-	ParserContext&			context
+	ParserContext& context
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::ParseLoop_AddEndLoop");
@@ -3655,6 +3665,12 @@ Engine::ParseLoop_AddEndLoop(
 	if ( context.peekAtToken().type != TT_endloop )
 		throw ParserTokenException( context.peekAtToken() );
 #endif
+	if ( context.taskStack.size() == 0 ) {
+		//print(LogLevel::error, "Loop-stop token found outside a loop.");
+		print(LogLevel::error, EngineMessage::UselessLoopStopper);
+		return ParseResult::Error;
+	}
+
 	context.commitTokenUsage(); // Use this token
 	// Must search for the top-most loop task in the parser task stack
 	GotoOpcode* code = REAL_NULL;
@@ -3672,7 +3688,8 @@ Engine::ParseLoop_AddEndLoop(
 			return ParseResult::Done;
 		}
 	} while ( taskIter.prev() );
-	print(LogLevel::error, "Loop-stop token found outside a loop.");
+	//print(LogLevel::error, "Loop-stop token found outside a loop.");
+	print(LogLevel::error, EngineMessage::UselessLoopStopper);
 	return ParseResult::Error;
 }
 
@@ -3701,7 +3718,8 @@ Engine::ParseLoop_AddLoopSkip(
 			return ParseResult::Done;
 		}
 	} while ( taskIter.prev() );
-	print(LogLevel::error, "Loop-stop token found outside a loop.");
+	//print(LogLevel::error, "Loop-skip token found outside a loop.");
+	print(LogLevel::error, EngineMessage::UselessLoopSkipper);
 	return ParseResult::Error;
 }
 
@@ -3717,20 +3735,29 @@ Engine::parseSRPS(
 	// Current parsing state: starting (name) token found, but nothing else
 
 	// Scan for parameter body first
-	if ( !context.moveToNextToken() ) {
+	if ( !context.moveToFirstUnusedToken() ) {
 		if ( srcDone ) {
-			print(LogLevel::error, "SRPS (own/is_owner/is_ptr) is missing parameter body.");
+			//print(LogLevel::error, "SRPS (own/is_owner/is_ptr) is missing parameter body.");
+				print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 			return ParseTask::Result::syntax_error;
 		} else {
 			return ParseTask::Result::need_more;
 		}
 	}
+
+	if ( context.peekAtToken().type != TT_parambody_open ) {
+		//print(LogLevel::error, "SRPS (own/is_owner/is_ptr) is missing parameter body.");
+		print(LogLevel::error, EngineMessage::InvalidTokenBeforePtrHandlerParamBody);
+		return ParseTask::Result::syntax_error;
+	}
+
 	// Next: scan for closing of parameter body
 	unsigned int openBodies = 1;
 	while ( openBodies != 0 ) {
 		if ( !context.moveToNextToken()) {
 			if ( srcDone ) {
-				print(LogLevel::error, "SRPS (own/is_owner/is_ptr) is missing parameter body.");
+				//print(LogLevel::error, "SRPS (own/is_owner/is_ptr) is missing parameter body.");
+				print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 				return ParseTask::Result::syntax_error;
 			} else {
 				return ParseTask::Result::need_more;
@@ -3759,7 +3786,8 @@ Engine::parseSRPS(
 	context.moveToNextToken();
 	// The next token should be name for the variable address
 	if ( context.peekAtToken().type != TT_name ) {
-		print(LogLevel::error, "SRPS (own/is_owner/is_ptr) contains invalid token for parameter.");
+		//print(LogLevel::error, "SRPS (own/is_owner/is_ptr) contains invalid token for parameter.");
+		print(LogLevel::error, EngineMessage::NonNameFoundInPtrHandlerParamBody);
 		return ParseTask::Result::syntax_error;
 	}
 
@@ -3767,19 +3795,28 @@ Engine::parseSRPS(
 	//VarAddress varAddress;
 	AddressOpcode* addressCode = new AddressOpcode( task->codeType );
 
-	while ( context.peekAtToken().type == TT_name ) {
+	bool loop = true;
+	while ( context.peekAtToken().type == TT_name && loop ) {
 		addressCode->varAddress.push_back( context.peekAtToken().name );
 		context.moveToNextToken();
 		switch( context.peekAtToken().type ) {
 		case TT_parambody_close:
+			loop = false;
 			break;
 
 		case TT_member_link:
 			context.moveToNextToken();
 			continue;
 
+		// If more than one variable is allowed, use the following.
+		// Note: You will also need to change Engine::run_Own(), Engine::run_Is_owner(), Engine::run_Is_pointer(), etc.
+		//case TT_name:
+		//	context.moveToNextToken();
+		//	continue;
+
 		default:
-			print(LogLevel::error, "SRPS (own/is_owner/is_ptr) contains invalid token for parameter.");
+			//print(LogLevel::error, "SRPS (own/is_owner/is_ptr) contains invalid token for extra parameter.");
+			print(LogLevel::error, EngineMessage::InvalidTokenForEndingPtrHandlerParamBody);
 			delete addressCode;
 			return ParseTask::Result::syntax_error;
 		}
@@ -4121,7 +4158,7 @@ Engine::operate(
 			default:
 				popLastTask();
 				// Should never happen
-				print(LogLevel::debug, "Function failed to call in setupFunctionExecution.");
+				print(LogLevel::debug, "SYSTEM ERROR: Function failed to call in setupFunctionExecution.");
 				//return EngineResult::Error;
 				throw BadFuncFoundTaskException();
 				break;
@@ -4159,12 +4196,14 @@ Engine::operate(
 					opIter.set( ((GotoOpcode*)opcode)->getOpStrandIter() );
 				}
 			} else {
-				print(LogLevel::warning, "Condition for goto operation is not boolean. Default is false.");
+				//print(LogLevel::warning, "Condition for goto operation is not boolean. Default is false.");
+				print(LogLevel::warning, EngineMessage::ConditionlessIf);
 				// Perform false operation
 				opIter.set( ((GotoOpcode*)opcode)->getOpStrandIter() );
 			}
 		} else {
-			print(LogLevel::error, "Missing condition for goto operation.");
+			//print(LogLevel::error, "Missing condition for goto operation.");
+			print(LogLevel::warning, EngineMessage::ConditionlessIf);
 			return ExecutionResult::Error;
 		}
 		break;
@@ -4298,7 +4337,8 @@ Engine::setupBuiltinFunctionExecution(
 
 	// Built-in function names should only have one name
 	if ( task.varAddress.size() > 1 ) {
-		print(LogLevel::error, "Attempt to call member of built-in function.");
+		//print(LogLevel::error, "Attempt to call member of built-in function.");
+		print(LogLevel::error, EngineMessage::SystemFuncInvalidAccess);
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -4413,7 +4453,8 @@ Engine::setupForeignFunctionExecution(
 
 	if ( ((uint)foreignFunc->getParameterCount() != task.args.size()) && ! foreignFunc->isVariadic() ) {
 		// Language specification says this should optionally be a warning
-		print(LogLevel::error, "Argument count does not match foreign function header.");
+		//print(LogLevel::error, "Argument count does not match foreign function header.");
+		print(LogLevel::error, EngineMessage::ForeignFunctionWrongArgCount);
 		if ( ignoreBadForeignFunctionCalls ) {
 			return FuncExecReturn::Ran; // Leaves the return as empty function
 		} else {
@@ -4435,7 +4476,8 @@ Engine::setupForeignFunctionExecution(
 		if ( ! foreignFunc->getParameterType(ffhIndex) == (*taskArgsIter)->getType() )
 		{
 			// Language specification says this should optionally be a warning
-			print(LogLevel::error, "Argument types do not match foreign function header.");
+			//print(LogLevel::error, "Argument types do not match foreign function header.");
+			print(LogLevel::error, EngineMessage::ForeignFunctionBadArg);
 			if ( ignoreBadForeignFunctionCalls ) {
 				return FuncExecReturn::Ran; // Leaves the return as empty function
 			} else {
@@ -4572,7 +4614,7 @@ Engine::setupUserFunctionExecution(
 	// If function body has been / is parsed, add its opcodes to the stack.
 	Body* body;
 	if ( ! func->body.obtain(body) ) {
-		print(LogLevel::error, "Function body is missing.");
+		print(LogLevel::error, "SYSTEM ERROR: Function body is missing.");
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -4582,7 +4624,8 @@ Engine::setupUserFunctionExecution(
 
 	// Attempt to compile. Automatically returns true if compiled.
 	if ( ! body->compile(this) ) {
-		print(LogLevel::error, "Function body contains errors.");
+		//print(LogLevel::error, "Function body contains errors.");
+		print(LogLevel::error, EngineMessage::UserFunctionBodyError);
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -4649,6 +4692,9 @@ Engine::setupUserFunctionExecution(
 	strand and then call Engine::execute().
 	Other than that, I can't think of a way that wouldn't overcomplicate the system.
 	Unfortunately, this wouldn't allow for functions like Foreach().
+
+	Update: I could have this mimic execute() and modify operate() to accept a task stack, allowing it
+	to be used by a separate process.
 */
 /*
 bool
@@ -4682,7 +4728,8 @@ Engine::resolveVariableAddress(
 	RobinHoodHash<SystemFunction::Value>::BucketData* sfBucket
 		= builtinFunctions.getBucketData(*ai);
 	if ( sfBucket != 0 ) { // Error, but handling is determined by the method that calls this one
-		print(LogLevel::warning, "Attempt to use standard access on a built-in function.");
+		//print(LogLevel::warning, "Attempt to use standard access on a built-in function.");
+		print(LogLevel::warning, EngineMessage::SystemFuncInvalidAccess);
 		return REAL_NULL;
 	}
 
@@ -4691,7 +4738,8 @@ Engine::resolveVariableAddress(
 	RobinHoodHash<ForeignFuncContainer>::BucketData* ffBucket
 		= foreignFunctions.getBucketData(addr);
 	if ( ffBucket != 0 ) { // Error, but handling is determined by the method that calls this one
-		print(LogLevel::warning, "Attempt to use standard access on a foreign function.");
+		//print(LogLevel::warning, "Attempt to use standard access on a foreign function.");
+		print(LogLevel::warning, EngineMessage::ForeignFuncInvalidAccess);
 		return REAL_NULL;
 	}
 
@@ -4744,12 +4792,14 @@ Engine::run_Own(
 #endif
 	lastObject.setWithoutRef(new FunctionContainer());
 	if ( !ownershipChangingEnabled ) {
-		print(LogLevel::warning, "Ownership changing is disabled.");
+		//print(LogLevel::warning, "Ownership changing is disabled.");
+		print(LogLevel::warning, EngineMessage::PointerNewOwnershipDisabled);
 		return ExecutionResult::Ok;
 	}
 	Variable* var = resolveVariableAddress(address);
 	if ( isNull(var) ) {
-		print(LogLevel::warning, "Cannot own given function. Built-in or foreign function.");
+		//print(LogLevel::warning, "Cannot own given function. Built-in or foreign function.");
+		print(LogLevel::warning, EngineMessage::NonVariablePassedToPtrHandler);
 		return ExecutionResult::Ok; // Could be set to EngineResult::Error
 	}
 	var->getRawContainer()->changeOwnerTo(var);
@@ -4765,7 +4815,8 @@ Engine::is_var_pointer(
 #endif
 	Variable* var = resolveVariableAddress(address);
 	if ( isNull(var) ) {
-		print(LogLevel::info, "Given function has system as owner.");
+		//print(LogLevel::info, "Given function has system as owner.");
+		print(LogLevel::warning, EngineMessage::NonVariablePassedToPtrHandler);
 		return false;
 	}
 	return var->isPointer();
@@ -4838,9 +4889,7 @@ Engine::process_sys_all(
 	if ( pi.has() )
 	do {
 		result = getBoolValue(**pi);
-		if ( !result )
-			break;
-	} while ( pi.next() );
+	} while ( pi.next() && ! result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -4857,9 +4906,7 @@ Engine::process_sys_any(
 	if ( pi.has() )
 	do {
 		result = getBoolValue(**pi);
-		if ( result )
-			break;
-	} while ( pi.next() );
+	} while ( pi.next() && result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -4876,9 +4923,7 @@ Engine::process_sys_nall(
 	if ( pi.has() )
 	do {
 		result = ! getBoolValue(**pi);
-		if ( !result )
-			break;
-	} while ( pi.next() );
+	} while ( pi.next() && !result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -4895,9 +4940,7 @@ Engine::process_sys_none(
 	if ( pi.has() )
 	do {
 		result = ! getBoolValue(**pi);
-		if ( !result )
-			break;
-	} while ( pi.next() );
+	} while ( pi.next() && !result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -4914,9 +4957,7 @@ Engine::process_sys_are_fn(
 	if ( pi.has() )
 	do {
 		result = isObjectFunction(**pi);
-		if ( !result )
-			break;
-	} while ( pi.next() );
+	} while ( pi.next() && !result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -4933,9 +4974,7 @@ Engine::process_sys_are_empty(
 	if ( pi.has() )
 	do {
 		result = isObjectEmptyFunction(**pi);
-		if ( !result )
-			break;
-	} while ( pi.next() );
+	} while ( pi.next() && result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -4972,12 +5011,12 @@ Engine::process_sys_member(
 #endif
 	ArgsIter paramsIter = task.args.start();
 	if ( task.args.size() != 2 ) {
-		print(LogLevel::error, EngineMessage::MemberWrongParamCount);
+		print(LogLevel::error, EngineMessage::MemberWrongArgCount);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the member sought
 	if ( ! isObjectFunction(**paramsIter) ) {
-		print(LogLevel::error, EngineMessage::MemberParam1NotFunction);
+		print(LogLevel::error, EngineMessage::MemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	FunctionContainer* parentFc = (FunctionContainer*)*paramsIter;
@@ -4985,19 +5024,19 @@ Engine::process_sys_member(
 		// Attempt to extract the function
 		// Failure occurs for "pointer variables" that have not reset
 	if ( ! parentFc->getFunction(parentFunc) ) {
-		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberParam);
+		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberArg);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Second parameter is the name of the member
 	paramsIter.next();
 	if ( !isObjectString(**paramsIter) ) {
-		print(LogLevel::error, EngineMessage::MemberParam2NotString);
+		print(LogLevel::error, EngineMessage::MemberArg2NotString);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ObjectString* objStr = (ObjectString*)(*paramsIter);
 	String& rawStr = objStr->getString();
 	if ( ! isValidName( rawStr ) ) {
-		print(LogLevel::error, EngineMessage::MemberFunctionInvalidNameParam);
+		print(LogLevel::error, EngineMessage::MemberFunctionInvalidNameArg);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Variable* var;
@@ -5015,27 +5054,26 @@ Engine::process_sys_member_count(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_member_count");
 #endif
 	ArgsIter paramsIter = task.args.start();
-	if ( task.args.size() == 0 ) {
-		print(LogLevel::warning, EngineMessage::MemberCountWrongParamCount);
-		// Seems inefficient, but it's faster that ObjectNumber(0) because the class uses string representation
+	if ( task.args.size() != 1 ) {
+		print(LogLevel::warning, EngineMessage::MemberCountWrongArgCount);
+		// Seems inefficient, but it's faster than ObjectNumber(0) because the class uses string representation
 		lastObject.setWithoutRef(new ObjectNumber(String("0")));
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// The only parameter is the parent function of the members
 	if ( ! isObjectFunction(**paramsIter) ) {
-		print(LogLevel::error, EngineMessage::MemberCountParam1NotFunction);
+		print(LogLevel::error, EngineMessage::MemberCountArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
 	FunctionContainer* fc = (FunctionContainer*)(*paramsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
-		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberCountParam);
+		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberCountArg);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	unsigned long size = parentFunc->getPersistentScope().occupancy();
-	// The bummer here is that it's cramming an unsigned int into an int.
-	// On the bright side, no one should be creating 2.7 billion variables.
 	lastObject.setWithoutRef(new ObjectNumber(size));
+
 	return FuncExecReturn::Ran;
 }
 
@@ -5049,26 +5087,26 @@ Engine::process_sys_is_member(
 #endif
 	ArgsIter paramsIter = task.args.start();
 	if ( task.args.size() != 2 ) {
-		print(LogLevel::error, EngineMessage::IsMemberWrongParamCount);
+		print(LogLevel::error, EngineMessage::IsMemberWrongArgCount);
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the members
 	if ( ! isObjectFunction(**paramsIter) ) {
-		print(LogLevel::error, EngineMessage::IsMemberParam1NotFunction);
+		print(LogLevel::error, EngineMessage::IsMemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
 	FunctionContainer* fc = (FunctionContainer*)(*paramsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
-		print(LogLevel::error, EngineMessage::DestroyedFuncAsIsMemberParam);
+		print(LogLevel::error, EngineMessage::DestroyedFuncAsIsMemberArg);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Second parameter should be a string
 	paramsIter.next();
 	bool result = false;
 	if ( ! isObjectString(**paramsIter) ) {
-		print(LogLevel::error, EngineMessage::IsMemberParam2NotString);
+		print(LogLevel::error, EngineMessage::IsMemberArg2NotString);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	const String& memberName = ((ObjectString*)*paramsIter)->getString();
@@ -5087,30 +5125,30 @@ Engine::process_sys_set_member(
 #endif
 	ArgsIter paramsIter = task.args.start();
 	if ( task.args.size() != 3 ) {
-		print(LogLevel::error, EngineMessage::SetMemberWrongParamCount);
+		print(LogLevel::error, EngineMessage::SetMemberWrongArgCount);
 		lastObject.setWithoutRef(new FunctionContainer());
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter should be the parent function of the members
 	if ( ! isObjectFunction(**paramsIter) ) {
-		print(LogLevel::error, EngineMessage::SetMemberParam1NotFunction);
+		print(LogLevel::error, EngineMessage::SetMemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
 	FunctionContainer* fc = (FunctionContainer*)(*paramsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
-		print(LogLevel::error, EngineMessage::DestroyedFuncAsSetMemberParam);
+		print(LogLevel::error, EngineMessage::DestroyedFuncAsSetMemberArg);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Second parameter should be a string
 	paramsIter.next();
 	if ( ! isObjectString(**paramsIter) ) {
-		print(LogLevel::error, EngineMessage::SetMemberParam2NotString);
+		print(LogLevel::error, EngineMessage::SetMemberArg2NotString);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	String& memberName = ((ObjectString*)*paramsIter)->getString();
 	if ( !isValidName(memberName) ) {
-		print(LogLevel::error, EngineMessage::SystemFunctionBadParam);
+		print(LogLevel::error, EngineMessage::SystemFunctionBadArg);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Third parameter can be anything
@@ -5145,10 +5183,10 @@ Engine::process_sys_union(
 				finalFunc->getPersistentScope().copyMembersFrom( usableFunc->getPersistentScope() );
 			} else {
 				//print(LogLevel::warning, "Destroyed function passed to \"union\" function.");
-				print(LogLevel::warning, EngineMessage::DestroyedFuncAsUnionParam);
+				print(LogLevel::warning, EngineMessage::DestroyedFuncAsUnionArg);
 			}
 		} else {
-			print(LogLevel::warning, EngineMessage::NonFunctionAsUnionParam);
+			print(LogLevel::warning, EngineMessage::NonFunctionAsUnionArg);
 		}
 	} while( paramsIter.next() );
 	lastObject.set(finalFC);

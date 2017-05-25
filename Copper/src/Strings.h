@@ -31,6 +31,7 @@ public:
 	bool equals( const char* pString ); // string must be null-terminated
 	bool equals( const CharList& pOther );
 	bool equalsIgnoreCase( const CharList& pOther );
+	void appendULong( const unsigned long pValue );
 };
 
 //! String

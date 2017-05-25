@@ -11,7 +11,7 @@ namespace Cu {
 namespace Numeric {
 namespace Sizes {
 
-void addFunctionsToEngine( Engine& engine, bool useShortNames ) {
+void addFunctionsToEngine( Engine& engine ) {
 
 	addForeignFuncInstance<GetSizeofInt>	(engine, "sizeof_int");
 	addForeignFuncInstance<GetSizeofULong>	(engine, "sizeof_ulong");

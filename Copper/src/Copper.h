@@ -21,7 +21,7 @@
 // To force the interpreter to perform checks where the state machine should fulfill assumptions.
 // These checks should not be necessary for safety of the final VM, but they aid in debugging.
 // IF YOU MODIFY THE PARSER, YOU SHOULD ENABLE THIS FLAG!
-//#define COPPER_STRICT_CHECKS
+#define COPPER_STRICT_CHECKS
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
 #include <cstdio>
@@ -74,7 +74,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.21
+#define COPPER_INTERPRETER_VERSION 0.221
 #define COPPER_INTERPRETER_BRANCH 4
 
 // ******* Language version *******
@@ -247,12 +247,16 @@ struct EngineMessage {
 	InvalidName,
 
 	// ERROR
+	// Stream ended before parsing completed.
+	StreamHaltedParsingNotDone,
+
+	// ERROR
 	// Stream ended before comment ended.
-	StreamInteruptedInComment,
+	StreamHaltedInComment,
 
 	// ERROR
 	// Stream ended before string ended.
-	StreamInteruptedInString,
+	StreamHaltedInString,
 
 	// ERROR
 	// Parameter body has been opened without being preceded by a name.
@@ -261,6 +265,10 @@ struct EngineMessage {
 	// ERROR
 	// Parameter body has been closed without being opened.
 	OrphanParamBodyCloser,
+
+	// ERROR
+	// Object body was started but the stream ended.
+	OrphanObjectBodyOpener,
 
 	// ERROR
 	// Object body has not been opened before but a closing token has been encountered.
@@ -285,39 +293,20 @@ struct EngineMessage {
 	TokenNotHandled,
 
 	// ERROR
-	// For compatibility reasons, this error remains.
-	InvalidTokenAtFunctionStart,
-
-	// WARNING
-	/* Unused assignment symbol in the function construction parameters.
-	This can result from accidentally adding the end-statement symbol before it. */
-	UnusedAsgnInFunctionBuildParams,
-
-	// WARNING
-	/* Unused pointer-assignment/creation symbol in the function construction parameters.
-	This can result from accidentally adding the end-statement symbol before it. */
-	UnusedPtrAsgnInFunctionBuildParams,
+	// Invalid token encountered in the object body construction.
+	ObjectBodyInvalid,
 
 	// ERROR
-	/* Unused token in function construction parameters.
-	This can result from forgetting a token. */
-	UnusedTokenInFunctionBuildParams,
+	// Unfinished or invalid parameter assignment in an object body construction.
+	ObjectBodyInvalidParamAsgn,
 
 	// ERROR
-	// Bad token found when collecting the parameter value.
-	InvalidParamValueToken,
+	// Unfinished or invalid parameter pointer assignment in an object body construction.
+	ObjectBodyInvalidParamPtrAsgn,
 
 	// ERROR
-	// Attempting to assign a pointer a non-named item.
-	PtrAssignedNonName,
-
-	// ERROR
-	// Attempting to open the scope of a system function.
-	OpeningSystemFuncScope,
-
-	// ERROR
-	// Attempting to open the scope of an extension function. Currently, this is unsupported.
-	OpeningExtensionFuncScope,
+	// Unfinished execution body.
+	ExecBodyUnfinished,
 
 	// ERROR
 	// Trying to create more bodies within a function than feasible.
@@ -325,57 +314,73 @@ struct EngineMessage {
 
 	// ERROR
 	// Trying to assign the wrong kind of token to a variable.
+	// May also be stream ended before assignment completed.
 	InvalidAsgn,
 
 	// ERROR
 	// Trying to make a variable a pointer to a non-object via wrong kind of token.
+	// May also be stream ended before pointer assignment completed.
 	InvalidPtrAsgn,
 
 	// ERROR
 	// Non-name followed member accessor (.).
+	// May also be stream ended before member access completed.
 	InvalidTokenAfterMemberAccessor,
-
-	// ERROR - SERIOUS!
-	// Task Variable does not exist. This would be my bad.
-	TaskVarIsNull,
 
 	// ERROR
 	// Trying to create more parameter bodies within a function header than feasible.
 	ExceededParamBodyCountLimit,
+
+	// ERROR
+	// Stream ended before arguments could be collected for a function call.
+	ArgBodyIncomplete,
+
+	// ERROR
+	// Invalid arguments passed to a function.
+	InvalidFunctionArguments,
 
 	// WARNING
 	/* Missing parameter for a function call.
 	This results in a default value (of empty function) for the parameter. */
 	MissingFunctionCallParam,
 
+	// WARNING
+	// Attempting to treat a built-in function like a variable.
+	SystemFuncInvalidAccess,
+
+	// Warning
+	// Attempting to treat a foreign function like a variable.
+	ForeignFuncInvalidAccess,
+
 	// ERROR
 	// Last-object pointer was not set before object was to be assigned to a variable.
+	// Unused but preserved in case it is to be used later.
 	UnsetLastObjectInAsgn,
-
-	// WARNING
-	// An attempt was made to assign a new function to a name reserved for a built-in function.
-	AttemptToOverrideBuiltinFunc,
-
-	// WARNING
-	// An attempt was made to assign a new function to a name reserved for an external function.
-	AttemptToOverrideExternalFunc,
 
 	// ERROR
 	// Last-object pointer was not set before a pointer-to-it was to be assigned to a variable.
+	// Unused but preserved in case it is to be used later.
 	UnsetLastObjectInPtrAsgn,
 
 	// ERROR - May be changed to WARNING
-	// An attempt was made to assign raw data to a variable via the pointer assignement token.
+	// An attempt was made to assign raw data to a variable via the pointer assignment token.
+	// NOTE: This is a run-time error because the data may be the return of a function call.
+	// Unused but preserved in case it is to be used later.
 	DataAssignedToPtr,
 
 	// ERROR
 	// After the if-statement, a condition (parameter body opener) did not immediately follow.
 	InvalidTokenAtIfStart,
 
+	// ERROR
+	// If-structure won't have a boolean in its condition or condition contamination will occur.
+	// e.g.: true if() { print("runs") }
+	IfConditionContaminated,
+
 	// WARNING
-	/* No boolean result came from the condition body given to the if-statement.
-	The statement automatically defaults to "false".
-	If this happens for successive if and elif statements, the else block is still executed. */
+	// No boolean result came from the condition body given to the if-statement.
+	// The statement automatically defaults to "false".
+	// If this happens for successive if and elif statements, the else block is still executed.
 	ConditionlessIf,
 
 	// ERROR
@@ -385,6 +390,16 @@ struct EngineMessage {
 	// ERROR
 	// A stray porameter was found while searching for the body of a loop.
 	StrayTokenInLoopHead,
+
+	// ERROR
+	// A stray loop-stop token was found.
+	// To allow such stops would contaminate the opcode execution process.
+	UselessLoopStopper,
+
+	// ERROR
+	// A stray loop-skip token was found.
+	// To allow such skips would contaminate the opcode execution process.
+	UselessLoopSkipper,
 
 	// WARNING
 	// The "own" control structure is disabled.
@@ -396,7 +411,12 @@ struct EngineMessage {
 
 	// WARNING
 	// A variable was not created before being used in an "own" or "is_ptr" structure, making the structure needless.
+	// Unused but preserved in case it is desired later.
 	NonexistentVariablePassedToPtrHandler,
+
+	// Warning
+	// Invalid name passed to "own", "is_ptr", or "is_owner".
+	NonVariablePassedToPtrHandler,
 
 	// ERROR
 	// Encountered a non-string token when searching for one in "own" or "is_ptr" structure.
@@ -404,90 +424,105 @@ struct EngineMessage {
 
 	// ERROR
 	// A token other than the parameter body ending was found before "own" or "is_ptr" ended (after parameter collection).
+	// For Copper branch 4, this is the same as breaking a member-link chain, i.e. is_ptr(a.)
 	InvalidTokenForEndingPtrHandlerParamBody,
 
 	// User-induced error
 	AssertionFailed,
 
 	// ERROR
-	// An incorrect number of params was passed to a system function.
-	SystemFunctionWrongParamCount,
+	// An incorrect number of args was passed to a system function.
+	SystemFunctionWrongArgCount,
 
 	// ERROR
-	// An incorrect parameter was passed to a system function.
-	SystemFunctionBadParam,
+	// An incorrect arg was passed to a system function.
+	SystemFunctionBadArg,
 
 	// ERROR
 	// member() was given the wrong number of parameters.
-	MemberWrongParamCount,
+	MemberWrongArgCount,
 
 	// ERROR
 	// First parameter passed to member() was not a function.
-	MemberParam1NotFunction,
+	MemberArg1NotFunction,
 
-	// ERROR
+	// SYSTEM ERROR
 	// Destroyed function passed to member() function. Parameter was probably a pointer.
-	DestroyedFuncAsMemberParam,
+	// Unlikely to happen. If it does, there is now most-likely a system error.
+	DestroyedFuncAsMemberArg,
 
 	// ERROR
 	// Second parameter passed to member() was not a string.
-	MemberParam2NotString,
+	MemberArg2NotString,
 
 	// ERROR
 	// Invalid member name passed to member() function.
-	MemberFunctionInvalidNameParam,
+	MemberFunctionInvalidNameArg,
 
 	// ERROR
 	// member_count() was given the wrong number of parameters.
-	MemberCountWrongParamCount,
+	MemberCountWrongArgCount,
 
 	// ERROR
 	// First parameter passed to member_count() was not a function.
-	MemberCountParam1NotFunction,
+	MemberCountArg1NotFunction,
 
 	// ERROR
 	// Destroyed function passed to member_count() function. Parameter was probably a pointer.
-	DestroyedFuncAsMemberCountParam,
+	DestroyedFuncAsMemberCountArg,
 
 	// ERROR
 	// is_member() was given the wrong number of parameters.
-	IsMemberWrongParamCount,
+	IsMemberWrongArgCount,
 
 	// ERROR
 	// First parameter passed to is_member() was not a function.
-	IsMemberParam1NotFunction,
+	IsMemberArg1NotFunction,
 
 	// ERROR
 	// Destroyed function passed to is_member() function. Parameter was probably a pointer.
-	DestroyedFuncAsIsMemberParam,
+	DestroyedFuncAsIsMemberArg,
 
 	// ERROR
 	// Second parameter passed to is_member() was not a string.
-	IsMemberParam2NotString,
+	IsMemberArg2NotString,
 
 	// ERROR
 	// set_member() was given the wrong number of parameters.
-	SetMemberWrongParamCount,
+	SetMemberWrongArgCount,
 
 	// ERROR
 	// First parameter passed to set_member() was not a function.
-	SetMemberParam1NotFunction,
+	SetMemberArg1NotFunction,
 
 	// ERROR
 	// Destroyed function passed to set_member() function. Parameter was probably a pointer.
-	DestroyedFuncAsSetMemberParam,
+	DestroyedFuncAsSetMemberArg,
 
 	// ERROR
 	// Second parameter passed to set_member() was not a string.
-	SetMemberParam2NotString,
+	SetMemberArg2NotString,
 
 	// WARNING
 	// Destroyed function passed to union() function. Parameter was probably a pointer.
-	DestroyedFuncAsUnionParam,
+	DestroyedFuncAsUnionArg,
 
 	// WARNING
 	// A parameter passed to the union() function was not a function.
-	NonFunctionAsUnionParam,
+	NonFunctionAsUnionArg,
+
+	// ERROR
+	// The wrong number of arguments was passed to a foreign function.
+	ForeignFunctionWrongArgCount,
+
+	// ERROR
+	// An argument passed to a foreign function did not match the requested type.
+	ForeignFunctionBadArg,
+
+	// ERROR
+	// The user-function contains errors.
+	// Usually, the other error will be printed. This just indicates that the problem is within a function body.
+	UserFunctionBodyError,
 
 	// Total number of engine messages
 	COUNT
@@ -1472,25 +1507,6 @@ public:
 };
 
 /*
-	Interface for all numbers.
-	This ensures all numbers will have the same functionality belonging to numbers.
-	The problem is that it hides ObjectNumber whose string representation is useful for converting
-	to bignum classes.
-	I guess I could use writeToString for that, but it would be slow. hm...
-*/
-//static const char* NUMBER_TYPENAME = "number";
-
-//struct Number : public Data {
-//	virtual ~Number() {}
-
-//	virtual unsigned long getAsUnsignedLong() const = 0;
-
-//	virtual const char* typeName() const {
-//		return NUMBER_TYPENAME;
-//	}
-//};
-
-/*
 	Object numbers are base-10 numbers saved as strings.
 	This makes for easy integration with other libraries, like GNU MPC.
 */
@@ -1505,11 +1521,13 @@ public:
 		, value()
 	{}
 
-	explicit ObjectNumber(const unsigned long pValue)
+	ObjectNumber(const unsigned long pValue)
 		: Object( ObjectType::Number )
 		, value()
 	{
-		value = CharList(pValue);
+		CharList k;
+		k.appendULong(pValue);
+		value = k;
 	}
 
 	explicit ObjectNumber(const String& pValue)
@@ -2360,6 +2378,10 @@ public:
 		ignoreBadForeignFunctionCalls = yes;
 	}
 
+	void setOwnershipChangingEnabled( bool yes ) {
+		ownershipChangingEnabled = yes;
+	}
+
 	// TODO: Re-implement
 	// Print the stack trace when a function fails
 	//void setStackTracePrintingEnabled( bool on ) {
@@ -2566,8 +2588,7 @@ protected:
 	ParseTask::Result::Value
 	ParseFuncFound_CollectParams(
 		FuncFoundParseTask*	task,
-		ParserContext&		context,
-		bool				srcDone
+		ParserContext&		context
 	);
 
 	ParseTask::Result::Value

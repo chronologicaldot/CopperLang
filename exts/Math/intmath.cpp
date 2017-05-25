@@ -159,7 +159,6 @@ Create::call(
 	// Only accepts at most 1 arg, but may have zero
 	Object* arg;
 	int value = 0;
-	unsigned int big = 0;
 	if ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
 		if ( ! getInt( *arg, value ) ) {

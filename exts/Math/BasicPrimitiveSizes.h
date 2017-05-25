@@ -7,7 +7,7 @@ namespace Cu {
 namespace Numeric {
 namespace Sizes {
 
-void addFunctionsToEngine(Engine& engine, bool useShortNames);
+void addFunctionsToEngine(Engine& engine);
 
 struct GetSizeofInt : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );

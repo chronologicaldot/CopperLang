@@ -45,7 +45,7 @@ int main() {
 	Cu::Numeric::ULong::addFunctionsToEngine(engine, false);
 	//Cu::Numeric::Float::addFunctionsToEngine(engine, false);
 	//Cu::Numeric::Double::addFunctionsToEngine(engine, false);
-	Cu::Numeric::Sizes::addFunctionsToEngine(engine, false);
+	Cu::Numeric::Sizes::addFunctionsToEngine(engine);
 	Cu::ManagedList::addFunctionsToEngine(engine, true);
 	Cu::MSecTime::addFunctionsToEngine(engine, true);
 

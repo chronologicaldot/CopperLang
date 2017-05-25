@@ -31,7 +31,7 @@ void testEngine() {
 	std::printf("\nTesting begins.\n");
 
 	engine.setLogger(&logger);
-	engine.addForeignFunctionInstance(util::String("print"), printer);
+	engine.addForeignFunction(util::String("print"), printer);
 	//engine.setStackTracePrintingEnabled(true);
 
 	std::printf("\nSetup done.\n");
