@@ -3,7 +3,6 @@
 #ifndef ROBIN_HOOD_HASH_H
 #define ROBIN_HOOD_HASH_H
 
-#include <stdio.h>
 #include "Strings.h"
 
 #ifndef uint

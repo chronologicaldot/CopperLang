@@ -1,5 +1,5 @@
 # Copper Lang Interpreter
-This repository contains an interpreter that runs code of the Copper language - a statically-typed, loose syntax programming language. For more information, see the [blog](http://copperlang.wordpress.com).
+This repository contains an interpreter that runs code of the Copper language - a statically-typed, loose syntax programming language. For more information, see the [blog](https://copperlang.wordpress.com) or the [online documentation](https://chronologicaldot.github.io/CopperLang/).
 
 ## Table of Contents
 1. Basic Introduction to the Language
@@ -41,9 +41,13 @@ loop {
 
 ## Interpreter Features
 
-This is a tiny, light-weight interpreter (roughly 250kb) providing only certain basic features essential to the language. The bare-bones interpreter includes functions for boolean comparisons but does not include functions for numbers or strings. Some extensions have been provided for numbers. Many features have been deliberately excluded from the engine to keep it small and also to allow users to have more control over the permitted flow of data. For example, basic strings are merely byte strands, but the user may create a separate object type to enforce Unicode.
+This is a tiny, light-weight, cross-platform interpreter (roughly 250kb) providing only certain basic features essential to the language. The bare-bones interpreter includes functions for boolean comparisons but does not include functions for numbers or strings. Some extensions have been provided for numbers. Many features have been deliberately excluded from the engine to keep it small and also to allow users to have more control over the permitted flow of data. For example, basic strings are merely byte strands, but the user may create a separate object type to enforce Unicode.
 
 The interpreter does not use a garbage collector. The language doesn't require one.
+
+There is only one system dependency in the core code: climits. Other includes are primarily for printing and debugging but aren't necessary.
+
+The code-base is written in cross-platform, standard-agnostic C++ and has been compiled successfully for C++98 and C++11 on GCC.
 
 
 ## Project Structure and Building
