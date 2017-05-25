@@ -1,0 +1,9 @@
+CopperLang and the associated project files are Copyright 2016-2017 Nicolaus Anderson.
+
+THIS SOFTWARE IS PROVIDED AS-IS WITHOUT ANY EXPRESSED GUARANTEE OF MERCHANTABILITY OR FITNESS.
+IN NO WAY WILL THE AUTHORS OF THIS SOFTWARE BE LIABLE FOR ANY DAMAGES OR LOSS, WHOLE OR IN PART, RESULTING FROM THE USE OF THIS SOFTWARE.
+THIS SOFTWARE MAY BE USED, REDISTRIBUTED, AND INCORPORATED INTO OTHER WORKS FREELY, PROVIDED THAT:
+1) This license remains unmodified and accompanies this software.
+2) The original copyright notices remain completely intact in each and every file.
+3) The authorship of this software is not misrepresented.
+4) Works that incorporate this software do not inhibit, modify, or conflict with anything in this license.
