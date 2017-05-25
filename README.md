@@ -17,10 +17,10 @@ Quick example:
 ```Copper
 fibonacci = {
 	ret([a=0 b=1]{
-		me.peek = +(me.a: me.b:)
-		me.a = me.b
-		me.b = me.peek
-		ret(me.peek:)
+		this.peek = +(this.a: this.b:)
+		this.a = this.b
+		this.b = this.peek
+		ret(this.peek:)
 	})
 }
 fibber = fibonacci()
