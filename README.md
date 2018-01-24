@@ -34,7 +34,7 @@ loop {
 	} elif ( eq(a:, 21) ) {
 		print("Still young!")
 	}
-	print("Value", a: "\n")
+	print("Value = ", a: "\n")
 }
 ```
 
@@ -47,7 +47,7 @@ The interpreter does not use a garbage collector. The language doesn't require o
 
 There is only one system dependency in the core code: climits. Other includes are primarily for printing and debugging but aren't necessary.
 
-The code-base is written in cross-platform, standard-agnostic C++ and has been compiled successfully for C++98 and C++11 on GCC.
+The code-base is written in cross-platform, standard-agnostic C++ and has been compiled successfully for C++98 and C++11 with GCC.
 
 
 ## Project Structure and Building
@@ -147,5 +147,5 @@ The method "call()" is called whenever the name associated with the function (th
 
 ## Legal
 
-The Copper Virtual Machine as given in the files included are copyright 2017 Nicolaus Anderson.
+The Copper Virtual Machine as given in the files included are copyright 2017-2018 Nicolaus Anderson.
 License details are provided in license.txt.

@@ -46,6 +46,8 @@ You are free to use, modify and redistribute this code to your heart's content, 
   <color name="pasteldarkpink"    value="#FF30FF"/>
   <color name="pasteldarktan"     value="#9B6938"/>
 
+  <color name="offwhite"          value="#efeeed"/>
+
   <!-- Global colors -->
   <style name="text"                        foreground="cyansilver1" background="cyandark1"/>
   <style name="selection"                   foreground="white" background="cyansilver2"/>
@@ -101,10 +103,10 @@ You are free to use, modify and redistribute this code to your heart's content, 
   <style name="def:floating-point"          foreground="darkteal"/>
 
   <!-- Identifiers -->
-  <style name="def:identifier"              bold="true"/>
+  <style name="def:identifier"              foreground="#white" bold="true"/>
 
   <!-- Statements -->
-  <style name="def:statement"               bold="true"/>
+  <style name="def:statement"               foreground="offwhite" bold="true"/>
 
   <!-- Types -->
   <style name="def:type"                    foreground="lightgreen" bold="true"/> 

@@ -1,4 +1,11 @@
 ====================
+2017/8/12
+v 4-0.222
+
+- Added CU_UNUSED_ARG macro to hide warnings from GCC about unused arguments.
+
+
+====================
 2017/5/25
 v 4-0.221
 

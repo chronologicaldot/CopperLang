@@ -21,7 +21,7 @@
 // To force the interpreter to perform checks where the state machine should fulfill assumptions.
 // These checks should not be necessary for safety of the final VM, but they aid in debugging.
 // IF YOU MODIFY THE PARSER, YOU SHOULD ENABLE THIS FLAG!
-#define COPPER_STRICT_CHECKS
+//#define COPPER_STRICT_CHECKS
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
 //#include <cstdio>
@@ -36,6 +36,13 @@
 
 // Strict check for debug, ensuring variable scopes are never null
 //#define COMPILE_WITH_SCOPE_HASH_NULL_CHECKING
+
+// For getting rid of the unused argument complaints by GCC.
+#ifdef __GNUC__
+# define CU_UNUSED_ARG(x) x __attribute__((__unused__))
+#else
+# define CU_UNUSED_ARG(x) x
+#endif
 
 
 // ******* Null *******
@@ -74,7 +81,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.221
+#define COPPER_INTERPRETER_VERSION 0.222
 #define COPPER_INTERPRETER_BRANCH 4
 
 // ******* Language version *******
@@ -1646,7 +1653,7 @@ public:
 	}
 
 	virtual ObjectType::Value
-	getParameterType( unsigned int index ) const {
+	getParameterType( unsigned int CU_UNUSED_ARG(index) ) const {
 		return ObjectType::UnknownData;
 	}
 
@@ -1990,6 +1997,13 @@ public:
 
 	// Add operation that has already been reference-counted
 	void addOperation( Opcode* op );
+
+	// TODO:
+	// Replace addNewOperation() and addOperation() with methods that handle ALL possible
+	// new opcode creation calls, thereby hiding the actual implementation of opcodes
+	// from the parsing functions.
+	// Currently, the problem is with dereferencing, which could possibly be solved
+	// if opcodes were to become unions / not stored in the heap.
 };
 
 void

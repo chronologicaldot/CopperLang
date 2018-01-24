@@ -1,4 +1,4 @@
-// Copyright 2016 Nicolaus Anderson
+// Copyright 2016-2018 Nicolaus Anderson
 
 #include "Copper.h"
 
@@ -2069,8 +2069,7 @@ Engine::setupSystemFunctions() {
 //-------------------------------------
 //********** PARSING SYSTEM ***********
 
-// The ParserContext must be passed in by whatever called this function. If none is provided, a new
-// context is made.
+// The ParserContext must be passed in by whatever called this function.
 ParseResult::Value
 Engine::parse(
 	ParserContext&	context,
@@ -2203,9 +2202,9 @@ Engine::interpretToken(
 
 	//---------------
 
-	case TT_comment:
+	//case TT_comment:
 		// This shouldn't be in the parser
-		throw (unsigned int)TT_comment;
+		//throw (unsigned int)TT_comment;
 
 	//---------------
 	case TT_exit:
@@ -3871,12 +3870,14 @@ Engine::execute() {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::execute");
 #endif
+
 #ifdef COPPER_SPEED_PROFILE
 	std::printf("PROFILE Engine::execute() start\n");
 	fullTime = 0;
 	timespec startTime, endTime;
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &startTime);
 #endif
+
 
 	// Note: When adding a list of operations, also set currOp.
 	OpStrandStackIter opcodeStrandStackIter = opcodeStrandStack.end();
@@ -3910,10 +3911,12 @@ Engine::execute() {
 				case ExecutionResult::Done:
 					clearStacks();
 					signalEndofProcessing();
+
 #ifdef COPPER_SPEED_PROFILE
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &endTime);
 	std::printf("done time sec(%ld) ns(%ld)\n", (endTime.tv_sec - startTime.tv_sec), (endTime.tv_nsec - startTime.tv_nsec) );
 #endif
+
 					return EngineResult::Done;
 
 				case ExecutionResult::Reset:
@@ -4491,25 +4494,25 @@ Engine::setupForeignFunctionExecution(
 	}
 
 	FFIServices ffi(*this, task.args.start());
-
+/*
 #ifdef COPPER_SPEED_PROFILE
 	double elapsedTime = 0;
 	timespec startTime, endTime;
 
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &startTime);
 #endif
-
+*/
 	bool result = foreignFunc->call( ffi );
-
+/*
 #ifdef COPPER_SPEED_PROFILE
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &endTime);
-	elapsedTime = (endTime.tv_sec - startTime.tv_sec) * 1000.0 + (endTime.tv_nsec - startTime.tv_nsec) / 1000000.0;
+	elapsedTime = (endTime.tv_sec - startTime.tv_sec) * 1000000.0 + (endTime.tv_nsec - startTime.tv_nsec);
 	fullTime += elapsedTime;
 	static int cycle = 1;
 	cycle++;
 	std::printf("time sec(%ld) ns(%ld), \t%s", (endTime.tv_sec - startTime.tv_sec), (endTime.tv_nsec - startTime.tv_nsec), (cycle % 6 == 0 ? "\n":"") );
 #endif
-
+*/
 	// lastObject is set by setResult() or setNewResult() of the FFI.
 	return result ?
 		FuncExecReturn::Ran :
@@ -4698,7 +4701,10 @@ Engine::setupUserFunctionExecution(
 */
 /*
 bool
-Engine::runFunction( FunctionContainer* function, ArgsList* pArgs ) {
+Engine::runFunction(
+	FunctionContainer*	function,
+	ArgsList*			pArgs
+) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::runFunction");
 #endif
