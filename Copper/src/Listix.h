@@ -1,32 +1,4 @@
-/*
-This is the header file for Listix
-Copyright 2017, Nic Anderson
-Created Nov 22, 2017.
-Based on a file created Oct 2, 2011.
-
-Note to self: This version is more robust than the original.
-
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
-
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
-
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
-  4. This license must not be removed or modified except with the explicit
-     permission of the original authors.
-  5. All distributions of this source code and alterations of it are subject
-     to this same license.
-
-*/
+// Copyright 2017-2018, Nic Anderson
 
 #ifndef _Listix_INCLUDED_
 #define _Listix_INCLUDED_
@@ -457,43 +429,6 @@ namespace util
 
 			(this->at(index))->Item = item;
 		}
-
-			//! Replace this list - TEMPORARILY REMOVED
-		/* Replace this list's contents with the one given. */
-		/*
-		void replaceAll( Listix<Unk>* other )
-		{
-			si32 index = 0;
-
-			// Replace the individual items without deleting the nodes
-			// since doing so is costly.
-			for (; index < size; index++ )
-			{
-				if ( index < other->getSize() )
-				{
-					this->at(index)->Item = other->copyOf(index);
-				} else {
-					cutOff( index, false, false );
-					break;
-				}
-			}
-
-			// Add extras to this list from the other if available
-			for (; index < other->getSize(); index++ )
-			{
-				push_back( other->copyOf(index) );
-			}
-		}
-		*/
-
-			//! Replace this list - TEMPORARILY REMOVED
-		/* Replace this list's contents with the one given. */
-		/*
-		void operator=( Listix<Unk>* other )
-		{
-			replaceAll( other );
-		}
-		*/
 
 			//! Insert
 		/* Insert a link at a specific location in the chain. The new link

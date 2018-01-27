@@ -1,4 +1,4 @@
-// Copyright 2015-2016 Nicolaus Anderson
+// Copyright 2015 Nicolaus Anderson
 // Note: Some of the function names in here have been changed from the original.
 
 #ifndef UTILITY_LIST

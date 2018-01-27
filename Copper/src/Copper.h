@@ -1,4 +1,4 @@
-// Copyright 2016-2017 Nicolaus Anderson
+// Copyright 2016 Nicolaus Anderson
 
 #ifndef COPPER_LANG_H
 #define COPPER_LANG_H

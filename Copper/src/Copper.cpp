@@ -1,4 +1,4 @@
-// Copyright 2016-2018 Nicolaus Anderson
+// Copyright 2016 Nicolaus Anderson
 
 #include "Copper.h"
 

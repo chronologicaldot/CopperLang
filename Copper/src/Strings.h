@@ -1,4 +1,4 @@
-// unfortunately copyright belongs to the author, Nicolaus Anderson, 2016
+// Copyright 2016, Nicolaus Anderson
 #ifndef STRINGS_H
 #define STRINGS_H
 
