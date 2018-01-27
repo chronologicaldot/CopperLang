@@ -1,2 +1,2 @@
-a = fn { print(true) }
+a = { print(true) }
 a()

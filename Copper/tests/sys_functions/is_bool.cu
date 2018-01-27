@@ -1,2 +1,2 @@
-assert(is_bool(true))
-assert(is_bool(false))
+assert(are_bool(true))
+assert(are_bool(false))

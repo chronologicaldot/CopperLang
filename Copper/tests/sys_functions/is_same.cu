@@ -1,2 +1,2 @@
 b~a
-assert( is_same(a b) )
+assert( are_same(a b) )

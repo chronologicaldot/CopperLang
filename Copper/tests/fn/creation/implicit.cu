@@ -1,2 +1,2 @@
-assert( is_fn(a) )
-assert( is_fn(a()) )
+assert( are_fn(a) )
+assert( are_fn(a()) )

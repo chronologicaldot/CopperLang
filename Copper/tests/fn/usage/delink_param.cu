@@ -1,4 +1,4 @@
 b = true
-a = fn(p) { p = {} }
+a = [p] { p = {} }
 a(b)
 assert(b())

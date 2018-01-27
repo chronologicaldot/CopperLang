@@ -1,3 +1,3 @@
-assert( is_empty({}) )
-assert( is_empty(fn{}) )
-assert( is_empty(fn(){}) )
+assert( are_empty({}) )
+assert( are_empty([]) )
+assert( are_empty([]{}) )

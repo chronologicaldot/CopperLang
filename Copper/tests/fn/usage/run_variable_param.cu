@@ -1,3 +1,3 @@
-a = fn(p) { assert(p()) }
+a = [p] { assert(p()) }
 b = true
 a(b)

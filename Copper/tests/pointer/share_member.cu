@@ -1,5 +1,5 @@
 a = {
-	assert( is_bool(this.c()) )
+	assert( are_bool(this.c()) )
 	assert( this.c() )
 }
 b ~ a

@@ -1,2 +1,2 @@
-a = fn(p) { assert(p()) }
+a = [p] { assert(p()) }
 a(true)

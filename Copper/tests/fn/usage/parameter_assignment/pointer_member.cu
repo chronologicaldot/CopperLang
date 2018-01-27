@@ -1,3 +1,3 @@
 a = true
-b = fn(a~a)
+b = [a~a]
 assert(b.a())

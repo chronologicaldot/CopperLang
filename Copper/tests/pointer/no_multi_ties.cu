@@ -3,4 +3,4 @@ a = true
 b 
 c~b
 c~a
-assert( is_fn(b()) )
+assert( are_fn(b()) )

@@ -1,1 +1,1 @@
-assert(is_fn({}))
+assert(are_fn({}))

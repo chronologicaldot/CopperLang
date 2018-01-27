@@ -2,4 +2,4 @@
 a = { true }
 b~a
 a = { false }
-assert( is_empty(b()) )
+assert( are_empty(b()) )
