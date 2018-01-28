@@ -6,6 +6,7 @@
 
 namespace CuStd {
 
+using Cu::UInteger;
 using Cu::LogLevel;
 using Cu::EngineMessage;
 using Cu::EngineErrorLevel;
@@ -148,6 +149,7 @@ public:
 
 		case LogLevel::warning:
 			printWarning(strMsg);
+			break;
 
 		case LogLevel::error:
 			switch( errLevel ) {
@@ -171,7 +173,7 @@ public:
 		}
 	}
 
-	virtual void printFunctionError(unsigned int functionId, unsigned int tokenIndex, const Cu::TokenType& tokenType) {
+	virtual void printFunctionError(UInteger functionId, UInteger tokenIndex, const Cu::TokenType& tokenType) {
 		fprintf(outFile, "STACK TRACE: fn( %u ) token( %u ):id(%u)\n", functionId, tokenIndex, (unsigned int)tokenType);
 	}
 

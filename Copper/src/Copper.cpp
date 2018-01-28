@@ -165,7 +165,7 @@ Function::addParam( const String pName ) {
 
 //--------------------------------------
 
-FunctionContainer::FunctionContainer(Function* pFunction, unsigned int id)
+FunctionContainer::FunctionContainer(Function* pFunction, UInteger id)
 	: Object(ObjectType::Function)
 	, funcBox()
 	, owner(REAL_NULL)
@@ -688,7 +688,7 @@ void Scope::copyMembersFrom(Scope& pOther) {
 	robinHoodTable->appendCopyOf(*(newScope.robinHoodTable));
 }
 
-unsigned int Scope::occupancy() {
+UInteger Scope::occupancy() {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::occupancy\n");
 #endif
@@ -744,7 +744,7 @@ Stack::getTop() {
 	return *top;
 }
 
-unsigned int
+UInteger
 Stack::getCurrLevel() {
 	return size;
 }
@@ -1029,6 +1029,55 @@ Opcode*
 StringOpcode::getCopy() const {
 	return new StringOpcode(type, name);
 }
+
+IntegerOpcode::IntegerOpcode(
+	const Integer pValue
+)
+	: Opcode( Opcode::CreateInteger )
+	, value( pValue )
+{}
+
+IntegerOpcode::IntegerOpcode(
+	const IntegerOpcode& pOther
+)
+	: Opcode( Opcode::CreateInteger )
+	, value( pOther.value )
+{}
+
+Integer
+IntegerOpcode::getIntegerData() const {
+	return value;
+}
+
+Opcode*
+IntegerOpcode::getCopy() const {
+	return new IntegerOpcode(value);
+}
+
+DecimalOpcode::DecimalOpcode(
+	const Decimal pValue
+)
+	: Opcode( Opcode::CreateDecimal )
+	, value( pValue )
+{}
+
+DecimalOpcode::DecimalOpcode(
+	const DecimalOpcode& pOther
+)
+	: Opcode( Opcode::CreateDecimal )
+	, value( pOther.value )
+{}
+
+Decimal
+DecimalOpcode::getDecimalData() const {
+	return value;
+}
+
+Opcode*
+DecimalOpcode::getCopy() const {
+	return new DecimalOpcode(value);
+}
+
 
 BodyOpcode::BodyOpcode()
 	: Opcode( Opcode::FuncBuild_execBody )
@@ -1545,7 +1594,7 @@ Engine::printGlobalStrand() {
 	if ( opIter.has() ) {
 		print(LogLevel::debug, "[DEBUG: Global strand:");
 		do {
-			std::printf("[ Opcode = %p, value = %u\n", (void*)(opIter->getOp()), (unsigned int)(opIter->getOp()->getType()) );
+			std::printf("[ Opcode = %p, value = %u\n", (void*)(opIter->getOp()), (UInteger)(opIter->getOp()->getType()) );
 		} while ( opIter.next() );
 	} else {
 		print(LogLevel::debug, "[DEBUG: Global strand is empty.");
@@ -1758,11 +1807,14 @@ Engine::resolveTokenType( const String& pName ) {
 		return TT_boolean_false;
 
 	if ( pName[0] >= '0' && pName[0] <= '9' ) {
-		if ( pName.isLiteralNumber() ) {
-			return TT_number;
-		} else {
-			print(LogLevel::error, EngineMessage::MalformedNumber);
-			return TT_malformed;
+		switch ( pName.numberType() ) {
+		case 1:
+			return TT_num_integer;
+		case 2:
+			return TT_num_decimal;
+		default:
+			print(LogLevel::warning, EngineMessage::MalformedNumber);
+			return TT_string;
 		}
 	}
 
@@ -1788,7 +1840,7 @@ Engine::tokenize( CharList& tokenValue, List<Token>& tokens ) {
 	const String tokenName(tokenValue);
 	TokenType tokenType = resolveTokenType( tokenName );
 
-	//std::printf("[DEBUG: token id =%u\n", (unsigned int)tokenType);
+	//std::printf("[DEBUG: token id =%u\n", (UInteger)tokenType);
 
 	if ( isValidToken(tokenType) ) {
 		tokens.push_back( Token(tokenType, tokenName) );
@@ -1951,7 +2003,7 @@ Engine::isValidName( const String& pName ) const {
 	if ( nameFilter ) {
 		return nameFilter(pName);
 	}
-	unsigned int i=0;
+	UInteger i=0;
 	for (; i < pName.size(); ++i ) {
 		if ( isValidNameCharacter(pName[i]) )
 			continue;
@@ -2063,6 +2115,8 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("are_bool"), SystemFunction::_are_bool);
 	builtinFunctions.insert(String("are_string"), SystemFunction::_are_string);
 	builtinFunctions.insert(String("are_number"), SystemFunction::_are_number);
+	builtinFunctions.insert(String("are_int"), SystemFunction::_are_integer);
+	builtinFunctions.insert(String("are_dcml"), SystemFunction::_are_decimal);
 	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
 }
 
@@ -2204,7 +2258,7 @@ Engine::interpretToken(
 
 	//case TT_comment:
 		// This shouldn't be in the parser
-		//throw (unsigned int)TT_comment;
+		//throw (UInteger)TT_comment;
 
 	//---------------
 	case TT_exit:
@@ -2362,27 +2416,25 @@ Engine::interpretToken(
 
 	//---------------
 
-	case TT_number:
+	case TT_string:
 		context.addNewOperation(
-			new StringOpcode(Opcode::CreateNumber, currToken.name)
+			new StringOpcode(Opcode::CreateString, currToken.name)
 		);
 		break;
 
 	//---------------
 
-	case TT_string:
-/*
-		// Originally, there was a purging mechanism, which should also be applied here.
-#ifdef COPPER_PURGE_NON_PRINTABLE_ASCII_INPUT_STRINGS
-		ObjectString* objStr = new ObjectString(value);
-		objStr->purgeNonPrintableASCII();
-		lastObject.setWithoutRef( objStr );
-#else
-		lastObject.setWithoutRef( new ObjectString(value) );
-#endif
-*/
+	case TT_num_integer:
 		context.addNewOperation(
-			new StringOpcode(Opcode::CreateString, currToken.name)
+			new IntegerOpcode(currToken.name.toInt())
+		);
+		break;
+
+	//---------------
+
+	case TT_num_decimal:
+		context.addNewOperation(
+			new DecimalOpcode(currToken.name.toDouble())
 		);
 		break;
 
@@ -2515,7 +2567,7 @@ Engine::ParseFunctionBuild_FromObjectBody(
 	// Check for the other object-body close token.
 	// If the tokens run out before it is found, request more.
 	// Otherwise, error.
-	unsigned int openBrackets = 1;
+	UInteger openBrackets = 1;
 
 	do {
 		switch( context.peekAtToken().type ) {
@@ -2600,8 +2652,9 @@ Engine::ParseFunctionBuild_CollectParameters(
 			case TT_name:
 			case TT_boolean_true:
 			case TT_boolean_false:
-			case TT_number:
 			case TT_string:
+			case TT_num_integer:
+			case TT_num_decimal:
 				task->state = FuncBuildParseTask::State::AwaitAssignment;
 				return ParseTask::Result::interpret_token;
 
@@ -2736,7 +2789,7 @@ Engine::ParseFunctionBuild_FromExecBody(
 	// Otherwise, error.
 
 	// For counting brackets:
-	unsigned int openBrackets = 1;
+	UInteger openBrackets = 1;
 	//BodyOpcode* bodyOpcode = new BodyOpcode();
 
 	do {
@@ -3002,8 +3055,9 @@ Engine::ParseFuncFound_ValidateAssignment(
 	case TT_name:
 	case TT_boolean_true:
 	case TT_boolean_false:
-	case TT_number:
 	case TT_string:
+	case TT_num_integer:
+	case TT_num_decimal:
 		task->state = FuncFoundParseTask::CompleteAssignment;
 		return ParseTask::Result::interpret_token;
 
@@ -3050,7 +3104,7 @@ Engine::ParseFuncFound_VerifyParams(
 	//std::printf("[ currToken.name = %s\n", context.peekAtToken().name.c_str());
 #endif
 	// Only for scanning
-	unsigned int openBodies = 1;
+	UInteger openBodies = 1;
 
 	do {
 		switch( context.peekAtToken().type ) {
@@ -3129,8 +3183,9 @@ Engine::ParseFuncFound_CollectParams(
 	case TT_name:
 	case TT_boolean_true:
 	case TT_boolean_false:
-	case TT_number:
 	case TT_string:
+	case TT_num_integer:
+	case TT_num_decimal:
 		task->waitingOnAssignment = true;
 		return ParseTask::Result::interpret_token;
 
@@ -3238,7 +3293,7 @@ Engine::ParseIfStructure_InitScan(
 		return ParseTask::Result::syntax_error;
 	}
 
-	unsigned int openBodies = 1;
+	UInteger openBodies = 1;
 	bool firstParamFound = false;
 
 	while ( context.moveToNextToken() ) {
@@ -3303,7 +3358,7 @@ Engine::ParseIfStructure_ScanExecBody(
 	// and now the execution body completeness needs to be verified
 	// and no tokens within either body (condition or execution) have been processed.
 	// NOTE: TOKENS USAGE HAS NOT BEEN COMMITTED
-	unsigned int openBodies = 1;
+	UInteger openBodies = 1;
 
 	// Move from ")"/"else" to "{"
 	if ( !context.moveToNextToken() ) {
@@ -3751,7 +3806,7 @@ Engine::parseSRPS(
 	}
 
 	// Next: scan for closing of parameter body
-	unsigned int openBodies = 1;
+	UInteger openBodies = 1;
 	while ( openBodies != 0 ) {
 		if ( !context.moveToNextToken()) {
 			if ( srcDone ) {
@@ -3961,7 +4016,7 @@ Engine::execute() {
 
 	//std::printf("[Debug: Engine::execute final currOp index = %lu, type = %u\n",
 	//	opcodeStrandStackIter->getCurrStrand()->indexOf(*currOp),
-	//	(unsigned int)((*currOp)->getOp()->getType())
+	//	(UInteger)((*currOp)->getOp()->getType())
 	//);
 
 	//printGlobalStrand();
@@ -4247,25 +4302,6 @@ Engine::operate(
 		lastObject.setWithoutRef(new ObjectBool(false));
 		break;
 
-	case Opcode::CreateNumber:
-#ifdef COPPER_OPCODE_DEBUGGING
-		print(LogLevel::debug, "[DEBUG: Execute opcode CreateNumber");
-#endif
-		// Should be creating numbers from a user-set factory
-/*
-		NumberObjectFactory* factory;
-		if ( numberObjectFactoryPtr.obtain(factory) ) {
-			lastObject.setWithoutRef( factory->createNumber(value) );
-		} else {
-			print(LogLevel::warning, "Missing number factory.");
-			lastObject.setWithoutRef( new ObjectNumber(value) );
-		}
-*/
-		lastObject.setWithoutRef(
-			new ObjectNumber( opcode->getNameData() )
-		);
-		break;
-
 	case Opcode::CreateString:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode CreateString");
@@ -4273,6 +4309,24 @@ Engine::operate(
 		// Should be creating strings from a user-set factory
 		lastObject.setWithoutRef(
 			new ObjectString( opcode->getNameData() )
+		);
+		break;
+
+	case Opcode::CreateInteger:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode CreateInteger");
+#endif
+		lastObject.setWithoutRef(
+			new ObjectInteger( opcode->getIntegerData() )
+		);
+		break;
+
+	case Opcode::CreateDecimal:
+#ifdef COPPER_OPCODE_DEBUGGING
+		print(LogLevel::debug, "[DEBUG: Execute opcode CreateInteger");
+#endif
+		lastObject.setWithoutRef(
+			new ObjectDecimal( opcode->getDecimalData() )
 		);
 		break;
 
@@ -4428,6 +4482,14 @@ Engine::setupBuiltinFunctionExecution(
 		process_sys_are_number(task);
 		break;
 
+	case SystemFunction::_are_integer:
+		process_sys_are_number(task);
+		break;
+
+	case SystemFunction::_are_decimal:
+		process_sys_are_number(task);
+		break;
+
 	case SystemFunction::_assert:
 		return process_sys_assert(task);
 
@@ -4465,7 +4527,7 @@ Engine::setupForeignFunctionExecution(
 		}
 	}
 
-	unsigned int ffhIndex = 0;
+	UInteger ffhIndex = 0;
 	ArgsIter taskArgsIter = task.args.start();
 	// This is for non-variadic functions. Variadic functions should only return a parameter count
 	// when they have a specific number of parameters that MUST be a certain type for any call.
@@ -5062,8 +5124,7 @@ Engine::process_sys_member_count(
 	ArgsIter paramsIter = task.args.start();
 	if ( task.args.size() != 1 ) {
 		print(LogLevel::warning, EngineMessage::MemberCountWrongArgCount);
-		// Seems inefficient, but it's faster than ObjectNumber(0) because the class uses string representation
-		lastObject.setWithoutRef(new ObjectNumber(String("0")));
+		lastObject.setWithoutRef(new ObjectInteger(0));
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// The only parameter is the parent function of the members
@@ -5078,7 +5139,7 @@ Engine::process_sys_member_count(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	unsigned long size = parentFunc->getPersistentScope().occupancy();
-	lastObject.setWithoutRef(new ObjectNumber(size));
+	lastObject.setWithoutRef(new ObjectInteger(Integer(size)));
 
 	return FuncExecReturn::Ran;
 }
@@ -5305,7 +5366,53 @@ Engine::process_sys_are_number(
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectNumber(**paramsIter);
+		out = isObjectInteger(**paramsIter) || isObjectDecimal(**paramsIter);
+		if ( !out)
+			break;
+	} while ( paramsIter.next() );
+	lastObject.setWithoutRef(new ObjectBool(out));
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_are_integer(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_number");
+#endif
+	ArgsIter paramsIter = task.args.start();
+	if ( !paramsIter.has() ) {
+		lastObject.setWithoutRef(new ObjectBool(false));
+		return FuncExecReturn::Ran;
+	}
+	// Check all parameters
+	bool out = true;
+	do {
+		out = isObjectInteger(**paramsIter);
+		if ( !out)
+			break;
+	} while ( paramsIter.next() );
+	lastObject.setWithoutRef(new ObjectBool(out));
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_are_decimal(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_number");
+#endif
+	ArgsIter paramsIter = task.args.start();
+	if ( !paramsIter.has() ) {
+		lastObject.setWithoutRef(new ObjectBool(false));
+		return FuncExecReturn::Ran;
+	}
+	// Check all parameters
+	bool out = true;
+	do {
+		out = isObjectDecimal(**paramsIter);
 		if ( !out)
 			break;
 	} while ( paramsIter.next() );

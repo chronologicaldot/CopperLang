@@ -688,16 +688,23 @@ bool String::contains( char c ) const {
 	return false;
 }
 
-bool String::isLiteralNumber() const {
+unsigned char String::numberType() const {
 	uint i = 0;
 	char* s = str;
+	unsigned char type = 1; // Integer type
 	for ( ; i < len; ++i, ++s ) {
-		if ( (*s >= '0' && *s <= '9') || *s == '.' )
+		if ( (*s >= '0' && *s <= '9') ) {
 			continue;
-		else
-			return false;
+		} else if ( *s == '.' ) {
+			if ( type == 2 ) // Second decimal found! Bad number format!
+				return 0;
+			type = 2; // Decimal type
+			continue;
+		} else {
+			return 0; // No numeric type
+		}
 	}
-	return true;
+	return type;
 }
 
 uint String::keyValue() const {

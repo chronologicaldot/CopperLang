@@ -1,4 +1,4 @@
-// Copyright 2016-2017 Nicolaus Anderson
+// Copyright 2016-2018 Nicolaus Anderson
 
 #include <execinfo.h>
 #include <signal.h>
@@ -37,7 +37,7 @@ int main() {
 	//engine.setStackTracePrintingEnabled(true);
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
-	std::printf("\n>> \t\tCOPPER LANGUAGE\n>>\t\tConsole Application\n>>\t\t(c) 2016-2017 Nicolaus Anderson\n\n");
+	std::printf("\n>> \t\tCOPPER LANGUAGE\n>>\t\tConsole Application\n>>\t\t(c) 2016-2018 Nicolaus Anderson\n\n");
 
 #ifdef COPPER_REF_LEVEL_MESSAGES
 	printer.declareStackBased();

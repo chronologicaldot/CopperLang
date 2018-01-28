@@ -1,5 +1,49 @@
 ====================
 2018/1/27
+v 5-0.23
+
+- Added List type to built-in types.
+- Replaced Number object type with Integer and Decimal types.
+- Added ObjectTypeIdentifier.
+- ObjectNumber now defaults to ObjectType::Integer but switches to ObjectType::Decimal when decimal is found.
+- Removed TT_number and added TT_num_integer and TT_num_decimal.
+- Renamed String::isLiteralNumber to numberType() and changed it to return unsigned char values of 0 for no type, 1 for integer, and 2 for decimal.
+- Changed Engine::resolveTokenType() to check for numbers and return token based on type.
+- TT_binary removed.
+- Added typedefs UInteger, Integer, and Decimal.
+- Added DECIMAL_ROUNDING_ERROR for checking rounding errors of the Decimal type.
+- Replaced unsigned int usages with UInteger in Copper.h and Copper.cpp.
+- Replaced int usages with Integer in Copper.h.
+- Replaced ObjectNumber with ObjectInteger and ObjectDecimal.
+- Replaced Opcode::Value value CreateNumber with CreateInteger and CreateDecimal.
+- Added IntegerOpcode and DecimalOpcode.
+- Removed Engine::interpretToken case TT_number.
+- Added Engine::interpretToken cases TT_num_integer and TT_num_decimal and implemented them.
+- Removed case Opcode::CreateNumber from Engine::operate.
+- Changed Engine::operate to create numbers with Opcode::CreateInteger and OpcodeCreateDecimal.
+- Replaced usages in Engine of ObjectNumber with ObjectInteger.
+- Changed Engine::process_sys_member_count() to directly assign integer value to ObjectInteger return and convert the occupancy value to Integer for the final return.
+- Removed isObjectNumber().
+- Added isObjectInteger().
+- Added isObjectDecimal().
+- Changed Engine::process_sys_are_number() to use isObjectInteger and isObjectDecimal instead of isObjectNumber.
+- Added _are_integer and _are_decimal to SystemFunction enum.
+- Added Engine::process_sys_are_integer() and Engine::process_sys_are_decimal().
+- Changed Engine::setupBuiltinFunctionExecution() to have implemented cases for _are_integer and _are_decimal.
+- Changed Engine::setupSystemFunctions() to save slots for _are_integer (responding to "are_int") and _are_decimal (responding to "are_dcml").
+- Changed the following parse functions to look for TT_num_integer and TT_num_decimal instead of TT_number:
+-- Engine::ParseFunctionBuild_CollectParameters()
+-- Engine::ParseFuncFound_ValidateAssignment()
+-- Engine::ParseFuncFound_CollectParams()
+- Added Opcode::getIntegerData() and Opcode::getDecimalData().
+
+InStreamLogger.h
+- Changed InStreamLogger::printFunctionError to use new typedef UInteger.
+- Fixed switch case in InStreamLogger::print() that failed to break after the warning case.
+
+
+====================
+2018/1/27
 v 5-0.222
 
 Now on Emu, the new master.

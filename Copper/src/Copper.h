@@ -81,8 +81,8 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.222
-#define COPPER_INTERPRETER_BRANCH 4
+#define COPPER_INTERPRETER_VERSION 0.23
+#define COPPER_INTERPRETER_BRANCH 5
 
 // ******* Language version *******
 
@@ -142,12 +142,22 @@ class RandomNullByteInStream {};
 
 namespace Cu {
 
+// ******* External Classes in Use ********
+
 using util::List;
 using util::CharList;
 using util::String;
 using util::RobinHoodHash;
 
-//-----------------
+// ******* Virtual Machine Types ********
+
+typedef unsigned int	UInteger;
+typedef long int		Integer;
+typedef double			Decimal;
+
+static const Decimal DECIMAL_ROUNDING_ERROR = 0.0000001;
+
+// ******* Operating System Info ********
 
 struct OSInfo {
 	enum OSType {
@@ -546,15 +556,18 @@ struct ObjectType {
 		// Built-in data
 		Bool		= 1,
 		String		= 2,
-		Number		= 3,
+		List		= 3,
+		Integer		= 4,
+		Decimal		= 5,
 
 		// For non-usable data
-		UnknownData	= 4,
+		UnknownData	= 6,
 
 		// Forces 32-bit compilation so that any user integer can be used to extend the enum
 		FORCE_32BIT = 0x7fffffff
 	};
 };
+
 
 struct Result {
 	enum Value {
@@ -682,13 +695,17 @@ enum TokenType {
 	TT_boolean_true,
 	TT_boolean_false,
 
-	/* Number
-	Contains only numbers 0 through 9 as letters. */
-	TT_number,
-
 	/* String (bit sequence)
 	Given between two quotation marks, this is a bit sequence that can be treated as a string. */
 	TT_string,
+
+	/* Integer
+	Contains only the numbers 0 through 9. */
+	TT_num_integer,
+
+	/* Decimal
+	Contains only the numbers 0 through 9 and a decimal place. */
+	TT_num_decimal,
 
 	/* Hide character
 	Used for hiding a single character. It is used only in run(). Process will give an error. */
@@ -703,7 +720,7 @@ enum TokenType {
 	Given in the format nnnnnb where n=0 or 1, this is a bit sequence.
 	ex: 10010100b
 	An error is thrown if the bit sequence length is not evenly divisible by 8. */
-	TT_binary // Not yet implemented
+	//TT_binary, // Not yet implemented
 };
 
 
@@ -729,6 +746,8 @@ struct SystemFunction {
 	_are_bool,
 	_are_string,
 	_are_number,
+	_are_integer,
+	_are_decimal,
 	_assert,
 	};
 };
@@ -759,7 +778,8 @@ struct LogLevel {
 struct Logger {
 	virtual void print(const LogLevel::Value& logLevel, const char* msg)=0;
 	virtual void print(const LogLevel::Value& logLevel, const EngineMessage::Value& msg)=0;
-	virtual void printFunctionError(unsigned int functionId, unsigned int tokenIndex, const TokenType& tokenType)=0;
+	// DEPRECATED
+	virtual void printFunctionError(UInteger functionId, UInteger tokenIndex, const TokenType& tokenType)=0;
 };
 
 //----------
@@ -768,10 +788,10 @@ struct Logger {
 class Ref;
 
 struct BadReferenceCountingException {
-	int refs;
+	Integer refs;
 	const Ref* object;
 
-	BadReferenceCountingException(int pCount, const Ref* pObject)
+	BadReferenceCountingException(Integer pCount, const Ref* pObject)
 		: refs(pCount)
 		, object(pObject)
 	{}
@@ -780,7 +800,7 @@ struct BadReferenceCountingException {
 // Class Ref
 // Used for tracking reference counting for certain types of C++ objects
 class Ref {
-	int refs;
+	Integer refs;
 #ifdef COPPER_REF_LEVEL_MESSAGES
 	bool isStackBased;
 #endif
@@ -828,7 +848,7 @@ public:
 	}
 
 	// Should be a DEBUG-only thing
-	int getRefCount() {
+	Integer getRefCount() {
 		return refs;
 	}
 
@@ -923,7 +943,8 @@ public:
 
 	virtual ~Object() {}
 
-	ObjectType::Value getType() const {
+	ObjectType::Value
+	getType() const {
 		return type;
 	}
 
@@ -933,19 +954,33 @@ public:
 
 	// Meant to be overridden.
 	// If you return "this", you must call this->ref() to ensure proper memory manangement.
-	virtual Object* copy() = 0;
+	virtual Object*
+	copy() =0;
 
-	virtual void writeToString(String& out) const {
+	virtual void
+	writeToString(String& out) const {
 		out = "{object}";
+	}
+
+	virtual Integer
+	getIntegerValue() const {
+		return 0;
+	}
+
+	virtual Decimal
+	getDecimalValue() const {
+		return 0;
 	}
 
 	// Name of the data
 	/* The Data class can be extended to point to other types of data, such as huge numbers,
 	matrices, etc., and complemented by extension functions. */
-	virtual const char* typeName() const =0;
+	virtual const char*
+	typeName() const =0;
 
 #ifdef COPPER_USE_DEBUG_NAMES
-	virtual const char* getDebugName() const {
+	virtual const char*
+	getDebugName() const {
 		return "Object";
 	}
 #endif
@@ -1036,8 +1071,9 @@ struct Opcode : public Ref {
 
 		CreateBoolTrue,
 		CreateBoolFalse,
-		CreateNumber,
-		CreateString
+		CreateString,
+		CreateInteger,
+		CreateDecimal
 	};
 
 protected:
@@ -1083,6 +1119,14 @@ public:
 
 	virtual String getNameData() const {
 		return String();
+	}
+
+	virtual Integer getIntegerData() const {
+		return Integer();
+	}
+
+	virtual Decimal getDecimalData() const {
+		return Decimal();
 	}
 
 	virtual Body* getBody() const {
@@ -1296,10 +1340,10 @@ by variables and passed around the system.
 class FunctionContainer : public Object {
 	RefPtr<Function> funcBox;
 	Variable* owner;
-	unsigned int ID;
+	UInteger ID;
 
 public:
-	explicit FunctionContainer(Function* pFunction, unsigned int id=0);
+	explicit FunctionContainer(Function* pFunction, UInteger id=0);
 
 	FunctionContainer();
 
@@ -1357,7 +1401,7 @@ public:
 		return ObjectType::Function;
 	}
 
-	unsigned int getID() {
+	UInteger getID() {
 		return ID;
 	}
 
@@ -1468,7 +1512,12 @@ public:
 		, value()
 	{}
 
-	explicit ObjectString(const String& pValue)
+	explicit ObjectString( const String& pValue )
+		: Object( ObjectType::String )
+		, value(pValue)
+	{}
+
+	explicit ObjectString( const char* pValue )
 		: Object( ObjectType::String )
 		, value(pValue)
 	{}
@@ -1491,12 +1540,14 @@ public:
 		return ObjectType::String;
 	}
 
-	String& getString() {
+	String&
+	getString() {
 		return value;
 	}
 
 #ifdef COPPER_PURGE_NON_PRINTABLE_ASCII_INPUT_STRINGS
-	void purgeNonPrintableASCII() {
+	void
+	purgeNonPrintableASCII() {
 		value.purgeNonPrintableASCII();
 	}
 #endif
@@ -1508,110 +1559,148 @@ public:
 	//}
 //#endif
 
-	virtual void writeToString(String& out) const {
+	virtual void
+	writeToString(String& out) const {
 		out = value;
 	}
 };
 
+
 /*
-	Object numbers are base-10 numbers saved as strings.
-	This makes for easy integration with other libraries, like GNU MPC.
+	Object type represeting integers
+	Created with characters 0-9
 */
-class ObjectNumber : public Object /*Number*/ {
-	String value; // Numeric-only string
+class ObjectInteger : public Object {
+	Integer  value;
 
 public:
-	 // TODO: A constructor using CharList
-
-	ObjectNumber()
-		: Object( ObjectType::Number )
-		, value()
+	//! cstor
+	ObjectInteger()
+		: Object( ObjectType::Integer )
+		, value(0)
 	{}
 
-	ObjectNumber(const unsigned long pValue)
-		: Object( ObjectType::Number )
-		, value()
-	{
-		CharList k;
-		k.appendULong(pValue);
-		value = k;
+	//! cstor
+	ObjectInteger( Integer newValue )
+		: Object( ObjectType::Integer )
+		, value ( newValue )
+	{}
+
+	//! cstor
+	ObjectInteger( const ObjectInteger& other )
+		: Object( ObjectType::Integer )
+		, value( other.value )
+	{}
+
+	//! Copy
+	virtual Object*
+	copy() {
+		return new ObjectInteger(value);
 	}
 
-	explicit ObjectNumber(const String& pValue)
-		: Object( ObjectType::Number )
-		, value()
-	{
-		// Slow constructor for long numbers, otherwise I have to create a filter in Engine::run()
-		// TODO: It should throw optional errors or print some warning message for debug,
-		// but it would be better to do that in the run() method.
-		CharList numbers;
-		unsigned int i=0;
-		for ( ; i < pValue.size(); ++i) {
-			if ( '1' <= pValue[i] && pValue[i] <= '9' ) {
-				numbers.push_back(pValue[i]);
-			}
-			else if ( pValue[i] == '.' ) {
-				numbers.push_back('.');
-			}
-			else if ( numbers.size() > 0 ) {
-				if ( pValue[i] == '0' ) {
-					numbers.push_back('0');
-				}
-			}
-		}
-		value = String(numbers);
+	void
+	setValue( Integer newValue ) {
+		value = newValue;
 	}
 
-	virtual Object* copy() {
-		return new ObjectNumber(value);
-	}
-
-	// May be deprecated
-	unsigned int getDigitCount() const {
-		// // Debating on this:
-		// if ( contains(value, '.') ) return value.size() - 1;
-		return value.size();
-	}
-
-	// May be deprecated
-	unsigned char getDigit(unsigned int index) const {
-		// // Debating on this:
-		// if ( value[index] == '.' ) ++index;
-		return value[index]; // Bounds checking done in String class
-	}
-
-	virtual void writeToString(String& out) const {
-		out = value.c_str();
-	}
-
-	String& getRawValue() {
+	virtual Integer
+	getIntegerValue() const {
 		return value;
 	}
 
-	virtual unsigned long getAsUnsignedLong() const {
-		return value.toUnsignedLong();
-	}
-
-	virtual const char* typeName() const {
-		return StaticTypeName();
+	virtual Decimal
+	getDecimalValue() const {
+		return (Decimal)value;
 	}
 
 	static const char*
 	StaticTypeName() {
-		return "number";
+		return "int";
+	}
+
+	virtual const char*
+	typeName() const {
+		return StaticTypeName();
 	}
 
 	static ObjectType::Value
 	StaticType() {
-		return ObjectType::Number;
+		return ObjectType::Integer;
+	}
+
+	virtual void
+	writeToString(String& out) const {
+		out = "{integer}";
 	}
 };
 
-//struct NumberObjectFactory : public Ref {
-//	virtual Number* createNumber(const String& pValue) {
-//		return new ObjectNumber(pValue);
-//	}
-//};
+/*
+	Object type represeting integers
+	Created with characters 0-9 and a singel decimal
+*/
+class ObjectDecimal : public Object {
+	Decimal  value;
+
+public:
+	//! cstor
+	ObjectDecimal()
+		: Object( ObjectType::Decimal )
+		, value(0)
+	{}
+
+	//! cstor
+	ObjectDecimal( Decimal newValue )
+		: Object( ObjectType::Decimal )
+		, value ( newValue )
+	{}
+
+	//! cstor
+	ObjectDecimal( const ObjectDecimal& other )
+		: Object( ObjectType::Decimal )
+		, value( other.value )
+	{}
+
+	//! Copy
+	virtual Object*
+	copy() {
+		return new ObjectDecimal(value);
+	}
+
+	void
+	setValue( Decimal newValue ) {
+		value = newValue;
+	}
+
+	virtual Integer
+	getIntegerValue() const {
+		return (Integer)value;
+	}
+
+	virtual Decimal
+	getDecimalValue() const {
+		return value;
+	}
+
+	static const char*
+	StaticTypeName() {
+		return "dec";
+	}
+
+	virtual const char*
+	typeName() const {
+		return StaticTypeName();
+	}
+
+	static ObjectType::Value
+	StaticType() {
+		return ObjectType::Decimal;
+	}
+
+	virtual void
+	writeToString(String& out) const {
+		out = "{decimal}";
+	}
+};
 
 
 //------------------
@@ -1628,6 +1717,41 @@ struct AppendObjectInterface {
 
 
 //*********** FOREIGN FUNCTION HANDLING *********
+
+// Identifier Class for Object Types
+// Used by foreign functions
+class ObjectTypeIdentifier {
+protected:
+	friend Engine;
+	ObjectType::Value  type;
+
+	//! For use by the engine only
+	ObjectTypeIdentifier( ObjectType::Value  t )
+		: type(t)
+	{}
+
+public:
+	// Copy constructor
+	// For use by foreign functions
+	ObjectTypeIdentifier( const ObjectTypeIdentifier& other )
+		: type( other.type )
+	{}
+
+	//! Compares types
+	bool
+	isSameType( const ObjectTypeIdentifier& other )
+	{
+		return type == other.type;
+	}
+
+	//! Returns the type
+	/* NOT VALID FOR VALUES BEYOND BUILT-IN TYPES! */
+	ObjectType::Value
+	getType() {
+		return type;
+	}
+};
+
 
 class FFIServices; // predeclaration
 
@@ -1653,11 +1777,11 @@ public:
 	}
 
 	virtual ObjectType::Value
-	getParameterType( unsigned int CU_UNUSED_ARG(index) ) const {
+	getParameterType( UInteger CU_UNUSED_ARG(index) ) const {
 		return ObjectType::UnknownData;
 	}
 
-	virtual unsigned int
+	virtual UInteger
 	getParameterCount() const {
 		return 0;
 	}
@@ -1789,7 +1913,7 @@ public:
 	void copyMembersFrom(Scope& pOther);
 
 	// Number of occupied storage slots / actual Variables (there may be more storage allocated)
-	unsigned int occupancy();
+	UInteger occupancy();
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
@@ -1845,7 +1969,7 @@ enum StackPopReturn {
 
 // Stack class
 class Stack {
-	unsigned int size;
+	UInteger size;
 	// Singly Linked List from top-to-bottom
 	StackFrame* bottom;
 	StackFrame* top;
@@ -1863,7 +1987,7 @@ public:
 	void clear();
 	StackFrame& getBottom();
 	StackFrame& getTop();
-	unsigned int getCurrLevel();
+	UInteger getCurrLevel();
 	StackPopReturn pop();
 	void push();
 	void push(StackFrame* pContext);
@@ -2073,6 +2197,24 @@ struct StringOpcode : public Opcode {
 	virtual Opcode* getCopy() const;
 };
 
+struct IntegerOpcode : public Opcode {
+	Integer  value;
+
+	IntegerOpcode( const Integer pValue );
+	IntegerOpcode( const IntegerOpcode& pOther );
+	virtual Integer getIntegerData() const;
+	virtual Opcode* getCopy() const;
+};
+
+struct DecimalOpcode : public Opcode {
+	Decimal  value;
+
+	DecimalOpcode( const Decimal pValue );
+	DecimalOpcode( const DecimalOpcode& pOther );
+	virtual Decimal getDecimalData() const;
+	virtual Opcode* getCopy() const;
+};
+
 struct BodyOpcode : public Opcode {
 	RefPtr<Body> body;
 
@@ -2140,7 +2282,7 @@ struct FuncFoundParseTask : public ParseTask {
 
 	FuncFoundOpcode* code;
 	bool waitingOnAssignment;
-	unsigned int openBodies;
+	UInteger openBodies;
 
 	FuncFoundParseTask( const String& pName )
 		: ParseTask(ParseTask::FuncFound)
@@ -2159,7 +2301,7 @@ class NullIfStructureConditionException {};
 
 struct IfStructureParseTask : public ParseTask {
 	OpStrandIter firstIter;
-	unsigned int openBodies; // used for both parameter and execution body token counting
+	UInteger openBodies; // used for both parameter and execution body token counting
 	GotoOpcode* conditionalGoto;
 	List<GotoOpcode*> finalGotos;
 	bool atElse;
@@ -2187,7 +2329,7 @@ struct IfStructureParseTask : public ParseTask {
 struct LoopStructureParseTask : public ParseTask {
 	OpStrandIter firstIter;
 	List<GotoOpcode*> finalGotos;
-	unsigned int openBodies;
+	UInteger openBodies;
 
 	enum State {
 		Start,
@@ -2333,10 +2475,17 @@ isObjectString(
 }
 
 inline bool
-isObjectNumber(
+isObjectInteger(
 	const Object& pObject
 ) {
-	return ( pObject.getType() == ObjectNumber::StaticType() );
+	return ( pObject.getType() == ObjectInteger::StaticType() );
+}
+
+inline bool
+isObjectDecimal(
+	const Object& pObject
+) {
+	return ( pObject.getType() == ObjectDecimal::StaticType() );
 }
 
 //--------------------------------
@@ -2772,6 +2921,8 @@ protected:
 	FuncExecReturn::Value	process_sys_are_bool(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_string(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_number(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_integer(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_decimal(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
 
 #ifdef COPPER_SPEED_PROFILE

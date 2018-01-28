@@ -39,7 +39,8 @@ project "Copper"
 		"console.cpp",
 		"Copper/src/*.h", "Copper/src/*.cpp",
 		"Copper/stdlib/*.h", "Copper/stdlib/*.cpp",
-		"exts/**.*"
+		--"exts/**.*"
+		"exts/Math/basicmath.h", "exts/Math/basicmath.cpp"
 	}
 
 	excludes
