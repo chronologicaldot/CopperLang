@@ -10,13 +10,15 @@
 #include "Copper/stdlib/Printer.h"
 #include "Copper/stdlib/InStreamLogger.h"
 
-#include "exts/Math/intmath.h"
-#include "exts/Math/ulongmath.h"
+//#include "exts/Math/intmath.h"
+//#include "exts/Math/ulongmath.h"
 //#include "exts/Math/floatmath.h"
 //#include "exts/Math/doublemath.h"
-#include "exts/Math/BasicPrimitiveSizes.h"
-#include "exts/Iterable/ManagedList.h"
-#include "exts/Time/timemath.h"
+//#include "exts/Math/BasicPrimitiveSizes.h"
+//#include "exts/Iterable/ManagedList.h"
+//#include "exts/Time/timemath.h"
+
+#include "exts/Math/basicmath.h"
 
 // function by tgamblin
 // https://stackoverflow.com/questions/77005/how-to-generate-a-stacktrace-when-my-gcc-c-app-crashes
@@ -41,13 +43,15 @@ int main() {
 	engine.addForeignFunction(util::String("print"), &printer);
 	//engine.setStackTracePrintingEnabled(true);
 
-	Cu::Numeric::Int::addFunctionsToEngine(engine, false);
-	Cu::Numeric::ULong::addFunctionsToEngine(engine, false);
+	//Cu::Numeric::Int::addFunctionsToEngine(engine, false);
+	//Cu::Numeric::ULong::addFunctionsToEngine(engine, false);
 	//Cu::Numeric::Float::addFunctionsToEngine(engine, false);
 	//Cu::Numeric::Double::addFunctionsToEngine(engine, false);
-	Cu::Numeric::Sizes::addFunctionsToEngine(engine);
-	Cu::ManagedList::addFunctionsToEngine(engine, true);
-	Cu::MSecTime::addFunctionsToEngine(engine, true);
+	//Cu::Numeric::Sizes::addFunctionsToEngine(engine);
+	//Cu::ManagedList::addFunctionsToEngine(engine, true);
+	//Cu::MSecTime::addFunctionsToEngine(engine, true);
+
+	Cu::Numeric::addFunctionsToEngine(engine);
 
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
@@ -59,7 +63,7 @@ int main() {
 	}
 	catch( Cu::BadReferenceCountingException& brce ) {
 		if ( brce.object ) {
-			std::printf("\nBad Reference Counting Exception: [%p], refs = %i\n", brce.object, brce.refs);
+			std::printf("\nBad Reference Counting Exception: [%p], refs = %ld\n", brce.object, brce.refs);
 			err = 1;
 		} else {
 			std::printf("\nBad Reference Counting Exception. Object deleted.\n\n");

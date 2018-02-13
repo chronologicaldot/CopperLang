@@ -1,4 +1,23 @@
 ===========
+2018/1/27
+
+Created basicmath.h
+Created basicmath.cpp
+
+
+THE FOLLOWING IS IRRELEVANT (since these files are deleted)
+
+intmath.h
+- Removed isObjectInt().
+- Changed getInt() to getInteger().
+- Removed class Int.
+
+intmath.cpp
+- Removed isObjectInt().
+- Changed getInt() to getInteger() and made it directly cast from Object to ObjectInteger.
+
+
+===========
 2017/5/4
 
 intmath.cpp
