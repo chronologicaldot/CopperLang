@@ -1006,7 +1006,7 @@ addNewParseTask(
 }
 
 StringOpcode::StringOpcode(
-	Opcode::Value	pType,
+	Opcode::Type	pType,
 	const String&	pName
 )
 	: Opcode( pType )
@@ -1106,7 +1106,7 @@ BodyOpcode::getCopy() const {
 }
 
 GotoOpcode::GotoOpcode(
-	const Opcode::Value		pType
+	const Opcode::Type		pType
 )
 	: Opcode(pType)
 	, target(REAL_NULL)
@@ -1182,14 +1182,14 @@ FuncFoundTask::addArg(
 }
 
 AddressOpcode::AddressOpcode(
-	const Opcode::Value value
+	const Opcode::Type value
 )
 	: Opcode(value)
 	, varAddress()
 {}
 
 AddressOpcode::AddressOpcode(
-	const Opcode::Value		value,
+	const Opcode::Type		value,
 	const VarAddress&		pAddress
 )
 	: Opcode(value)
@@ -1220,11 +1220,6 @@ FuncFoundOpcode::FuncFoundOpcode(
 	: AddressOpcode(pOther.type)
 {
 	varAddress = pOther.varAddress;
-}
-
-Task*
-FuncFoundOpcode::getTask() const {
-	return new FuncFoundTask(varAddress);
 }
 
 Opcode*
@@ -4060,7 +4055,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_start");
 #endif
 		// Should create the function and scope
-		addNewTaskToStack( opcode->getTask() );
+		addNewTaskToStack( new FuncBuildTask() );
 		break;
 
 	case Opcode::FuncBuild_createRegularParam:
@@ -4168,7 +4163,7 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_call");
 #endif
-		addNewTaskToStack( opcode->getTask() );
+		addNewTaskToStack( new FuncFoundTask( *(opcode->getAddressData()) ) );
 		break;
 
 	case Opcode::FuncFound_setParam:

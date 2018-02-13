@@ -1045,7 +1045,7 @@ class BadVarAddressException {};
 class Body; // pre-declaration
 
 struct Opcode : public Ref {
-	enum Value {
+	enum Type {
 		Exit = 0,
 		FuncBuild_start,
 		FuncBuild_createRegularParam,
@@ -1077,11 +1077,22 @@ struct Opcode : public Ref {
 	};
 
 protected:
-	Value type;
+	Type type;
+
+/*	TODO: Enable
+	union {
+		String			str;
+		Integer			integer;
+		Decimal			decimal;
+		RefPtr<Body>	body; // or BodyWrap, just holding a pointer and having maybe getter and setter
+		CodeIndex		codeIndex; // or GotoWrap
+		Address			address;
+	} data;
+*/
 
 public:
 
-	Opcode(Opcode::Value pType)
+	Opcode(Opcode::Type pType)
 		: type(pType)
 	{}
 
@@ -1089,23 +1100,40 @@ public:
 		: type( pOther.type )
 	{}
 
-	virtual ~Opcode() {}
+	~Opcode() {
+		/* TODO: Enable
+		switch(type) {
+		case FuncFound_access:
+		case FuncFound_assignment:
+		case FuncFound_pointerAssignment:
+			data.address.~Address();
+			break;
+		case FuncBuild_execBody:
+			data.body.~RefPtr<Body>();
+			break;
+		case Goto:
+		case ConditionalGoto:
+			data.codeIndex.~CodeIndex();
+			break;
+		case CreateString:
+			data.str.~String();
+			break;
+		default:
+			break;
+		}
+		*/
+	}
 
 	virtual Opcode* getCopy() const {
 		return new Opcode(type);
 	}
 
-	Value getType() const {
+	Type getType() const {
 		return type;
 	}
 
-	void setType( Opcode::Value pType ) {
+	void setType( Opcode::Type pType ) {
 		type = pType;
-	}
-
-	// Task produced by this operation
-	virtual Task* getTask() const {
-		return REAL_NULL;
 	}
 
 	// Data produced by this operation
@@ -1135,14 +1163,14 @@ public:
 };
 
 class BadOpcodeException {
-	const Opcode::Value v;
+	const Opcode::Type v;
 	
 public:
-	BadOpcodeException(const Opcode::Value code)
+	BadOpcodeException(const Opcode::Type code)
 		: v(code)
 	{}
 
-	Opcode::Value getOpcodeType() const {
+	Opcode::Type getOpcodeType() const {
 		return v;
 	}
 };
@@ -2155,10 +2183,6 @@ struct FuncBuildOpcode : public Opcode {
 		: Opcode( Opcode::FuncBuild_start )
 	{}
 
-	virtual Task* getTask() const {
-		return new FuncBuildTask();
-	}
-
 	virtual Opcode* getCopy() const {
 		return new FuncBuildOpcode();
 	}
@@ -2191,7 +2215,7 @@ struct FuncBuildParseTask : public ParseTask {
 struct StringOpcode : public Opcode {
 	String name;
 
-	StringOpcode( Opcode::Value pType, const String& pName );
+	StringOpcode( Opcode::Type pType, const String& pName );
 	StringOpcode( const StringOpcode& pOther );
 	virtual String getNameData() const;
 	virtual Opcode* getCopy() const;
@@ -2230,7 +2254,7 @@ class GotoOpcode : public Opcode {
 	OpStrandIter* target;
 
 public:
-	GotoOpcode(const Opcode::Value pType);
+	GotoOpcode(const Opcode::Type pType);
 	GotoOpcode(const GotoOpcode& pOther);
 	~GotoOpcode();
 	void setTarget( const OpStrandIter pTarget );
@@ -2255,8 +2279,8 @@ struct FuncFoundTask : public Task {
 struct AddressOpcode : public Opcode {
 	VarAddress varAddress;
 
-	AddressOpcode( const Opcode::Value value );
-	AddressOpcode( const Opcode::Value value, const VarAddress& pAddress );
+	AddressOpcode( const Opcode::Type value );
+	AddressOpcode( const Opcode::Type value, const VarAddress& pAddress );
 	virtual const VarAddress* getAddressData() const;
 	virtual Opcode* getCopy() const;
 };
@@ -2265,7 +2289,6 @@ struct FuncFoundOpcode : public AddressOpcode {
 
 	FuncFoundOpcode( const String& pStartName );
 	FuncFoundOpcode( const FuncFoundOpcode& other );
-	virtual Task* getTask() const;
 	virtual Opcode* getCopy() const;
 };
 
@@ -2347,9 +2370,9 @@ struct LoopStructureParseTask : public ParseTask {
 };
 
 struct SRPSParseTask : ParseTask {
-	const Opcode::Value codeType;
+	const Opcode::Type codeType;
 
-	SRPSParseTask(const Opcode::Value value)
+	SRPSParseTask(const Opcode::Type value)
 		: ParseTask(ParseTask::SRPS)
 		, codeType(value)
 	{}
