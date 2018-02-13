@@ -5,6 +5,7 @@ namespace CuStd {
 
 using util::List;
 using Cu::RefPtr;
+using Cu::ObjectType;
 using Cu::Object;
 using Cu::FFIServices;
 
@@ -32,10 +33,25 @@ public:
 	}
 
 	virtual bool call( FFIServices& ffi ) {
-		util::String out;
+		Object*  arg;
+		util::String  out;
 		while ( ffi.hasMoreArgs() ) {
-			ffi.getNextArg()->writeToString(out);
-			std::fprintf(writeFile, "%s", out.c_str());
+			arg = ffi.getNextArg();
+			switch( arg->getType() )
+			{
+			case ObjectType::Integer:
+				std::fprintf(writeFile, "%ld", arg->getIntegerValue());
+				break;
+
+			case ObjectType::Decimal:
+				std::fprintf(writeFile, "%lf", arg->getDecimalValue());
+				break;
+
+			default:
+				arg->writeToString(out);
+				std::fprintf(writeFile, "%s", out.c_str());
+				break;
+			}
 		}
 		return true;
 	}

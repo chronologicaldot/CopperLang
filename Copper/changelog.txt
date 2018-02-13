@@ -1,4 +1,19 @@
 ====================
+2018/1/30
+v 5-0.24
+
+Printer.h
+- Changed call method to use types for identifying numbers.
+
+
+====================
+2018/1/28
+v 5-0.24
+
+- Added Object::getIntegerValue() and Object::getDecimalValue().
+
+
+====================
 2018/1/27
 v 5-0.23
 
