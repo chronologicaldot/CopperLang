@@ -1,85 +1,13 @@
 // Copyright 2018 Nicolaus Anderson
 #include "basicmath.h"
 #include <math.h>
-#include <climits>
+//#include <climits>
+#include <limits>
 #include <sstream>
 
 namespace Cu {
 namespace Numeric {
-/*
-bool
-getInteger(
-	const Object*	pObject,
-	Integer&		pValue
-) {
-	if ( isObjectInteger( *pObject ) ) {
-		pValue = ((ObjectInteger*)pObject)->getIntegerValue();
-		return true;
-	}
-	if ( isObjectDecimal( *pObject ) ) {
-		pValue = static_cast<Integer>(((ObjectDecimal*)pObject)->getDecimalValue());
-		return true;
-	}
-	pValue = 0;
-	return false;
-}
 
-bool
-getDataAsInteger(
-	const Object*	pObject,
-	Integer&		pValue
-) {
-	if ( getInteger( pObject, pValue ) )
-		return true;
-
-	if ( ! isObjectString( *pObject ) ) {
-		pValue = 0;
-		return false;
-	}
-	// Assume a string and try to extract a numeric value
-	String sval;
-	pObject->writeToString(sval);
-	std::istringstream iss(sval.c_str());
-	if ( !( iss >> pValue ) )
-		pValue = 0;
-	return true;
-}
-
-bool
-getDecimal(
-	const Object*	pObject,
-	Decimal&		pValue
-) {
-	if ( isObjectDecimal( *pObject ) ) {
-		pValue = ((ObjectDecimal*)pObject)->getDecimalValue();
-		return true;
-	}
-	if ( isObjectInteger( *pObject ) ) {
-		pValue = static_cast<Decimal>(((ObjectInteger*)pObject)->getIntegerValue());
-		return true;
-	}
-	pValue = 0;
-	return false;
-}
-
-bool
-getDataAsDecimal(
-	const Object*	pObject,
-	Decimal&		pValue
-) {
-	if ( ! getDecimal( pObject, pValue ) ) {
-		pValue = 0;
-		return false;
-	}
-	// Assume a string
-	String sval;
-	pObject->writeToString(sval);
-	std::istringstream iss(sval.c_str());
-	if ( !( iss >> pValue ) )
-		pValue = 0;
-	return true;
-}
-*/
 bool
 iszero(
 	Decimal		p
@@ -102,28 +30,33 @@ addFunctionsToEngine(
 	addForeignFuncInstance<IsLessThan>				(engine, "lt");
 	addForeignFuncInstance<IsGreaterThanOrEqual>	(engine, "gte");
 	addForeignFuncInstance<IsLessThanOrEqual>		(engine, "lte");
-/*
 	addForeignFuncInstance<Add>						(engine, "+");
 	addForeignFuncInstance<Subtract>				(engine, "-");
 	addForeignFuncInstance<Multiply>				(engine, "*");
 	addForeignFuncInstance<Divide>					(engine, "/");
-	addForeignFuncInstance<Modulus>					(engine, "%");
-	addForeignFuncInstance<Power>					(engine, "pow");
+/*
 	addForeignFuncInstance<Avg>						(engine, "avg");
 	addForeignFuncInstance<Get_abs>					(engine, "abs");
-*/
-	addForeignFuncInstance<Incr>					(engine, "++");
 	//addForeignFuncInstance<Pick_min>				(engine, "min");
 	//addForeignFuncInstance<Pick_max>				(engine, "max");
 
-	// Decimal only
+	// Integer-return only
+	addForeignFuncInstance<Modulus>					(engine, "%");
+
+	// Decimal return only
+	addForeignFuncInstance<Power>					(engine, "pow");
+*/
+	// Integer only
+	addForeignFuncInstance<Incr>					(engine, "++");
+
 /*
+	// Decimal only (Integers are casted)
 	addForeignFuncInstance<Unimplemented>			(engine, "sin");
 	addForeignFuncInstance<Unimplemented>			(engine, "cos");
 	addForeignFuncInstance<Unimplemented>			(engine, "tan");
+	addForeignFuncInstance<Unimplemented>			(engine, "floor");
+	addForeignFuncInstance<Unimplemented>			(engine, "ceiling");
 */
-	// TODO: for Decimal
-	// floor, ceiling
 }
 
 /*
@@ -477,202 +410,294 @@ bool
 Add::call(
 	FFIServices& ffi
 ) {
-/*
-	Object* arg;
-	int total = 0;
-	int indie = 0;
-	while ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		if ( getInt(*arg, indie) ) {
+	Object*  obj;
+	IntDeciUnion  startValue;
 #ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
-			if ((indie > 0) && (total > INT_MAX - indie)) // detect overflow
-			{
-				ffi.printWarning("Int-sum overflows. Returning max value.");
-				total = INT_MAX;
-				break;
-			}
-			else if ((indie < 0) && (total < INT_MIN - indie)) // detect underflow
-			{
-				ffi.printWarning("Int-sum underflows. Returning min value.");
-				total = INT_MIN;
-				break;
-			}
+	Integer  nextValue;
 #endif
-			total += indie;
+	startValue.i_val = 0;
+
+	if ( ffi.hasMoreArgs() ) {
+		obj = ffi.getNextArg();
+		switch( obj->getType() )
+		{
+		case ObjectType::Integer:
+			startValue.i_val = obj->getIntegerValue();
+			while ( ffi.hasMoreArgs() ) {
+#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
+				nextValue = ffi.getNextArg()->getIntegerValue();
+				// detect overflow
+				if ((nextValue > 0) && (startValue.i_val > std::numeric_limits<Integer>::max() - nextValue))
+				{
+					ffi.printWarning("Integer-summation overflows. Returning max value.");
+					startValue.i_val = std::numeric_limits<Integer>::max();
+					break;
+				}
+				// detect underflow
+				else if ((nextValue < 0) && (startValue.i_val < std::numeric_limits<Integer>::min() - nextValue))
+				{
+					ffi.printWarning("Integer-summation underflows. Returning min value.");
+					startValue.i_val = std::numeric_limits<Integer>::min();
+					break;
+				}
+				startValue.i_val += nextValue;
+#else
+				startValue.i_val += ffi.getNextArg()->getIntegerValue();
+#endif
+			}
+			obj = new ObjectInteger( startValue.i_val );
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		case ObjectType::Decimal:
+			startValue.d_val = obj->getDecimalValue();
+			while ( ffi.hasMoreArgs() ) {
+				startValue.d_val += ffi.getNextArg()->getDecimalValue();
+			}
+			obj = new ObjectDecimal( startValue.d_val );
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		default:
+			ffi.printWarning("Summation not given numeric initial argument. Defaulting to empty function.");
+			break;
 		}
 	}
-	Int* out = new Int(total);
-	ffi.setResult(out);
-	out->deref();
-*/
-	return true;
+	return false;
 }
 
 bool
 Subtract::call(
 	FFIServices& ffi
 ) {
-/*
-	Object* arg;
-	int total = 0;
-	int indie = 0;
-	while ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		if ( getInt(*arg, indie) ) {
+	Object*  obj;
+	IntDeciUnion  startValue;
 #ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
-			if ((indie < 0) && (total > INT_MAX + indie)) // detect overflow
-			{
-				ffi.printWarning("Int-subtraction/reduce overflows. Returning max value.");
-				total = INT_MAX;
-				break;
-			}
-			else if ((indie > 0) && (total < INT_MIN + indie)) // detect underflow
-			{
-				ffi.printWarning("Int-subtraction/reduce underflows. Returning min value.");
-				total = INT_MIN;
-				break;
-			}
+	Integer  nextValue;
 #endif
-			total -= indie;
+	startValue.i_val = 0;
+
+	if ( ffi.hasMoreArgs() ) {
+		obj = ffi.getNextArg();
+		switch( obj->getType() )
+		{
+		case ObjectType::Integer:
+			startValue.i_val = obj->getIntegerValue();
+			while ( ffi.hasMoreArgs() ) {
+#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
+				nextValue = ffi.getNextArg()->getIntegerValue();
+				// detect overflow
+				if ((nextValue < 0) && (startValue.i_val > std::numeric_limits<Integer>::max() + nextValue))
+				{
+					ffi.printWarning("Integer-subtraction/reduce overflows. Returning max value.");
+					startValue.i_val = std::numeric_limits<Integer>::max();
+					break;
+				}
+				// detect underflow
+				else if ((nextValue > 0) && (startValue.i_val < std::numeric_limits<Integer>::min() + nextValue))
+				{
+					ffi.printWarning("Integer-subtraction/reduce underflows. Returning min value.");
+					startValue.i_val = std::numeric_limits<Integer>::min();
+					break;
+				}
+				startValue.i_val -= nextValue;
+#else
+				startValue.i_val -= ffi.getNextArg()->getIntegerValue();
+#endif
+			}
+			obj = new ObjectInteger( startValue.i_val );
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		case ObjectType::Decimal:
+			startValue.d_val = obj->getDecimalValue();
+			while ( ffi.hasMoreArgs() ) {
+				startValue.d_val -= ffi.getNextArg()->getDecimalValue();
+			}
+			obj = new ObjectDecimal( startValue.d_val );
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		default:
+			ffi.printWarning("Subtraction not given numeric initial argument. Defaulting to empty function.");
+			break;
 		}
 	}
-	Int* out = new Int(total);
-	ffi.setResult(out);
-	out->deref();
-*/
-	return true;
+	return false;
 }
 
 bool
 Multiply::call(
 	FFIServices& ffi
 ) {
-/*
-	Object* arg;
-	int total = 1;
-	int indie = 0;
-	int indieAbs = 0;
-	while ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		if ( getInt(*arg, indie) ) {
+	Object*  obj;
+	IntDeciUnion  startValue;
 #ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
-			indieAbs = (indie > 0 ? indie : -indie);
-			if ( ! iszero(indieAbs) ) {
-				if ( total > INT_MAX / indieAbs ) {
-					ffi.printWarning("Int-multiplication overflows. Returning max value.");
-					total = INT_MAX;
-					break;
-				}
-				if ( total < INT_MIN / indieAbs ) {
-					ffi.printWarning("Int-multiplication underflows. Returning min value.");
-					total = INT_MIN;
-					break;
-				}
-			}
+	Integer  nextValue;
+	Integer  nextValueAbs;
 #endif
-			total *= indie;
+	startValue.i_val = 0;
+
+	if ( ffi.hasMoreArgs() ) {
+		obj = ffi.getNextArg();
+		switch( obj->getType() )
+		{
+		case ObjectType::Integer:
+			startValue.i_val = obj->getIntegerValue();
+			while ( ffi.hasMoreArgs() ) {
+#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
+				nextValue = ffi.getNextArg()->getIntegerValue();
+				nextValueAbs = (nextValue > 0 ? nextValue : -nextValue);
+				if ( ! iszero(nextValueAbs) ) {
+					if ( startValue.i_val > std::numeric_limits<Integer>::max() / nextValueAbs ) {
+						ffi.printWarning("Integer-multiplication overflows. Returning max value.");
+						startValue.i_val = std::numeric_limits<Integer>::max();
+						break;
+					}
+					if ( startValue.i_val < std::numeric_limits<Integer>::min() / nextValueAbs ) {
+						ffi.printWarning("Integer-multiplication underflows. Returning min value.");
+						startValue.i_val = std::numeric_limits<Integer>::min();
+						break;
+					}
+				}
+				startValue.i_val *= nextValue;
+#else
+				startValue.i_val *= ffi.getNextArg()->getIntegerValue();
+#endif
+			}
+			obj = new ObjectInteger( startValue.i_val );
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		case ObjectType::Decimal:
+			startValue.d_val = obj->getDecimalValue();
+			while ( ffi.hasMoreArgs() ) {
+				startValue.d_val *= ffi.getNextArg()->getDecimalValue();
+			}
+			obj = new ObjectDecimal( startValue.d_val );
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		default:
+			ffi.printWarning("Multiplication not given numeric initial argument. Defaulting to empty function.");
+			break;
 		}
 	}
-	Int* out = new Int(total);
-	ffi.setResult(out);
-	out->deref();
-*/
-	return true;
+	return false;
 }
 
 bool
 Divide::call(
 	FFIServices& ffi
 ) {
-/*
-	Object* arg;
-	int total = 1;
-	int indie = 0;
+	Object*  obj;
+	IntDeciUnion  startValue;
+	Integer  nextValue;
+
+	startValue.i_val = 0;
+
 	if ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		// Get the first arg and save it as the total.
-		// Failure results in termination
-		if ( ! getInt(*arg, total) ) {
-			ffi.printError("Int division first argument was not a number.");
-			return false;
+		obj = ffi.getNextArg();
+		switch( obj->getType() )
+		{
+		case ObjectType::Integer:
+			startValue.i_val = obj->getIntegerValue();
+			while ( ffi.hasMoreArgs() ) {
+				nextValue = ffi.getNextArg()->getIntegerValue();
+				if ( iszero(nextValue) ) {
+					ffi.printWarning("Integer-division divisor is zero. Returning maximized value instead.");
+					if ( startValue.i_val != 0 )
+						startValue.i_val = (startValue.i_val > 0 ?
+							std::numeric_limits<Integer>::max()
+							: std::numeric_limits<Integer>::min());
+					break;
+				}
+				else if ( startValue.i_val == std::numeric_limits<Integer>::min() && nextValue == -1 ) {
+					ffi.printWarning("Integer-division is integer min over -1. Returning max positive integer value instead.");
+					startValue.i_val = std::numeric_limits<Integer>::max();
+					break;
+				}
+				// else
+				startValue.i_val /= nextValue;
+			}
+			obj = new ObjectInteger( startValue.i_val );
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		case ObjectType::Decimal:
+			startValue.d_val = obj->getDecimalValue();
+			while ( ffi.hasMoreArgs() ) {
+				nextValue = ffi.getNextArg()->getDecimalValue();
+				if ( iszero( nextValue ) ) {
+					ffi.printWarning("Decimal-division is zero. Returning infinity.");
+					startValue.d_val = (startValue.d_val > 0 ?
+							std::numeric_limits<Decimal>::max()
+							: std::numeric_limits<Decimal>::min());
+					break;
+				}
+				startValue.d_val /= ffi.getNextArg()->getDecimalValue();
+			}
+			obj = new ObjectDecimal( startValue.d_val );
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		default:
+			ffi.printWarning("Division not given numeric initial argument. Defaulting to empty function.");
+			break;
 		}
 	}
-	while ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		if ( getInt(*arg, indie) ) {
-			if ( iszero(indie) ) {
-				ffi.printWarning("Int division divisor is zero. Returning maximized value instead.");
-				if ( total != 0 )
-					total = (total > 0 ? INT_MAX : INT_MIN);
-				break;
-			}
-			else if ( total == INT_MIN && indie == -1 ) {
-				ffi.printWarning("Int division is integer min over -1. Returning max positive integer value instead.");
-				total = INT_MAX;
-				break;
-			}
-			// else
-			total /= indie;
-		}
-	}
-	Int* out = new Int(total);
-	ffi.setResult(out);
-	out->deref();
-*/
-	return true;
-}
-
-
-bool
-Power::call(
-	FFIServices& ffi
-) {
-/*
-	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
-	int argValue1 = arg->getAsInt();
-	arg = (BasicPrimitive*)(ffi.getNextArg());
-	int argValue2 = arg->getAsInt();
-	int total = 1;
-	double r = pow((double)argValue1, (double)argValue2);
-#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
-	if ( r > INT_MAX ) {
-		ffi.printWarning("Int power result is greater than integer max. Returning max value.");
-		total = INT_MAX;
-	}
-	else if ( r < INT_MIN ) {
-		ffi.printWarning("Int power result is less than integer min. Returning min value.");
-		total = INT_MIN;
-	} else
-#endif
-		total = int(r);
-
-	Int* out = new Int(total);
-	ffi.setResult(out);
-	out->deref();
-*/
-	return true;
+	return false;
 }
 
 bool
 Modulus::call(
 	FFIServices& ffi
 ) {
-/*
-	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
-	int argValue1 = arg->getAsInt();
-	arg = (BasicPrimitive*)(ffi.getNextArg());
-	int argValue2 = arg->getAsInt();
-	int total = 0;
-	if ( iszero(argValue2) ) {
-		ffi.printWarning("Int modulus divisor is zero. Ignoring argument value.");
-		total = argValue1;
-	} else {
-		total = argValue1 % argValue2;
+	Object*  obj;
+	Integer  total = 0;
+	Integer  nextValue = 0;
+
+	if ( ffi.hasMoreArgs() ) {
+		total = ffi.getNextArg()->getIntegerValue();
+		while ( ffi.hasMoreArgs() ) {
+			nextValue = ffi.getNextArg()->getIntegerValue();
+			if ( nextValue == 0 ) {
+				ffi.printWarning("Integer-modulus divisor is zero. Ignoring argument value.");
+			} else {
+				total %= nextValue;
+			}
+		}
 	}
-	Int* out = new Int(total);
-	ffi.setResult(out);
-	out->deref();
-*/
+	obj = new ObjectInteger(total);
+	ffi.setResult(obj);
+	obj->deref();
+	return true;
+}
+
+bool
+Power::call(
+	FFIServices& ffi
+) {
+	Object*  obj;
+	Decimal  base;
+
+	if ( ffi.hasMoreArgs() ) {
+		base = ffi.getNextArg()->getDecimalValue();
+		while ( ffi.hasMoreArgs() ) {
+			base = pow( base, ffi.getNextArg()->getDecimalValue() );
+		}
+	}
+	obj = new ObjectDecimal(base);
+	ffi.setResult(obj);
+	obj->deref();
 	return true;
 }
 
@@ -680,104 +705,175 @@ bool
 Pick_min::call(
 	FFIServices& ffi
 ) {
-/*
-	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
-	int argValue1 = arg->getAsInt();
-	arg = (BasicPrimitive*)(ffi.getNextArg());
-	int argValue2 = arg->getAsInt();
-	ObjectBool* out = new ObjectBool(
-		argValue1 > argValue2 ? argValue2 : argValue1
-	);
-	ffi.setResult(out);
-	out->deref();
-*/
-	return true;
+	Object*  obj;
+	IntDeciUnion  minValue;
+	IntDeciUnion  nextValue;
+
+	if ( ffi.hasMoreArgs() ) {
+		obj = ffi.getNextArg();
+		switch( obj->getType() )
+		{
+		case ObjectType::Integer:
+			minValue.i_val = obj->getIntegerValue();
+			while ( ffi.hasMoreArgs() ) {
+				nextValue.i_val = ffi.getNextArg()->getIntegerValue();
+				minValue.i_val = ( minValue.i_val <= nextValue.i_val ) ? minValue.i_val : nextValue.i_val;
+			}
+			obj = new ObjectInteger(minValue.i_val);
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		case ObjectType::Decimal:
+			minValue.d_val = obj->getDecimalValue();
+			while ( ffi.hasMoreArgs() ) {
+				nextValue.d_val = ffi.getNextArg()->getDecimalValue();
+				minValue.d_val = ( minValue.d_val <= nextValue.d_val ) ? minValue.d_val : nextValue.d_val;
+			}
+			obj = new ObjectDecimal(minValue.d_val);
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		default:
+			ffi.printWarning("Numeric-min given non-numeric initial argument. Defaulting to empty function.");
+			break;
+		}
+	}
+	return false;
 }
 
 bool
 Pick_max::call(
 	FFIServices& ffi
 ) {
-/*
-	BasicPrimitive* arg = (BasicPrimitive*)(ffi.getNextArg());
-	int argValue1 = arg->getAsInt();
-	arg = (BasicPrimitive*)(ffi.getNextArg());
-	int argValue2 = arg->getAsInt();
-	ObjectBool* out = new ObjectBool(
-		argValue1 > argValue2 ? argValue1 : argValue2
-	);
-	ffi.setResult(out);
-	out->deref();
-*/
-	return true;
+	Object*  obj;
+	IntDeciUnion  maxValue;
+	IntDeciUnion  nextValue;
+
+	if ( ffi.hasMoreArgs() ) {
+		obj = ffi.getNextArg();
+		switch( obj->getType() )
+		{
+		case ObjectType::Integer:
+			maxValue.i_val = obj->getIntegerValue();
+			while ( ffi.hasMoreArgs() ) {
+				nextValue.i_val = ffi.getNextArg()->getIntegerValue();
+				maxValue.i_val = ( maxValue.i_val >= nextValue.i_val ) ? maxValue.i_val : nextValue.i_val;
+			}
+			obj = new ObjectInteger(maxValue.i_val);
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		case ObjectType::Decimal:
+			maxValue.d_val = obj->getDecimalValue();
+			while ( ffi.hasMoreArgs() ) {
+				nextValue.d_val = ffi.getNextArg()->getDecimalValue();
+				maxValue.d_val = ( maxValue.d_val >= nextValue.d_val ) ? maxValue.d_val : nextValue.d_val;
+			}
+			obj = new ObjectDecimal(maxValue.d_val);
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		default:
+			ffi.printWarning("Numeric-max given non-numeric initial argument. Defaulting to empty function.");
+			break;
+		}
+	}
+	return false;
 }
 
 bool
 Avg::call(
 	FFIServices& ffi
 ) {
-/*
-	int total = 0;
-	int indie = 0;
-	int used_count = 0;
-	while ( ffi.hasMoreArgs() ) {
-		if ( getInt(ffi.getNextArg(), indie) ) {
-			total += indie;
-			used_count++;
-		} else {
-			ffi.printWarning("Int average function given non-numeric arg. Cancelling calculation...");
-			return false;
+	Object*  obj;
+	Integer  valueCount = 0;
+	IntDeciUnion  avgValue;
+	IntDeciUnion  nextValue;
+
+	if ( ffi.hasMoreArgs() ) {
+		obj = ffi.getNextArg();
+		switch( obj->getType() )
+		{
+		case ObjectType::Integer:
+			valueCount++;
+			avgValue.i_val = obj->getIntegerValue();
+			while ( ffi.hasMoreArgs() ) {
+				nextValue.i_val = ffi.getNextArg()->getIntegerValue();
+				avgValue.i_val += nextValue.i_val;
+			}
+			obj = new ObjectInteger(avgValue.i_val / valueCount);
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		case ObjectType::Decimal:
+			valueCount++;
+			avgValue.d_val = obj->getDecimalValue();
+			while ( ffi.hasMoreArgs() ) {
+				nextValue.d_val = ffi.getNextArg()->getDecimalValue();
+				avgValue.d_val += nextValue.d_val;
+			}
+			obj = new ObjectDecimal(avgValue.d_val / (Decimal)valueCount);
+			ffi.setResult(obj);
+			obj->deref();
+			return true;
+
+		default:
+			ffi.printWarning("Numeric-average given non-numeric initial argument. Defaulting to empty function.");
+			break;
 		}
 	}
-	if ( used_count > 0 )
-		total /= used_count;
-	Int* i = new Int(total);
-	ffi.setResult(i);
-	i->deref();
-*/
-	return true;
+	return false;
 }
-/*
+
 bool
 Get_abs::call(
 	FFIServices& ffi
 ) {
-	int value = 0;
-	if ( getInt(ffi.getNextArg(), value) ) {
-		value = value < 0 ? -value : value;
+	Object*  obj;
+	IntDeciUnion  value;
+	if ( ! ffi.hasMoreArgs() ) {
+		ffi.printWarning("Numeric-abs called with no arguments.");
+		return false;
 	}
-	Int* i = new Int(value);
-	ffi.setResult(i);
-	i->deref();
+
+	obj = ffi.getNextArg();
+	switch( obj->getType() )
+	{
+	case ObjectType::Decimal:
+		value.i_val = obj->getDecimalValue();
+		obj = new ObjectDecimal(value.i_val);
+		ffi.setResult(obj);
+		obj->deref();
+		break;
+
+	default:
+		value.i_val = obj->getIntegerValue();
+		obj = new ObjectInteger(value.i_val);
+		ffi.setResult(obj);
+		obj->deref();
+		break;
+	}
 	return true;
 }
 
-ObjectType::Value
-Get_abs::getParameterType(
-	unsigned int index
-) const {
-	if ( index == 0 )
-		return BasicPrimitive::StaticType();
-	return ObjectType::Function;
-}
-
-unsigned int
-Get_abs::getParameterCount() const {
-	return 1;
-}
-*/
 bool
 Incr::call(
 	FFIServices& ffi
 ) {
-	Object* arg;
+	Object*  arg;
+
 	while ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
 		if ( isObjectInteger(*arg) ) {
 			// Should check bounds
 			((ObjectInteger*)arg)->setValue(arg->getIntegerValue() + 1);
 		} else {
-			ffi.printWarning("Increment argument was not of type Integer. Ignoring...");
+			ffi.printWarning("Increment argument was not of type Integer. Ignoring.");
 		}
 	}
 	return true;

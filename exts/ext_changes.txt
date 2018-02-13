@@ -1,4 +1,14 @@
 ===========
+2018/2/13
+
+basicmath.h
+- Added VariadicFunc and had all variadic parameter foreign functions inherit it.
+
+basicmath.cpp
+- Implemented classes Add, Subtract, Multiply, Divide, Modulus, Power, Pick_min, Pick_max, and Get_abs.
+
+
+===========
 2018/1/27
 
 Created basicmath.h

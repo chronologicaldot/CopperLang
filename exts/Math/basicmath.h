@@ -16,39 +16,7 @@ void
 addFunctionsToEngine(
 	Engine&		engine
 );
-/*
-// DEPRECATED
-//! Get an Integer only from a built-in number
-bool
-getInteger(
-	const Object*	pObject,
-	Integer&		pValue
-);
 
-// DEPRECATED
-//! Get an Integer, converting from string if need-be
-bool
-getDataAsInteger(
-	const Object*	pObject,
-	Integer&		pValue
-);
-
-// DEPRECATED
-//! Get an Decimal only from a built-in number
-bool
-getDecimal(
-	const Object*	pObject,
-	Decimal&		pValue
-);
-
-// DEPRECATED
-//! Get an Decimal, converting from string if need-be
-bool
-getDataAsDecimal(
-	const Object*	pObject,
-	Decimal&		pValue
-);
-*/
 bool
 iszero(
 	Decimal		p
@@ -59,28 +27,24 @@ union IntDeciUnion {
 	Decimal  d_val;
 };
 
-struct IntegerCast : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+struct VariadicFunc : public ForeignFunc {
+	virtual ~VariadicFunc() {}
 
 	virtual bool isVariadic() {
 		return true;
 	}
 };
 
-struct DecimalCast : public ForeignFunc {
+struct IntegerCast : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
-
-	virtual bool isVariadic() {
-		return true;
-	}
 };
 
-struct ToString : public ForeignFunc {
+struct DecimalCast : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
+};
 
-	virtual bool isVariadic() {
-		return true;
-	}
+struct ToString : public VariadicFunc {
+	virtual bool call( FFIServices& ffi );
 };
 
 // Unimplemented
@@ -100,123 +64,78 @@ struct IsZero : public ForeignFunc {
 };
 */
 
-struct AreZero : public ForeignFunc {
+struct AreZero : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
-
-	virtual bool isVariadic() {
-		return true;
-	}
 };
 
 //! Foreign Function for checking numeric equality of a series of arguments
 /* Precedence for the type goes to the first argument. */
-struct AreEqual : public ForeignFunc {
+struct AreEqual : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
-
-	virtual bool isVariadic() {
-		return true;
-	}
 };
 
-// Stand-in
-struct TwoArgBase : public ForeignFunc {
-
-};
-
-// Doesn't have to be a TwoArgBase
 // gt(a: b: c:) means is a > b && a > c
-struct IsGreaterThan : public TwoArgBase {
+struct IsGreaterThan : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
 // lt(a: b: c:) means a < b && a < c
-struct IsLessThan : public TwoArgBase {
+struct IsLessThan : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
 // gte(a: b: c:) means a >= b && a >= c
-struct IsGreaterThanOrEqual : public TwoArgBase {
+struct IsGreaterThanOrEqual : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
 // lte(a: b: c:) means a <= b && a <= c
-struct IsLessThanOrEqual : public TwoArgBase {
+struct IsLessThanOrEqual : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Add : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
-
-	virtual bool isVariadic() {
-		return true;
-	}
-};
-
-struct Subtract : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
-
-	virtual bool isVariadic() {
-		return true;
-	}
-};
-
-struct Multiply : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
-
-	virtual bool isVariadic() {
-		return true;
-	}
-};
-
-struct Divide : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
-
-	virtual bool isVariadic() {
-		return true;
-	}
-};
-
-struct Power : public TwoArgBase {
+struct Add : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Modulus : public TwoArgBase {
+struct Subtract : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Pick_max : public TwoArgBase {
+struct Multiply : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Pick_min : public TwoArgBase {
+struct Divide : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-// Int Average
-struct Avg : public ForeignFunc {
+struct Modulus : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
-
-	virtual bool isVariadic() {
-		return true;
-	}
 };
-/*
+
+struct Power : public VariadicFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Pick_max : public VariadicFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Pick_min : public VariadicFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Avg : public VariadicFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
 struct Get_abs : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
-
-	virtual ObjectType::Value
-	getParameterType( unsigned int index ) const;
-
-	virtual unsigned int
-	getParameterCount() const;
 };
-*/
-struct Incr : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
 
-	virtual bool isVariadic() {
-		return true;
-	}
+struct Incr : public VariadicFunc {
+	virtual bool call( FFIServices& ffi );
 };
 
 }}
