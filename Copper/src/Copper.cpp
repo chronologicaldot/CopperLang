@@ -4279,7 +4279,6 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode ConditionalGoto");
 #endif
-
 		Object* obj; // Needs to be declared at the beginning of this method
 		if ( lastObject.obtain(obj) ) {
 			if ( isObjectBool(*obj) ) {
@@ -4552,7 +4551,7 @@ Engine::setupForeignFunctionExecution(
 
 	ForeignFunc* foreignFunc = bucketData->item.getForeignFunction();
 
-	if ( ((uint)foreignFunc->getParameterCount() != task.args.size()) && ! foreignFunc->isVariadic() ) {
+	if ( ! foreignFunc->isVariadic() && ((uint)foreignFunc->getParameterCount() != task.args.size()) ) {
 		// Language specification says this should optionally be a warning
 		//print(LogLevel::error, "Argument count does not match foreign function header.");
 		print(LogLevel::error, EngineMessage::ForeignFunctionWrongArgCount);
