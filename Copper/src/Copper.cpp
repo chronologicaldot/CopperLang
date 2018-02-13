@@ -430,7 +430,7 @@ FunctionContainer::~FunctionContainer()
 #endif
 }
 
-void FunctionContainer::own(Variable* pGrabber) {
+void FunctionContainer::own( Owner* pGrabber ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer::own [%p]\n", (void*)this);
 #endif
@@ -440,7 +440,7 @@ void FunctionContainer::own(Variable* pGrabber) {
 	//ref(); // Called by RefPtr already, so I'm using FuncBoxRefPtr for variables instead.
 }
 
-void FunctionContainer::disown(Variable* pDropper) {
+void FunctionContainer::disown( Owner* pDropper ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer::disown [%p]\n", (void*)this);
 #endif
@@ -459,20 +459,20 @@ bool FunctionContainer::isOwned() const {
 	return notNull(owner);
 }
 
-bool FunctionContainer::isOwner( const Variable* pVariable ) const {
+bool FunctionContainer::isOwner( const Owner* pVariable ) const {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer::isOwner [%p]\n", (void*)this);
 #endif
 	return owner == pVariable;
 }
 
-void FunctionContainer::changeOwnerTo(Variable* pNewOwner) {
+void FunctionContainer::changeOwnerTo( Owner* pNewOwner ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer::changeOwnerTo [%p]\n", (void*)this);
 #endif
 	// NOTE: This performs no ref() or deref(). Those should have been performed elsewhere automatically.
 
-	if ( pNewOwner->getRawContainer() == this ) {
+	if ( pNewOwner->owns(this) ) {
 		owner = pNewOwner;
 	} else {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
@@ -482,7 +482,7 @@ void FunctionContainer::changeOwnerTo(Variable* pNewOwner) {
 	}
 }
 
-bool FunctionContainer::getFunction(Function*& storage) {
+bool FunctionContainer::getFunction( Function*& storage ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer::getFunction [%p]\n", (void*)this);
 #endif
@@ -656,6 +656,11 @@ Variable::isPointer() const {
 	if ( isNull(box) )
 		throw NullVariableException();
 	return ! box->isOwner(this);
+}
+
+bool
+Variable::owns( FunctionContainer*  container ) const {
+	return box != REAL_NULL && box == container;
 }
 
 FunctionContainer*

@@ -1317,12 +1317,23 @@ public:
 
 //-------------------
 
-// Predeclaration
-class Variable;
+class FunctionContainer; // Pre-declaration
 
 //class RefNullFunctionInContainerException {};
 class BadFunctionContainerOwnerException {};
 class SettingNullFunctionInContainerException {};
+
+// Base class for ownership over a FunctionContainer
+struct Owner {
+	virtual ~Owner() {}
+
+	operator Owner* () {
+		return (Owner*)this;
+	}
+
+	virtual bool owns( FunctionContainer*  container ) const = 0;
+};
+
 /*
 	The idea:
 
@@ -1339,7 +1350,7 @@ by variables and passed around the system.
 */
 class FunctionContainer : public Object {
 	RefPtr<Function> funcBox;
-	Variable* owner;
+	Owner* owner;
 	UInteger ID;
 
 public:
@@ -1352,18 +1363,18 @@ public:
 //private:
 	~FunctionContainer();
 //public:
-	void own(Variable* pGrabber);
+	void own( Owner* pGrabber );
 
-	void disown(Variable* pDropper);
+	void disown( Owner* pDropper );
 
 	bool isOwned() const;
 
-	bool isOwner( const Variable* pVariable ) const;
+	bool isOwner( const Owner* pVariable ) const;
 
-	void changeOwnerTo(Variable* pNewOwner);
+	void changeOwnerTo( Owner* pNewOwner );
 
 	// Should store in a better storage variable, not some open pointer
-	bool getFunction(Function*& storage);
+	bool getFunction( Function*& storage );
 
 	// Used for assignment, which only requires copying
 	void setFrom( FunctionContainer& pOther );
@@ -1421,7 +1432,7 @@ class NullVariableException {};
 
 	As a language rule, all variables MUST point to a function container.
 */
-class Variable : public Ref {
+class Variable : public Ref, public Owner {
 	FunctionContainer* box;
 
 public:
@@ -1452,6 +1463,8 @@ public:
 	bool isPointer() const;
 
 	FunctionContainer* getRawContainer();
+
+	virtual bool owns( FunctionContainer*  container ) const;
 
 	Variable* getCopy();
 

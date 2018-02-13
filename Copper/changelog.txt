@@ -5,6 +5,7 @@ v 5-0.3
 - Removed getTask() from Opcode and changed Engine to generate the tasks itself.
 - Removed Opcode::getCopy() and its implementations.
 - MAJOR CHANGE: Changed entire Opcode system to use only Opcode, removing old Opcode implementations.
+- Abstracted ownership system for FunctionContainers so that lists can own them.
 
 
 ====================
