@@ -4297,7 +4297,7 @@ Engine::operate(
 			}
 		} else {
 			//print(LogLevel::error, "Missing condition for goto operation.");
-			print(LogLevel::warning, EngineMessage::ConditionlessIf);
+			print(LogLevel::error, EngineMessage::ConditionlessIf);
 			return ExecutionResult::Error;
 		}
 		break;
