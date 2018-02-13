@@ -28,6 +28,225 @@ static const char CONSTANT_ESCAPE_CHARACTER_TOKEN = '\\';
 
 // *********** OPERATION PROCESSING BASE COMPONENTS **********
 
+OpcodeContainer::OpcodeContainer( Opcode* pCode )
+	: code(pCode)
+{
+	// Unfortunately, making opcodes independent would make the creation of loops messier.
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf(
+		"[DEBUG: OpcodeContainer cstor(code): code = %p, type = %u, pCode= %p\n",
+		(void*)code, (unsigned)(code->getType()), (void*)pCode);
+#endif
+	code->ref();
+}
+
+OpcodeContainer::OpcodeContainer( const OpcodeContainer& pOther ) // Used only for transmission in lists
+	: code( pOther.code )
+{
+#ifdef COPPER_PARSER_LEVEL_MESSAGES
+	std::printf("[DEBUG: OpcodeContainer cstor copy: code = %p\n", (void*)code);
+#endif
+	code->ref();
+}
+
+OpcodeContainer::~OpcodeContainer() {
+	code->deref();
+}
+
+const Opcode*
+OpcodeContainer::getOp() {
+	return code;
+}
+
+/*
+static OpcodeContainer
+OpcodeContainer::indie( Opcode* pCode ) {
+	OpcodeContainer out(pCode);
+	pCode->deref();
+	return out;
+}
+*/
+
+//--------------
+
+Opcode::Opcode( Opcode::Type pType )
+	: type(pType)
+{
+	switch(type)
+	{
+	case FuncBuild_execBody:
+		data.body = new Body(); // REQUIRED! (addToken depends on this)
+		break;
+
+	case Goto:
+	case ConditionalGoto:
+		data.target = REAL_NULL; // REQUIRED! (copy constructer depends on this)
+		break;
+
+	// WARNING: It is assumed that the other values are initialized via setters
+	default:
+		break;
+	}
+}
+
+Opcode::Opcode( Opcode::Type pType, const String&  pStrValue )
+	: type(pType)
+{
+	switch(type)
+	{
+	case FuncFound_access:
+	case FuncFound_assignment:
+	case FuncFound_pointerAssignment:
+		address.push_back(pStrValue);
+		break;
+
+	case CreateString:
+		name = pStrValue;
+		break;
+
+	// WARNING: It is assumed that the other values are initialized via setters
+	default:
+		throw InvalidOpcodeInit();
+	}
+}
+
+Opcode::Opcode( Opcode::Type pType, const VarAddress&  pAddress )
+	: type(pType)
+	, address(pAddress)
+{
+	switch(type)
+	{
+	case FuncFound_access:
+	case FuncFound_assignment:
+	case FuncFound_pointerAssignment:
+		break;
+
+	default:
+		throw InvalidOpcodeInit();
+	}
+}
+
+Opcode::Opcode( const Opcode& pOther )
+	: type( pOther.type )
+{
+	switch(type)
+	{
+	case FuncFound_access:
+	case FuncFound_assignment:
+	case FuncFound_pointerAssignment:
+		address = pOther.address;
+		break;
+
+	case FuncBuild_execBody:
+		// Copy for bodies not allowed
+		throw CopyBodyOpcodeException();
+		break;
+
+	case Goto:
+	case ConditionalGoto:
+		data.target = REAL_NULL;
+		if ( data.target )
+			data.target = new OpStrandIter(*(pOther.data.target));
+		break;
+
+	case CreateString:
+		name = pOther.name;
+		break;
+
+	case CreateInteger:
+		data.integer = pOther.data.integer;
+		break;
+
+	case CreateDecimal:
+		data.decimal = pOther.data.decimal;
+		break;
+
+	default:
+		break;
+	}		
+}
+
+Opcode::~Opcode() {
+	if ( type == FuncBuild_execBody )
+		data.body->deref();
+}
+
+Opcode::Type
+Opcode::getType() const {
+	return type;
+}
+
+void
+Opcode::setType( Opcode::Type pType ) {
+	type = pType;
+}
+
+void
+Opcode::appendAddressData( const String&  pString ) {
+	address.push_back(pString);
+}
+
+const VarAddress*
+Opcode::getAddressData() const {
+	return &address;
+}
+
+// Used for function parameters and so forth
+String
+Opcode::getNameData() const {
+	return name;
+}
+
+void
+Opcode::setIntegerData( Integer value ) {
+	data.integer = value;
+}
+
+Integer
+Opcode::getIntegerData() const {
+	return data.integer;
+}
+
+void
+Opcode::setDecimalData( Decimal value ) {
+	data.decimal = value;
+}
+
+Decimal
+Opcode::getDecimalData() const {
+	return data.decimal;
+}
+
+void
+Opcode::addToken( const Token& pToken ) {
+	if ( type != FuncBuild_execBody )
+		throw InvalidBodyOpcodeAccess();
+
+	data.body->addToken(pToken);
+}
+
+Body*
+Opcode::getBody() const {
+	if ( type != FuncBuild_execBody )
+		throw InvalidBodyOpcodeAccess();
+
+	return data.body;
+}
+
+void
+Opcode::setTarget( const OpStrandIter pTarget ) {
+	data.target = new OpStrandIter(pTarget);
+}
+
+OpStrandIter&
+Opcode::getOpStrandIter() {
+	if ( isNull(data.target) )
+		throw NullGotoOpcodeException();
+	return *(data.target);
+}
+
+//--------------
+
 Body::Body()
 	: state(Raw)
 	, tokens()
@@ -1005,147 +1224,6 @@ addNewParseTask(
 	newTask->deref();
 }
 
-StringOpcode::StringOpcode(
-	Opcode::Type	pType,
-	const String&	pName
-)
-	: Opcode( pType )
-	, name( pName )
-{}
-
-StringOpcode::StringOpcode(
-	const StringOpcode& pOther
-)
-	: Opcode( pOther.type )
-	, name( pOther.name )
-{}
-
-String
-StringOpcode::getNameData() const {
-	return name;
-}
-
-Opcode*
-StringOpcode::getCopy() const {
-	return new StringOpcode(type, name);
-}
-
-IntegerOpcode::IntegerOpcode(
-	const Integer pValue
-)
-	: Opcode( Opcode::CreateInteger )
-	, value( pValue )
-{}
-
-IntegerOpcode::IntegerOpcode(
-	const IntegerOpcode& pOther
-)
-	: Opcode( Opcode::CreateInteger )
-	, value( pOther.value )
-{}
-
-Integer
-IntegerOpcode::getIntegerData() const {
-	return value;
-}
-
-Opcode*
-IntegerOpcode::getCopy() const {
-	return new IntegerOpcode(value);
-}
-
-DecimalOpcode::DecimalOpcode(
-	const Decimal pValue
-)
-	: Opcode( Opcode::CreateDecimal )
-	, value( pValue )
-{}
-
-DecimalOpcode::DecimalOpcode(
-	const DecimalOpcode& pOther
-)
-	: Opcode( Opcode::CreateDecimal )
-	, value( pOther.value )
-{}
-
-Decimal
-DecimalOpcode::getDecimalData() const {
-	return value;
-}
-
-Opcode*
-DecimalOpcode::getCopy() const {
-	return new DecimalOpcode(value);
-}
-
-
-BodyOpcode::BodyOpcode()
-	: Opcode( Opcode::FuncBuild_execBody )
-	, body()
-{
-	body.setWithoutRef(new Body());
-}
-
-void
-BodyOpcode::addToken(
-	const Token& pToken
-) {
-	body.raw()->addToken(pToken);
-}
-
-Body*
-BodyOpcode::getBody() const {
-	return body.raw();
-}
-
-Opcode*
-BodyOpcode::getCopy() const {
-	BodyOpcode* out = new BodyOpcode();
-	out->body.set(body.raw());
-	return out;
-}
-
-GotoOpcode::GotoOpcode(
-	const Opcode::Type		pType
-)
-	: Opcode(pType)
-	, target(REAL_NULL)
-{}
-
-GotoOpcode::GotoOpcode(
-	const GotoOpcode& pOther
-)
-	: Opcode(pOther.type)
-	, target(REAL_NULL)
-{
-	if ( pOther.target )
-		target = new OpStrandIter(*(pOther.target));
-}
-
-GotoOpcode::~GotoOpcode() {
-	if ( notNull(target) )
-		delete target;
-}
-
-void
-GotoOpcode::setTarget(
-	const OpStrandIter pTarget
-) {
-	target = new OpStrandIter(pTarget);
-}
-
-OpStrandIter&
-GotoOpcode::getOpStrandIter() {
-	if ( isNull(target) )
-		throw NullGotoOpcodeException();
-	return *target;
-}
-
-Opcode*
-GotoOpcode::getCopy() const {
-	return new GotoOpcode(*this);
-}
-
 FuncFoundTask::FuncFoundTask(
 	const VarAddress& pVarAddress
 )
@@ -1181,51 +1259,6 @@ FuncFoundTask::addArg(
 	}
 }
 
-AddressOpcode::AddressOpcode(
-	const Opcode::Type value
-)
-	: Opcode(value)
-	, varAddress()
-{}
-
-AddressOpcode::AddressOpcode(
-	const Opcode::Type		value,
-	const VarAddress&		pAddress
-)
-	: Opcode(value)
-	, varAddress(pAddress)
-{}
-
-const VarAddress*
-AddressOpcode::getAddressData() const {
-	return &varAddress;
-}
-
-Opcode*
-AddressOpcode::getCopy() const {
-	return new AddressOpcode(type, varAddress);
-}
-
-FuncFoundOpcode::FuncFoundOpcode(
-	const String& pStartName
-)
-	: AddressOpcode(Opcode::FuncFound_access)
-{
-	varAddress.push_back(pStartName);
-}
-
-FuncFoundOpcode::FuncFoundOpcode(
-	const FuncFoundOpcode& pOther
-)
-	: AddressOpcode(pOther.type)
-{
-	varAddress = pOther.varAddress;
-}
-
-Opcode*
-FuncFoundOpcode::getCopy() const {
-	return new FuncFoundOpcode(*this);
-}
 
 IfStructureParseTask::IfStructureParseTask(
 	OpStrand* strand
@@ -1248,7 +1281,7 @@ IfStructureParseTask::IfStructureParseTask(
 // Queues a conditional goto meant to be set to the next terminal when added
 void
 IfStructureParseTask::queueNewConditionalJump(
-	GotoOpcode* jump
+	Opcode* jump
 ) {
 #ifdef COPPER_PARSER_LEVEL_MESSAGES
 	std::printf("[DEBUG: IfStructureParseTask::queueNewConditionalJump\n");
@@ -1260,7 +1293,7 @@ IfStructureParseTask::queueNewConditionalJump(
 // Queues a new goto meant to be set to the last terminal when added
 void
 IfStructureParseTask::queueNewFinalJumpCode(
-	GotoOpcode* jump
+	Opcode* jump
 ) {
 #ifdef COPPER_PARSER_LEVEL_MESSAGES
 	std::printf("[DEBUG: IfStructureParseTask::queueNewFinalJumpCode\n");
@@ -1293,7 +1326,7 @@ IfStructureParseTask::finalizeGotos(
 #endif
 	context.addNewOperation( new Opcode(Opcode::Terminal) );
 	OpStrandIter lastIter = context.outputStrand->end();
-	List<GotoOpcode*>::Iter fg = finalGotos.start();
+	List<Opcode*>::Iter fg = finalGotos.start();
 	if ( fg.has() )
 	do {
 		(*fg)->setTarget( lastIter );
@@ -1319,7 +1352,7 @@ LoopStructureParseTask::LoopStructureParseTask(
 
 void
 LoopStructureParseTask::setGotoOpcodeToLoopStart(
-	GotoOpcode* code
+	Opcode* code
 ) {
 #ifdef COPPER_PARSER_LEVEL_MESSAGES
 	std::printf("[DEBUG: LoopStructureParseTask::setGotoOpcodeToLoopStart\n");
@@ -1329,7 +1362,7 @@ LoopStructureParseTask::setGotoOpcodeToLoopStart(
 
 void
 LoopStructureParseTask::queueFinalGoto(
-	GotoOpcode* code
+	Opcode* code
 ) {
 #ifdef COPPER_PARSER_LEVEL_MESSAGES
 	std::printf("[DEBUG: LoopStructureParseTask::queueFinalGoto\n");
@@ -1345,7 +1378,7 @@ LoopStructureParseTask::finalizeGotos(
 	std::printf("[DEBUG: LoopStructureParseTask::finalizeGotos\n");
 #endif
 	OpStrandIter lastIter = strand->end();
-	List<GotoOpcode*>::Iter fg = finalGotos.start();
+	List<Opcode*>::Iter fg = finalGotos.start();
 	if ( fg.has() )
 	do {
 		(*fg)->setTarget( lastIter );
@@ -2237,7 +2270,9 @@ Engine::interpretToken(
 	if ( ! context.moveToFirstUnusedToken() )
 		return ParseResult::Done;
 
-	Token currToken = context.peekAtToken();
+	Token  currToken = context.peekAtToken();
+
+	Opcode*  code = REAL_NULL;
 
 	switch( currToken.type ) {
 
@@ -2288,7 +2323,7 @@ Engine::interpretToken(
 			context.taskStack,
 			new FuncBuildParseTask( FuncBuildParseTask::State::FromExecBody )
 		);
-		context.addNewOperation( new FuncBuildOpcode() );
+		context.addNewOperation( new Opcode(Opcode::FuncBuild_start) );
 		return ParseResult::More;
 
 	case TT_execbody_close:
@@ -2302,7 +2337,7 @@ Engine::interpretToken(
 			context.taskStack,
 			new FuncBuildParseTask( FuncBuildParseTask::State::FromObjectBody )
 		);
-		context.addNewOperation( new FuncBuildOpcode() );
+		context.addNewOperation( new Opcode(Opcode::FuncBuild_start) );
 		return ParseResult::More;
 
 	case TT_objectbody_close:
@@ -2412,25 +2447,24 @@ Engine::interpretToken(
 	//---------------
 
 	case TT_string:
-		context.addNewOperation(
-			new StringOpcode(Opcode::CreateString, currToken.name)
-		);
+		code = new Opcode(Opcode::CreateString, currToken.name);
+		context.addNewOperation(code);
 		break;
 
 	//---------------
 
 	case TT_num_integer:
-		context.addNewOperation(
-			new IntegerOpcode(currToken.name.toInt())
-		);
+		code = new Opcode(Opcode::CreateInteger);
+		code->setIntegerData(currToken.name.toInt());
+		context.addNewOperation(code);
 		break;
 
 	//---------------
 
 	case TT_num_decimal:
-		context.addNewOperation(
-			new DecimalOpcode(currToken.name.toDouble())
-		);
+		code = new Opcode(Opcode::CreateDecimal);
+		code->setDecimalData(currToken.name.toDouble());
+		context.addNewOperation(code);
 		break;
 
 	//---------------
@@ -2508,14 +2542,14 @@ Engine::parseFuncBuildTask(
 
 	case FuncBuildParseTask::State::AwaitAssignment:
 		context.addNewOperation(
-			new StringOpcode( Opcode::FuncBuild_assignToVar, task->paramName )
+			new Opcode( Opcode::FuncBuild_assignToVar, task->paramName )
 		);
 		task->state = FuncBuildParseTask::State::CollectParams;
 		return ParseFunctionBuild_CollectParameters(task, context, srcDone);
 
 	case FuncBuildParseTask::State::AwaitPointerAssignment:
 		context.addNewOperation(
-			new StringOpcode( Opcode::FuncBuild_pointerAssignToVar, task->paramName )
+			new Opcode( Opcode::FuncBuild_pointerAssignToVar, task->paramName )
 		);
 		task->state = FuncBuildParseTask::State::CollectParams;
 		return ParseFunctionBuild_CollectParameters(task, context, srcDone);
@@ -2714,7 +2748,7 @@ Engine::ParseFunctionBuild_CollectParameters(
 		case TT_end_segment:
 			// Regular parameters
 			context.addNewOperation(
-				new StringOpcode( Opcode::FuncBuild_createRegularParam, task->paramName )
+				new Opcode( Opcode::FuncBuild_createRegularParam, task->paramName )
 			);
 			break;
 
@@ -2785,7 +2819,6 @@ Engine::ParseFunctionBuild_FromExecBody(
 
 	// For counting brackets:
 	UInteger openBrackets = 1;
-	//BodyOpcode* bodyOpcode = new BodyOpcode();
 
 	do {
 		// Start inside the execbody open token
@@ -2821,7 +2854,7 @@ Engine::ParseFunctionBuild_FromExecBody(
 	} while ( openBrackets > 0 );	
 
 	// Everything worked out
-	BodyOpcode* bodyOpcode = new BodyOpcode();
+	Opcode* bodyOpcode = new Opcode(Opcode::FuncBuild_execBody);
 	context.moveToFirstUnusedToken();
 #ifdef COPPER_STRICT_CHECKS
 	if ( context.peekAtToken().type != TT_execbody_open )
@@ -2887,7 +2920,7 @@ Engine::parseFuncFoundTask(
 		// We know the name is the current token because we immediately come here after interpretToken()
 		if ( ! context.moveToNextToken() ) {
 			if ( srcDone ) {
-				task->code->varAddress.push_back( context.peekAtToken().name );
+				task->code->appendAddressData( context.peekAtToken().name );
 				context.addOperation( task->code );
 				return ParseTask::Result::task_done;
 			} else {
@@ -2900,7 +2933,7 @@ Engine::parseFuncFoundTask(
 			// Get the next name and restart
 			if ( context.moveToNextToken() ) {
 				if ( context.peekAtToken().type == TT_name ) {
-					task->code->varAddress.push_back(context.peekAtToken().name);
+					task->code->appendAddressData( context.peekAtToken().name );
 					// Next token should be member-link, assignment, pointer-assignment, or parambody-open
 					if ( context.moveToNextToken() ) {
 						continue;
@@ -3431,7 +3464,7 @@ Engine::ParseIfStructure_CreateCondition(
 	// State: Both conditional and execution bodies have been verified as complete.
 	// The first parambody_open token has been skipped.
 	// The first unused token has been moved to.
-	GotoOpcode* code;
+	Opcode* code;
 
 	// Keep an eye out for parameter body openers and closers, tracking them in the task
 	switch( context.peekAtToken().type ) {
@@ -3442,7 +3475,7 @@ Engine::ParseIfStructure_CreateCondition(
 	case TT_parambody_close:
 		task->openBodies--;
 		if ( task->openBodies == 0 ) {
-			code = new GotoOpcode(Opcode::ConditionalGoto);
+			code = new Opcode(Opcode::ConditionalGoto);
 			context.addNewOperation( code );
 			// Since the code's jump has not been set yet, add it to the queue for setting
 			task->queueNewConditionalJump(code); // Jumps to the next section of the if-structure
@@ -3478,7 +3511,7 @@ Engine::ParseIfStructure_CreateBody(
 	print(LogLevel::debug, "[DEBUG: Engine::ParseIfStructure_CreateBody");
 #endif
 	// State: One execution token has been grabbed and the existence of its match/pair has been verified
-	GotoOpcode* code;
+	Opcode* code;
 
 	switch( context.peekAtToken().type ) {
 	case TT_execbody_open:
@@ -3490,7 +3523,7 @@ Engine::ParseIfStructure_CreateBody(
 		if ( task->openBodies == 0 ) {
 			context.commitTokenUsage(); // Use this body-closing token
 			// Create an opcode at the end of the body for jumping to the end of the if-structure
-			code = new GotoOpcode(Opcode::Goto);
+			code = new Opcode(Opcode::Goto);
 			context.addNewOperation( code );
 			task->queueNewFinalJumpCode(code);
 
@@ -3669,7 +3702,7 @@ Engine::ParseLoop_AwaitFinish(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::ParseLoop_AwaitFinish");
 #endif
-	GotoOpcode* code = REAL_NULL;
+	Opcode* code = REAL_NULL;
 
 	ParseTask::Result::Value r = moveToFirstUnusedToken(context, false);
 	if ( r != ParseTask::Result::task_done )
@@ -3686,7 +3719,7 @@ Engine::ParseLoop_AwaitFinish(
 			// Take this last body token
 			context.commitTokenUsage();
 			// Add the re-loop goto
-			code = new GotoOpcode(Opcode::Goto);
+			code = new Opcode(Opcode::Goto);
 			task->setGotoOpcodeToLoopStart(code);
 			context.addNewOperation(code);
 
@@ -3722,13 +3755,13 @@ Engine::ParseLoop_AddEndLoop(
 
 	context.commitTokenUsage(); // Use this token
 	// Must search for the top-most loop task in the parser task stack
-	GotoOpcode* code = REAL_NULL;
+	Opcode* code = REAL_NULL;
 	ParseTaskIter taskIter = context.taskStack.end();
 	ParseTask* task;
 	do {
 		task = taskIter->getTask();
 		if ( task->type == ParseTask::Loop ) {
-			code = new GotoOpcode(Opcode::Goto);
+			code = new Opcode(Opcode::Goto);
 			((LoopStructureParseTask*)task)->queueFinalGoto(code);
 			context.addNewOperation(code);
 			// Unfortunately, adding the code as a new operation would delink it from the
@@ -3755,13 +3788,13 @@ Engine::ParseLoop_AddLoopSkip(
 #endif
 	context.commitTokenUsage(); // Use this token
 	// Must search for the top-most loop task in the parser task stack
-	GotoOpcode* code;
+	Opcode* code;
 	ParseTaskIter taskIter = context.taskStack.end();
 	ParseTask* task;
 	do {
 		task = taskIter->getTask();
 		if ( task->type == ParseTask::Loop ) {
-			code = new GotoOpcode(Opcode::Goto);
+			code = new Opcode(Opcode::Goto);
 			((LoopStructureParseTask*)task)->setGotoOpcodeToLoopStart(code);
 			context.addNewOperation(code);
 			return ParseResult::Done;
@@ -3842,11 +3875,11 @@ Engine::parseSRPS(
 
 	// It'd be faster if I saved directly to the opcode instead
 	//VarAddress varAddress;
-	AddressOpcode* addressCode = new AddressOpcode( task->codeType );
+	Opcode* addressCode = new Opcode( task->codeType );
 
 	bool loop = true;
 	while ( context.peekAtToken().type == TT_name && loop ) {
-		addressCode->varAddress.push_back( context.peekAtToken().name );
+		addressCode->appendAddressData( context.peekAtToken().name );
 		context.moveToNextToken();
 		switch( context.peekAtToken().type ) {
 		case TT_parambody_close:
@@ -4233,7 +4266,8 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode Goto");
 #endif
-		opIter.set( ((GotoOpcode*)opcode)->getOpStrandIter() );
+		// Here we cheat and cast to volatile because we don't have a const iterator for the list
+		opIter.set( ((Opcode*)opcode)->getOpStrandIter() );
 		break;
 
 	case Opcode::ConditionalGoto:
@@ -4246,13 +4280,15 @@ Engine::operate(
 			if ( isObjectBool(*obj) ) {
 				// Use the inverse of the value because if-statements request jumps when condition is false
 				if ( ((ObjectBool*)obj)->getValue() == false ) {
-					opIter.set( ((GotoOpcode*)opcode)->getOpStrandIter() );
+					// Here we cheat and cast to volatile because we don't have a const iterator for the list
+					opIter.set( ((Opcode*)opcode)->getOpStrandIter() );
 				}
 			} else {
 				//print(LogLevel::warning, "Condition for goto operation is not boolean. Default is false.");
 				print(LogLevel::warning, EngineMessage::ConditionlessIf);
 				// Perform false operation
-				opIter.set( ((GotoOpcode*)opcode)->getOpStrandIter() );
+				// Here we cheat and cast to volatile because we don't have a const iterator for the list
+				opIter.set( ((Opcode*)opcode)->getOpStrandIter() );
 			}
 		} else {
 			//print(LogLevel::error, "Missing condition for goto operation.");

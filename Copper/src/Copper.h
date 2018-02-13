@@ -1040,9 +1040,44 @@ typedef List<String> 			VarAddress;
 typedef List<String>::Iter 		VarAddressIter;
 typedef List<String>::ConstIter VarAddressConstIter;
 
+class InvalidOpcodeInit {};
 class BadVarAddressException {};
+class CopyBodyOpcodeException {};
+class InvalidBodyOpcodeAccess {};
+class NullGotoOpcodeException {};
 
 class Body; // pre-declaration
+
+class Opcode; // pre-declaration
+
+//----------
+// Moved from AFTER Opcode
+
+class OpcodeContainer {
+	// DO NOT SHARE
+	Opcode* code;
+
+public:
+	explicit OpcodeContainer( Opcode* pCode );
+
+	OpcodeContainer( const OpcodeContainer& pOther ); // Used only for transmission in lists
+
+	~OpcodeContainer();
+
+	const Opcode*
+	getOp();
+
+	//static OpcodeContainer
+	//indie( Opcode* pCode );
+};
+
+//typedef List<OpcodeContainer> OpStrand;
+//typedef List<OpcodeContainer>::Iter OpStrandIter;
+
+struct OpStrand : public List<OpcodeContainer>, public Ref {};
+typedef OpStrand::Iter	OpStrandIter;
+
+//----------
 
 struct Opcode : public Ref {
 	enum Type {
@@ -1079,87 +1114,72 @@ struct Opcode : public Ref {
 protected:
 	Type type;
 
-/*	TODO: Enable
+	// Non-trivial destructors
+	String name;
+	VarAddress address;
 	union {
-		String			str;
 		Integer			integer;
 		Decimal			decimal;
-		RefPtr<Body>	body; // or BodyWrap, just holding a pointer and having maybe getter and setter
-		CodeIndex		codeIndex; // or GotoWrap
-		Address			address;
+		Body*			body;
+		//CodeIndex		codeIndex; // or GotoWrap
+		OpStrandIter*	target;
 	} data;
-*/
+
+	/*
+	Memory allocation appearance:
+	unsigned | pointer | pointer | pointer | unsigned | [int/f64/pointer/pointer]
+	*/
 
 public:
 
-	Opcode(Opcode::Type pType)
-		: type(pType)
-	{}
+	Opcode( Opcode::Type pType );
 
-	Opcode(const Opcode& pOther)
-		: type( pOther.type )
-	{}
+	Opcode( Opcode::Type pType, const String&  pStrValue );
 
-	~Opcode() {
-		/* TODO: Enable
-		switch(type) {
-		case FuncFound_access:
-		case FuncFound_assignment:
-		case FuncFound_pointerAssignment:
-			data.address.~Address();
-			break;
-		case FuncBuild_execBody:
-			data.body.~RefPtr<Body>();
-			break;
-		case Goto:
-		case ConditionalGoto:
-			data.codeIndex.~CodeIndex();
-			break;
-		case CreateString:
-			data.str.~String();
-			break;
-		default:
-			break;
-		}
-		*/
-	}
+	Opcode( Opcode::Type pType, const VarAddress&  pAddress );
 
-	virtual Opcode* getCopy() const {
-		return new Opcode(type);
-	}
+	Opcode( const Opcode& pOther );
 
-	Type getType() const {
-		return type;
-	}
+	~Opcode();
 
-	void setType( Opcode::Type pType ) {
-		type = pType;
-	}
+	Type
+	getType() const;
 
-	// Data produced by this operation
-	virtual Object* getData() const {
-		return REAL_NULL;
-	}
+	void setType( Opcode::Type pType );
 
-	virtual const VarAddress* getAddressData() const {
-		return REAL_NULL;
-	}
+	void
+	appendAddressData( const String&  pString );
 
-	virtual String getNameData() const {
-		return String();
-	}
+	const VarAddress*
+	getAddressData() const;
 
-	virtual Integer getIntegerData() const {
-		return Integer();
-	}
+	// Used for function parameters and so forth
+	String
+	getNameData() const;
 
-	virtual Decimal getDecimalData() const {
-		return Decimal();
-	}
+	void
+	setIntegerData( Integer value );
 
-	virtual Body* getBody() const {
-		return REAL_NULL;
-	}
+	Integer
+	getIntegerData() const;
+
+	void
+	setDecimalData( Decimal value );
+
+	Decimal
+	getDecimalData() const;
+
+	void
+	addToken( const Token& pToken );
+
+	Body*
+	getBody() const;
+
+	void
+	setTarget( const OpStrandIter pTarget );
+
+	OpStrandIter&
+	getOpStrandIter();
 };
 
 class BadOpcodeException {
@@ -1174,54 +1194,6 @@ public:
 		return v;
 	}
 };
-
-class OpcodeContainer {
-	// DO NOT SHARE
-	Opcode* code;
-public:
-	explicit OpcodeContainer( Opcode* pCode )
-		: code(pCode)
-		//: code( pCode->getCopy() ) // Make independent - WON'T WORK
-	{
-		// Unfortunately, making opcodes independent would make the creation of loops messier.
-#ifdef COPPER_PARSER_LEVEL_MESSAGES
-		std::printf("[DEBUG: OpcodeContainer cstor(code): code = %p, type = %u, pCode= %p\n", (void*)code, (unsigned)(code->getType()), (void*)pCode);
-#endif
-		code->ref();
-	}
-
-	OpcodeContainer( const OpcodeContainer& pOther ) // Used only for transmission in lists
-		//: code( pOther.code->getCopy() ) // Make independent
-		: code( pOther.code )
-	{
-#ifdef COPPER_PARSER_LEVEL_MESSAGES
-		std::printf("[DEBUG: OpcodeContainer cstor copy: code = %p\n", (void*)code);
-#endif
-		code->ref();
-	}
-
-	~OpcodeContainer() {
-		code->deref();
-	}
-
-	const Opcode*
-	getOp() {
-		return code;
-	}
-
-	static OpcodeContainer
-	indie( Opcode* pCode ) {
-		OpcodeContainer out(pCode);
-		pCode->deref();
-		return out;
-	}
-};
-
-//typedef List<OpcodeContainer> OpStrand;
-//typedef List<OpcodeContainer>::Iter OpStrandIter;
-
-struct OpStrand : public List<OpcodeContainer>, public Ref {};
-typedef OpStrand::Iter	OpStrandIter;
 
 class OpStrandContainer {
 	OpStrand* s;
@@ -2178,16 +2150,6 @@ struct FuncBuildTask : public Task {
 	}
 };
 
-struct FuncBuildOpcode : public Opcode {
-	FuncBuildOpcode()
-		: Opcode( Opcode::FuncBuild_start )
-	{}
-
-	virtual Opcode* getCopy() const {
-		return new FuncBuildOpcode();
-	}
-};
-
 // struct FuncBuildParseTask
 // The first op-code has already been created.
 // This is used to create related op-codes.
@@ -2211,58 +2173,6 @@ struct FuncBuildParseTask : public ParseTask {
 	{}
 };
 
-// Used for function parameters and so forth
-struct StringOpcode : public Opcode {
-	String name;
-
-	StringOpcode( Opcode::Type pType, const String& pName );
-	StringOpcode( const StringOpcode& pOther );
-	virtual String getNameData() const;
-	virtual Opcode* getCopy() const;
-};
-
-struct IntegerOpcode : public Opcode {
-	Integer  value;
-
-	IntegerOpcode( const Integer pValue );
-	IntegerOpcode( const IntegerOpcode& pOther );
-	virtual Integer getIntegerData() const;
-	virtual Opcode* getCopy() const;
-};
-
-struct DecimalOpcode : public Opcode {
-	Decimal  value;
-
-	DecimalOpcode( const Decimal pValue );
-	DecimalOpcode( const DecimalOpcode& pOther );
-	virtual Decimal getDecimalData() const;
-	virtual Opcode* getCopy() const;
-};
-
-struct BodyOpcode : public Opcode {
-	RefPtr<Body> body;
-
-	BodyOpcode();
-	void addToken(const Token& pToken);
-	virtual Body* getBody() const;
-	virtual Opcode* getCopy() const;
-};
-
-class NullGotoOpcodeException {};
-
-class GotoOpcode : public Opcode {
-	OpStrandIter* target;
-
-public:
-	GotoOpcode(const Opcode::Type pType);
-	GotoOpcode(const GotoOpcode& pOther);
-	~GotoOpcode();
-	void setTarget( const OpStrandIter pTarget );
-	OpStrandIter& getOpStrandIter();
-	virtual Opcode* getCopy() const;
-};
-
-
 typedef List<Object*>			ArgsList;
 typedef List<Object*>::Iter		ArgsIter;
 
@@ -2276,22 +2186,6 @@ struct FuncFoundTask : public Task {
 	void addArg( Object* a );
 };
 
-struct AddressOpcode : public Opcode {
-	VarAddress varAddress;
-
-	AddressOpcode( const Opcode::Type value );
-	AddressOpcode( const Opcode::Type value, const VarAddress& pAddress );
-	virtual const VarAddress* getAddressData() const;
-	virtual Opcode* getCopy() const;
-};
-
-struct FuncFoundOpcode : public AddressOpcode {
-
-	FuncFoundOpcode( const String& pStartName );
-	FuncFoundOpcode( const FuncFoundOpcode& other );
-	virtual Opcode* getCopy() const;
-};
-
 struct FuncFoundParseTask : public ParseTask {
 	enum State {
 		Start,
@@ -2303,14 +2197,14 @@ struct FuncFoundParseTask : public ParseTask {
 		CollectParams,
 	} state;
 
-	FuncFoundOpcode* code;
+	Opcode* code;
 	bool waitingOnAssignment;
 	UInteger openBodies;
 
 	FuncFoundParseTask( const String& pName )
 		: ParseTask(ParseTask::FuncFound)
 		, state(Start)
-		, code(new FuncFoundOpcode(pName))
+		, code(new Opcode(Opcode::FuncFound_access, pName))
 		, waitingOnAssignment(false)
 		, openBodies(1)
 	{}
@@ -2325,8 +2219,8 @@ class NullIfStructureConditionException {};
 struct IfStructureParseTask : public ParseTask {
 	OpStrandIter firstIter;
 	UInteger openBodies; // used for both parameter and execution body token counting
-	GotoOpcode* conditionalGoto;
-	List<GotoOpcode*> finalGotos;
+	Opcode* conditionalGoto;
+	List<Opcode*> finalGotos;
 	bool atElse;
 
 	enum State {
@@ -2339,10 +2233,10 @@ struct IfStructureParseTask : public ParseTask {
 	IfStructureParseTask( OpStrand* strand );
 
 	// Queues a conditional goto meant to be set to the next terminal when added
-	void queueNewConditionalJump( GotoOpcode* jump );
+	void queueNewConditionalJump( Opcode* jump );
 
 	// Queues a new goto meant to be set to the last terminal when added
-	void queueNewFinalJumpCode( GotoOpcode* jump );
+	void queueNewFinalJumpCode( Opcode* jump );
 
 	void finalizeConditionalGoto( ParserContext& context );
 
@@ -2351,7 +2245,7 @@ struct IfStructureParseTask : public ParseTask {
 
 struct LoopStructureParseTask : public ParseTask {
 	OpStrandIter firstIter;
-	List<GotoOpcode*> finalGotos;
+	List<Opcode*> finalGotos;
 	UInteger openBodies;
 
 	enum State {
@@ -2362,9 +2256,9 @@ struct LoopStructureParseTask : public ParseTask {
 
 	LoopStructureParseTask( OpStrand* strand );
 
-	void setGotoOpcodeToLoopStart( GotoOpcode* code );
+	void setGotoOpcodeToLoopStart( Opcode* code );
 
-	void queueFinalGoto( GotoOpcode* code );
+	void queueFinalGoto( Opcode* code );
 
 	void finalizeGotos( OpStrand* strand );
 };
