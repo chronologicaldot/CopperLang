@@ -1751,7 +1751,7 @@ struct AppendObjectInterface {
 
 class ObjectList : public Object, public AppendObjectInterface {
 
-	struct Node, public Owner {
+	struct Node : public Owner {
 		Object*  item;
 		Node* prior;
 		Node* post;
@@ -1765,18 +1765,26 @@ class ObjectList : public Object, public AppendObjectInterface {
 				((FunctionContainer*)item)->own(this);
 		}
 
-		void destroy() {
+		virtual bool
+		owns( FunctionContainer*  container ) const {
+			return (Object*)container == item;
+		}
+
+		void
+		destroy() {
 			item->deref();
 			delete this;
 		}
 
-		void swapItem( Node* pOther ) {
+		void
+		swapItem( Node& pOther ) {
 			Object*  temp = pOther.item;
 			pOther.item = item;
 			item = temp;
 		}
 
-		void replace( Object*  pItem ) {
+		void
+		replace( Object*  pItem ) {
 			if ( item )
 				item->deref();
 			item = pItem;
@@ -1790,22 +1798,26 @@ class ObjectList : public Object, public AppendObjectInterface {
 
 		NodePtr()
 			: node (REAL_NULL)
+		{}
 
-		void moveToPost() {
+		void
+		moveToPost() {
 			if ( node )
 				node = node->post;
 			else
 				node = REAL_NULL;
 		}
 
-		void moveToPrior() {
+		void
+		moveToPrior() {
 			if ( node )
 				node = node->prior;
 			else
 				node = REAL_NULL;
 		}
 
-		bool moveOff( Node* n ) {
+		bool
+		moveOff( Node* n ) {
 			if ( !node || node != n )
 				return false;
 			if ( node->post )
@@ -1813,21 +1825,24 @@ class ObjectList : public Object, public AppendObjectInterface {
 			node = node->prior; // Move even if null
 		}
 
-		void append( Object*  pItem ) {
+		void
+		append( Object*  pItem ) {
 			// Should throw if no node. Should also check if node->post exists.
 			// Limit usage to contexts where node exists and node->post does not.
 			node->post = new Node(pItem);
 			node = node->post;
 		}
 
-		void prepend( Object*  pItem ) {
+		void
+		prepend( Object*  pItem ) {
 			// Should throw if no node. Should also check if node->prior exists.
 			// Limit usage to contexts where node exists and node->prior does not.
 			node->prior = new Node(pItem);
 			node = node->prior;
 		}
 
-		void insert( Object*  pItem ) {
+		void
+		insert( Object*  pItem ) {
 			// Does NOT check for null nodes.
 			// Limit usage to contexts where node and node->post exist.
 			Node* n = new Node(pItem);
@@ -3039,11 +3054,34 @@ protected:
 // NOTE: Must be after the definition of Engine.
 // WARNING: The typename MUST be of a type inheriting ForeignFunc.
 template<typename ForeignFuncClass>
-void addForeignFuncInstance( Engine& engine, const String& name ) {
+void addForeignFuncInstance( Engine& pEngine, const String& pName ) {
 	ForeignFunc* f = new ForeignFuncClass();
-	engine.addForeignFunction(name, f);
+	pEngine.addForeignFunction(pName, f);
 	f->deref();
 }
+
+// Class for wrapping variadic functions
+class FuncWrapper : public ForeignFunc {
+
+	bool (*func)( FFIServices& );
+
+public:
+	FuncWrapper( bool (*f)( FFIServices& ) )
+		: func(f)
+	{}
+
+	virtual bool
+	call( FFIServices& ffi ) {
+		return func(ffi);
+	}
+
+	virtual bool
+	isVariadic() {
+		return true;
+	}
+};
+
+void addForeignFuncInstance( Engine& pEngine, const String& pName, bool (*pFunction)( FFIServices& ) );
 
 }
 

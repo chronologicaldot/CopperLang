@@ -791,10 +791,10 @@ ObjectList::remove( Integer  index ) {
 	if ( ! gotoIndex(index) )
 		return;
 
-	Node* n = selecter.node;
-	head.moveOff(node);
-	tail.moveOff(node);
-	if ( selector.moveOff(node) ) {
+	Node* n = selector.node;
+	head.moveOff(n);
+	tail.moveOff(n);
+	if ( selector.moveOff(n) ) {
 		if ( selector.node == n->post )
 			++selectorIndex;
 		else
@@ -826,7 +826,7 @@ ObjectList::swap( Integer  index1, Integer  index2 ) {
 	gotoIndex(index1);
 	Node* n = selector.node;
 	gotoIndex(index2);
-	selector.node->swapItem(n);
+	selector.node->swapItem(*n);
 }
 
 void
@@ -5623,6 +5623,12 @@ Engine::process_sys_assert(
 	} while ( paramsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(true));
 	return FuncExecReturn::Ran;
+}
+
+void addForeignFuncInstance( Engine& pEngine, const String& pName, bool (*pFunction)( FFIServices& ) ) {
+	ForeignFunc* ff = new FuncWrapper(pFunction);
+	pEngine.addForeignFunction(pName, ff);
+	ff->deref();
 }
 
 
