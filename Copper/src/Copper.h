@@ -24,7 +24,7 @@
 //#define COPPER_STRICT_CHECKS
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-#include <cstdio>
+//#include <cstdio>
 
 //#define COPPER_SPEED_PROFILE
 
