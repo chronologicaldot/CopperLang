@@ -642,7 +642,7 @@ Divide::call(
 							: std::numeric_limits<Decimal>::min());
 					break;
 				}
-				startValue.d_val /= ffi.getNextArg()->getDecimalValue();
+				startValue.d_val /= nextValue;
 			}
 			obj = new ObjectDecimal( startValue.d_val );
 			ffi.setResult(obj);
