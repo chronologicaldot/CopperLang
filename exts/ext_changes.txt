@@ -8,6 +8,18 @@ basicmath.cpp
 - Implemented classes Add, Subtract, Multiply, Divide, Modulus, Power, Pick_min, Pick_max, and Get_abs.
 - Fixed Get_abs and Avg.
 - Added Decrement.
+- Slightly optimized Avg.
+
+ManagedList.h
+- Changed List to inherit public Owner.
+
+ManagedList.cpp
+- Changed methods to check for FunctionContainers being assigned to them and calling their own with the iterator list as parameter. Changed functions:
+-- Iter::insert_above
+-- Iter::insert_below
+-- Iter::replace
+-- List::push_top
+-- List::push_bottom
 
 
 ===========

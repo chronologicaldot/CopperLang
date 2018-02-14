@@ -216,6 +216,8 @@ void Iter::set_result_to_elem(
 bool Iter::insert_above(Object* pData) {
 	if ( isNull(node) || isNull(pData) )
 		return false;
+	if ( isObjectFunction(pData) )
+		((FunctionContainer*)pData)->own(list);
 	Node* nn = new Node(pData);
 	nn->below = node;
 	if ( notNull( node->above ) ) {
@@ -233,6 +235,8 @@ bool Iter::insert_above(Object* pData) {
 bool Iter::insert_below(Object* pData) {
 	if ( isNull(node) || isNull(pData) )
 		return false;
+	if ( isObjectFunction(pData) )
+		((FunctionContainer*)pData)->own(list);
 	Node* nn = new Node(pData);
 	nn->above = node;
 	if ( notNull( node->below ) ) {
@@ -271,6 +275,8 @@ bool Iter::extract() {
 bool Iter::replace(Object* pData) {
 	if ( isNull(node) )
 		return false;
+	if ( isObjectFunction(pData) )
+		((FunctionContainer*)pData)->own(list);
 	node->setElem(pData);
 	return true;
 }
@@ -314,6 +320,8 @@ void List::push_top(Object* pData) {
 		while( notNull( top->above ) ) {
 			top = top->above;
 		}
+		if ( isObjectFunction(pData) )
+			((FunctionContainer*)pData)->own(list);
 		top->above = new Node(pData);
 		top->above->below = top;
 		top = top->above;
@@ -332,6 +340,8 @@ void List::push_bottom(Object* pData) {
 		while( notNull( bottom->below ) ) {
 			bottom = bottom->below;
 		}
+		if ( isObjectFunction(pData) )
+			((FunctionContainer*)pData)->own(list);
 		bottom->below = new Node(pData);
 		bottom->below->above = bottom;
 		bottom = bottom->below;

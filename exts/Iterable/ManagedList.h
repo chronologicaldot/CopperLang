@@ -78,7 +78,7 @@ public:
 	}
 };
 
-class List : public Object {
+class List : public Object, public Owner {
 protected:
 	friend Iter;
 	Node* bottom;

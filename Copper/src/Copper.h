@@ -1747,7 +1747,6 @@ struct AppendObjectInterface {
 	virtual void append(Object* pObject)=0;
 };
 
-
 //*********** FOREIGN FUNCTION HANDLING *********
 
 // Identifier Class for Object Types

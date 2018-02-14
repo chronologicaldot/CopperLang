@@ -799,10 +799,10 @@ Avg::call(
 		switch( obj->getType() )
 		{
 		case ObjectType::Integer:
-			valueCount++;
+			++valueCount;
 			avgValue.i_val = obj->getIntegerValue();
 			while ( ffi.hasMoreArgs() ) {
-				valueCount++;
+				++valueCount;
 				nextValue.i_val = ffi.getNextArg()->getIntegerValue();
 				avgValue.i_val += nextValue.i_val;
 			}
@@ -812,10 +812,10 @@ Avg::call(
 			return true;
 
 		case ObjectType::Decimal:
-			valueCount++;
+			++valueCount;
 			avgValue.d_val = obj->getDecimalValue();
 			while ( ffi.hasMoreArgs() ) {
-				valueCount++;
+				++valueCount;
 				nextValue.d_val = ffi.getNextArg()->getDecimalValue();
 				avgValue.d_val += nextValue.d_val;
 			}
