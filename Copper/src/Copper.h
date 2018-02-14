@@ -18,10 +18,18 @@
 // Shows the type of each opcode that is executed
 //#define COPPER_OPCODE_DEBUGGING
 
+//----- Strict Checks
+
 // To force the interpreter to perform checks where the state machine should fulfill assumptions.
 // These checks should not be necessary for safety of the final VM, but they aid in debugging.
+
 // IF YOU MODIFY THE PARSER, YOU SHOULD ENABLE THIS FLAG!
 //#define COPPER_STRICT_CHECKS
+
+// Checks the "box" of instances of Variable.
+//define COPPER_VAR_STRICT_CHECKS
+
+//-----
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
 //#include <cstdio>

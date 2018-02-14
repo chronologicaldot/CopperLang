@@ -537,9 +537,10 @@ Variable::reset() {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Variable::reset [%p]\n", (void*)this);
 #endif
+#ifdef COPPER_VAR_STRICT_CHECKS
 	if ( isNull(box) )
 		throw NullVariableException();
-
+#endif
 	box->disown(this);
 	box->deref();
 	box = new FunctionContainer();
@@ -565,8 +566,10 @@ Variable::setFunc( FunctionContainer* pContainer, bool pReuseStorage ) {
 	if ( isNull(pContainer) ) {
 		throw BadParameterException<Variable>();
 	}
+#ifdef COPPER_VAR_STRICT_CHECKS
 	if ( isNull(box) )
 		throw NullVariableException();
+#endif
 
 	FunctionContainer* fc = REAL_NULL;
 
@@ -595,8 +598,10 @@ Variable::setFuncReturn( Object* pData ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Variable::setFuncReturn [%p]\n", (void*)this);
 #endif
+#ifdef COPPER_VAR_STRICT_CHECKS
 	if ( isNull(box) )
 		throw NullVariableException();
+#endif
 
 	Function* f = REAL_NULL;
 	if ( box->getFunction(f) ) {
@@ -620,8 +625,10 @@ Variable::getFunction(Logger* logger) {
 #endif
 	Function* f = REAL_NULL;
 
+#ifdef COPPER_VAR_STRICT_CHECKS
 	if ( isNull(box) )
 		throw NullVariableException();
+#endif
 
 	if ( box->getFunction(f) ) {
 		return f;
@@ -647,8 +654,10 @@ Variable::isPointer() const {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Variable::isPointer [%p]\n", (void*)this);
 #endif
+#ifdef COPPER_VAR_STRICT_CHECKS
 	if ( isNull(box) )
 		throw NullVariableException();
+#endif
 	return ! box->isOwner(this);
 }
 
@@ -662,8 +671,10 @@ Variable::getRawContainer() {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Variable::getRawContainer [%p]\n", (void*)this);
 #endif
+#ifdef COPPER_VAR_STRICT_CHECKS
 	if ( isNull(box) )
 		throw NullVariableException();
+#endif
 	return box;
 }
 

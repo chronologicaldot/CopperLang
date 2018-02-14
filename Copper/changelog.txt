@@ -6,6 +6,7 @@ v 5-0.3
 - Removed Opcode::getCopy() and its implementations.
 - MAJOR CHANGE: Changed entire Opcode system to use only Opcode, removing old Opcode implementations.
 - Abstracted ownership system for FunctionContainers so that lists can own them.
+- Added preprocessor define COPPER_VAR_STRICT_CHECKS for checking/hiding checks on Variable "box" integrity.
 
 
 ====================
