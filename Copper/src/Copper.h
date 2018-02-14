@@ -24,7 +24,7 @@
 // These checks should not be necessary for safety of the final VM, but they aid in debugging.
 
 // IF YOU MODIFY THE PARSER, YOU SHOULD ENABLE THIS FLAG!
-//#define COPPER_STRICT_CHECKS
+#define COPPER_STRICT_CHECKS
 
 // Checks the "box" of instances of Variable.
 //define COPPER_VAR_STRICT_CHECKS
@@ -1044,19 +1044,195 @@ public:
 typedef List<Token>			TokenQueue;
 typedef List<Token>::Iter	TokenQueueIter;
 
-typedef List<String> 			VarAddress;
-typedef List<String>::Iter 		VarAddressIter;
-typedef List<String>::ConstIter VarAddressConstIter;
+//typedef List<String> 			VarAddress;
+//typedef List<String>::Iter 		VarAddressIter;
+//typedef List<String>::ConstIter VarAddressConstIter;
+
+// Exceptions
+
+class VarAddressException {
+
+public:
+	enum Value {
+		is_empty,
+		index_out_of_bounds,
+		bad_iterator
+	};
+
+private:
+	Value  v;
+
+public:
+	VarAddressException( Value  pValue )
+		: v(pValue)
+	{}
+
+	Value
+	getErrorValue() {
+		return v;
+	}
+};
 
 class InvalidOpcodeInit {};
-class BadVarAddressException {};
 class CopyBodyOpcodeException {};
 class InvalidBodyOpcodeAccess {};
 class NullGotoOpcodeException {};
 
+//---------- Predeclarations for OpcodeContainer and Opcode
+
 class Body; // pre-declaration
 
 class Opcode; // pre-declaration
+
+//-----------
+
+//! Address of a Variable
+/*
+	Addresses are constant after being built and are only iterated over from start-to-finish,
+	so there is no need for a doubly-linked list.
+*/
+class VarAddress {
+
+	struct Node {
+		const String data;
+		Node* post;
+
+		Node( const String&  pData )
+			: data(pData)
+			, post(REAL_NULL)
+		{}
+	};
+
+	Node*  head;
+	Node*  tail;
+
+public:
+	// For access only
+	class Iterator {
+		friend VarAddress;
+		Node* start;
+		Node* curr;
+
+	protected:
+		Iterator( Node* pStart )
+			: start( pStart )
+			, curr( pStart )
+		{}
+
+	public:
+		Iterator( const Iterator&  pOther )
+			: start( pOther.start )
+			, curr( pOther.start )
+		{}
+
+		bool
+		atEnd() const {
+			return curr == REAL_NULL;
+		}
+
+		bool
+		atLast() const {
+			if ( curr != REAL_NULL )
+				return curr->post == REAL_NULL;
+			return false;
+		}
+
+		bool
+		next() {
+#ifdef COPPER_STRICT_CHECKS
+			if ( !curr )
+				throw VarAddressException( VarAddressException::index_out_of_bounds );
+#endif
+			curr = curr->post;
+			return curr != REAL_NULL;
+		}
+
+		const String&
+		get() const {
+#ifdef COPPER_STRICT_CHECKS
+			if ( !curr )
+				throw VarAddressException( VarAddressException::bad_iterator );
+#endif
+			return curr->data;
+		}
+
+		void
+		reset() {
+			curr = start;
+		}
+	};
+
+
+	VarAddress()
+		: head(REAL_NULL)
+		, tail(REAL_NULL)
+	{}
+
+	VarAddress( const VarAddress&  pOther )
+		: head(REAL_NULL)
+		, tail(REAL_NULL)
+	{
+		if ( pOther.head == REAL_NULL )
+			return;
+
+		Node* n = pOther.head;
+		Node* m = REAL_NULL;
+		head = new Node( n->data );
+		tail = head;
+		while ( n->post ) {
+			n = n->post;
+			m = new Node( n->data );
+			tail->post = m;
+			tail = m;
+		}
+	}
+
+	~VarAddress() {
+		Node* n;
+		while ( head ) {
+			n = head;
+			head = head->post;
+			delete n;
+		}
+	}
+
+	bool
+	has() const {
+		return head != REAL_NULL;
+	}
+
+	bool
+	hasOne() const {
+		if ( head != REAL_NULL )
+			return head->post == REAL_NULL;
+		return false;
+	}
+
+	void
+	push_back( const String&  part ) {
+		if ( !tail ) {
+			tail = new Node( part );
+			head = tail;
+		} else {
+			tail->post = new Node( part );
+			tail = tail->post;
+		}
+	}
+
+	const String&
+	first() const {
+#ifdef COPPER_STRIC_CHECKS
+		if ( !head )
+			throw VarAddressException( VarAddressException::is_empty );
+#endif
+		return head->data;
+	}
+
+	Iterator
+	iterator() const {
+		return Iterator(head);
+	}
+};
 
 //----------
 // Moved from AFTER Opcode
@@ -1530,6 +1706,12 @@ public:
 	virtual void writeToString(String& out) const {
 		out = value?"true":"false";
 	}
+
+#ifdef COPPER_USE_DEBUG_NAMES
+	virtual const char* getDebugName() const {
+		return "ObjectBool";
+	}
+#endif
 };
 
 
@@ -1595,6 +1777,12 @@ public:
 	writeToString(String& out) const {
 		out = value;
 	}
+
+#ifdef COPPER_USE_DEBUG_NAMES
+	virtual const char* getDebugName() const {
+		return "ObjectString";
+	}
+#endif
 };
 
 
@@ -1664,6 +1852,12 @@ public:
 	writeToString(String& out) const {
 		out = "{integer}";
 	}
+
+#ifdef COPPER_USE_DEBUG_NAMES
+	virtual const char* getDebugName() const {
+		return "ObjectInteger";
+	}
+#endif
 };
 
 /*
@@ -1732,6 +1926,12 @@ public:
 	writeToString(String& out) const {
 		out = "{decimal}";
 	}
+
+#ifdef COPPER_USE_DEBUG_NAMES
+	virtual const char* getDebugName() const {
+		return "ObjectDecimal";
+	}
+#endif
 };
 
 
@@ -1916,6 +2116,12 @@ public:
 	writeToString(String& out) const {
 		out = "{list}";
 	}
+
+#ifdef COPPER_USE_DEBUG_NAMES
+	virtual const char* getDebugName() const {
+		return "ObjectList";
+	}
+#endif
 };
 
 //*********** FOREIGN FUNCTION HANDLING *********
@@ -1952,6 +2158,12 @@ public:
 	getType() {
 		return type;
 	}
+
+#ifdef COPPER_USE_DEBUG_NAMES
+	virtual const char* getDebugName() const {
+		return "ObjectTypeIdentifier";
+	}
+#endif
 };
 
 

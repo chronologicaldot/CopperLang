@@ -5,6 +5,7 @@ v 5-0.31
 - Added ObjectList and fixed it.
 - Fixed calls to _are_integer and _are_decimal in Engine::setupBuiltinFunctionExecution().
 - Added FuncWrapper and void addForeignFuncInstance( Engine&, const String&, bool (*f)( FFIServices& ) )
+- Changed VarAddress to be a singly-linked list.
 
 
 ====================

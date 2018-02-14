@@ -1637,15 +1637,15 @@ addressToString(
 	std::printf("[DEBUG: Engine::addressToString\n");
 #endif
 	// This is EXTREMELY SLOW
-	VarAddressConstIter addrIter = address.constStart();
 	CharList builder;
-	if ( addrIter.has() )
-	do {
-		builder.append( *addrIter );
-		if ( addrIter.atEnd() == false ) {
+	VarAddress::Iterator i = address.iterator();
+	while( ! i.atEnd() ) {
+		builder.append( i.get() );
+		if ( ! i.atLast() ) { // If not at the last part
 			builder.push_back('.');
 		}
-	} while ( addrIter.next() );
+		i.next();
+	}
 	return String(builder);
 }
 
@@ -4535,7 +4535,7 @@ Engine::setupFunctionExecution(
 	FuncExecReturn::Value result;
 
 	if ( ! task.varAddress.has() )
-		throw BadVarAddressException();
+		throw VarAddressException( VarAddressException::is_empty );
 
 	result = setupBuiltinFunctionExecution(task);
 	if ( result != FuncExecReturn::NoMatch ) {
@@ -4568,7 +4568,7 @@ Engine::setupBuiltinFunctionExecution(
 	//	= builtinFunctions.getBucketData(*addrIter);
 
 	RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
-		= builtinFunctions.getBucketData(task.varAddress.getConstFirst());
+		= builtinFunctions.getBucketData(task.varAddress.first());
 
 	// No matching function found
 	if ( ! bucketData )
@@ -4576,7 +4576,7 @@ Engine::setupBuiltinFunctionExecution(
 	// Else, bucketData found...
 
 	// Built-in function names should only have one name
-	if ( task.varAddress.size() > 1 ) {
+	if ( task.varAddress.hasOne() ) {
 		//print(LogLevel::error, "Attempt to call member of built-in function.");
 		print(LogLevel::error, EngineMessage::SystemFuncInvalidAccess);
 		return FuncExecReturn::ErrorOnRun;
@@ -4691,7 +4691,7 @@ Engine::setupForeignFunctionExecution(
 #endif
 
 	RobinHoodHash<ForeignFuncContainer>::BucketData* bucketData
-		= foreignFunctions.getBucketData(task.varAddress.getConstFirst());
+		= foreignFunctions.getBucketData(task.varAddress.first());
 
 	if ( ! bucketData ) {
 		return FuncExecReturn::NoMatch;
@@ -4790,6 +4790,7 @@ Engine::setupUserFunctionExecution(
 	Variable* super = REAL_NULL;
 	Scope* scope = &getCurrentTopScope();
 	Function* func = REAL_NULL;
+	// TODO: Change to index
 	VarAddressConstIter addrIter = task.varAddress.constStart();
 	do {
 		super = callVariable;
@@ -4809,44 +4810,43 @@ Engine::setupUserFunctionExecution(
 	Scope* scope = &getCurrentTopScope();
 	Function* func = REAL_NULL;
 	bool foundVar = false;
-	VarAddressConstIter addrIter = task.varAddress.constStart();
-	addrIter.reset(); // Restart
+	VarAddress::Iterator ai = task.varAddress.iterator();
 	do {
 		super = callVariable;
-		if ( scope->findVariable(*addrIter, callVariable) ) {
+		if ( scope->findVariable(ai.get(), callVariable) ) {
 			func = callVariable->getFunction(logger);
 			scope = &(func->getPersistentScope());
 			foundVar = true;
 		} else {
 			break;
 		}
-	} while ( addrIter.next() );
+	} while ( ai.next() );
 
 	if ( !foundVar ) {
-		addrIter.reset(); // Restart
+		ai.reset();
 		scope = &getGlobalScope();
 		do {
 			super = callVariable;
-			if ( scope->findVariable(*addrIter, callVariable) ) {
+			if ( scope->findVariable(ai.get(), callVariable) ) {
 				func = callVariable->getFunction(logger);
 				scope = &(func->getPersistentScope());
 				foundVar = true;
 			} else {
 				break;
 			}
-		} while ( addrIter.next() );
+		} while ( ai.next() );
 	}
 
 	if ( !foundVar ) {
-		addrIter.reset(); // Restart
+		ai.reset();
 		scope = &getCurrentTopScope();
 		do {
 			super = callVariable;
 			// Create the variable if it doesn't exist
-			scope->getVariable(*addrIter, callVariable);
+			scope->getVariable(ai.get(), callVariable);
 			func = callVariable->getFunction(logger);
 			scope = &(func->getPersistentScope());
-		} while ( addrIter.next() );
+		} while ( ai.next() );
 	}
 
 //----------
@@ -4969,25 +4969,21 @@ Engine::resolveVariableAddress(
 	// Then, if it's not in either, create it in the local scope.
 
 	if ( ! address.has() )
-		throw BadVarAddressException();
+		throw VarAddressException( VarAddressException::is_empty );
 
 	// Should return REAL_NULL if the address belongs to a non-variable, such as a
 	// built-in function or foreign function.
 
-	VarAddressConstIter ai = address.constStart();
-
 	RobinHoodHash<SystemFunction::Value>::BucketData* sfBucket
-		= builtinFunctions.getBucketData(*ai);
+		= builtinFunctions.getBucketData( address.first() );
 	if ( sfBucket != 0 ) { // Error, but handling is determined by the method that calls this one
 		//print(LogLevel::warning, "Attempt to use standard access on a built-in function.");
 		print(LogLevel::warning, EngineMessage::SystemFuncInvalidAccess);
 		return REAL_NULL;
 	}
 
-	// The varAddress is guaranteed to be of length > 0 because of parsing
-	String addr = addressToString(address);
 	RobinHoodHash<ForeignFuncContainer>::BucketData* ffBucket
-		= foreignFunctions.getBucketData(addr);
+		= foreignFunctions.getBucketData( addressToString(address) );
 	if ( ffBucket != 0 ) { // Error, but handling is determined by the method that calls this one
 		//print(LogLevel::warning, "Attempt to use standard access on a foreign function.");
 		print(LogLevel::warning, EngineMessage::ForeignFuncInvalidAccess);
@@ -4997,9 +4993,9 @@ Engine::resolveVariableAddress(
 	Scope* scope = &getCurrentTopScope();
 	Variable* var;
 	Function* func;
-	ai.reset(); // Restart
+	VarAddress::Iterator ai = address.iterator();
 	do {
-		if ( scope->findVariable(*ai, var) ) {
+		if ( scope->findVariable(ai.get(), var) ) {
 			func = var->getFunction(logger);
 			scope = &(func->getPersistentScope());
 		} else {
@@ -5009,11 +5005,10 @@ Engine::resolveVariableAddress(
 	return var;
 
 resolve_addr_search_globals:
-	ai.reset(); // Restart
 	scope = &getGlobalScope();
-
+	ai.reset();
 	do {
-		if ( scope->findVariable(*ai, var) ) {
+		if ( scope->findVariable(ai.get(), var) ) {
 			func = var->getFunction(logger);
 			scope = &(func->getPersistentScope());
 		} else {
@@ -5023,11 +5018,10 @@ resolve_addr_search_globals:
 	return var;
 
 resolve_addr_search_locals:
-	ai.reset();
 	scope = &getCurrentTopScope();
-
+	ai.reset();
 	do {
-		scope->getVariable(*ai, var);
+		scope->getVariable(ai.get(), var);
 		func = var->getFunction(logger);
 		scope = &(func->getPersistentScope());
 	} while ( ai.next() );
