@@ -89,7 +89,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.23
+#define COPPER_INTERPRETER_VERSION 0.31
 #define COPPER_INTERPRETER_BRANCH 5
 
 // ******* Language version *******
@@ -1745,6 +1745,162 @@ struct AppendObjectInterface {
 	// Append objects
 	// Implementers of this function are expected to call ref() on each object passed in.
 	virtual void append(Object* pObject)=0;
+};
+
+//------------------
+
+class ObjectList : public Object, public AppendObjectInterface {
+
+	struct Node, public Owner {
+		Object*  item;
+		Node* prior;
+		Node* post;
+
+		Node( Object* pItem )
+			: item(pItem)
+			, prior( REAL_NULL )
+			, post( REAL_NULL )
+		{
+			if ( item->getType() == ObjectType::Function )
+				((FunctionContainer*)item)->own(this);
+		}
+
+		void destroy() {
+			item->deref();
+			delete this;
+		}
+
+		void swapItem( Node* pOther ) {
+			Object*  temp = pOther.item;
+			pOther.item = item;
+			item = temp;
+		}
+
+		void replace( Object*  pItem ) {
+			if ( item )
+				item->deref();
+			item = pItem;
+			if ( item )
+				item->ref();
+		}
+	};
+
+	struct NodePtr {
+		Node*  node;
+
+		NodePtr()
+			: node (REAL_NULL)
+
+		void moveToPost() {
+			if ( node )
+				node = node->post;
+			else
+				node = REAL_NULL;
+		}
+
+		void moveToPrior() {
+			if ( node )
+				node = node->prior;
+			else
+				node = REAL_NULL;
+		}
+
+		bool moveOff( Node* n ) {
+			if ( !node || node != n )
+				return false;
+			if ( node->post )
+				node = node->post;
+			node = node->prior; // Move even if null
+		}
+
+		void append( Object*  pItem ) {
+			// Should throw if no node. Should also check if node->post exists.
+			// Limit usage to contexts where node exists and node->post does not.
+			node->post = new Node(pItem);
+			node = node->post;
+		}
+
+		void prepend( Object*  pItem ) {
+			// Should throw if no node. Should also check if node->prior exists.
+			// Limit usage to contexts where node exists and node->prior does not.
+			node->prior = new Node(pItem);
+			node = node->prior;
+		}
+
+		void insert( Object*  pItem ) {
+			// Does NOT check for null nodes.
+			// Limit usage to contexts where node and node->post exist.
+			Node* n = new Node(pItem);
+			n->post = node->post;
+			n->prior = node;
+			node->post->prior = n;
+			node->post = n;
+		}
+	};
+
+	Integer  nodeCount;
+	Integer  selectorIndex;
+	NodePtr  selector;
+	NodePtr  head;
+	NodePtr  tail;
+
+public:
+
+	ObjectList();
+
+	ObjectList( const ObjectList&  pOther );
+
+	Integer
+	size();
+
+protected:
+	bool
+	gotoIndex( Integer  index );
+
+public:
+	void
+	clear();
+
+	virtual void
+	append( Object*  pItem );
+
+	void
+	prepend( Object* pItem );
+
+	void
+	remove( Integer  index );
+
+	void
+	insert( Object*  pItem, Integer  index );
+
+	void
+	swap( Integer  index1, Integer  index2 );
+
+	void
+	replace( Integer  index, Object*  pNewItem );
+
+	Object*
+	getItem( Integer  index );
+
+	static const char*
+	StaticTypeName() {
+		return "list";
+	}
+
+	virtual const char*
+	typeName() const {
+		return StaticTypeName();
+	}
+
+	static ObjectType::Value
+	StaticType() {
+		return ObjectType::List;
+	}
+
+	virtual void
+	writeToString(String& out) const {
+		out = "{list}";
+	}
 };
 
 //*********** FOREIGN FUNCTION HANDLING *********

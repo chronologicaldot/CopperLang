@@ -698,6 +698,149 @@ Variable::getCopy() {
 
 //--------------------------------------
 
+ObjectList::ObjectList()
+	: nodeCount(0)
+	, selectorIndex(0)
+	, selector()
+	, head()
+	, tail()
+{}
+
+ObjectList::ObjectList( const ObjectList&  pOther )
+	: nodeCount(0)
+	, selectorIndex(0)
+	, selector()
+	, head()
+	, tail()
+{}
+
+Integer
+ObjectList::size() {
+	return nodeCount;
+}
+
+bool
+ObjectList::gotoIndex( Integer  index ) {
+	if ( index >= nodeCount )
+		return false;
+
+	if ( selectorIndex - index > index ) {
+		selectorIndex = 0;
+		selector.node = head.node;
+	}
+	else if ( nodeCount - 1 - index > index - selectorIndex ) {
+		selectorIndex = nodeCount - 1;
+		selector.node = tail.node;
+	}
+	while ( selectorIndex > index ) {
+		selector.node = selector.node->prior;
+		--selectorIndex;
+	}
+	while ( selectorIndex < index ) {
+		selector.node = selector.node->post;
+		++selectorIndex;
+	}
+	return true;
+}
+
+void
+ObjectList::clear() {
+	if ( nodeCount == 0 )
+		return;
+
+	Node* n;
+
+	head.node = REAL_NULL;
+	selector.node = REAL_NULL;
+	while ( tail.node ){
+		n = tail.node;
+		tail.moveToPrior();
+		n->destroy();
+	}
+	selectorIndex = 0;
+	nodeCount = 0;
+}
+
+void
+ObjectList::append( Object*  pItem ) {
+	if ( nodeCount == 0 ) {
+		head.node = new Node(pItem);
+		tail.node = head.node;
+		selector.node = head.node;
+	} else {
+		tail.append(pItem);
+	}
+	++nodeCount;
+}
+
+void
+ObjectList::prepend( Object* pItem ) {
+	if ( nodeCount == 0 ) {
+		head.node = new Node(pItem);
+		tail.node = head.node;
+		selector.node = head.node;
+	} else {
+		head.prepend(pItem);
+		++selectorIndex;
+	}
+	++nodeCount;
+}
+
+void
+ObjectList::remove( Integer  index ) {
+	if ( ! gotoIndex(index) )
+		return;
+
+	Node* n = selecter.node;
+	head.moveOff(node);
+	tail.moveOff(node);
+	if ( selector.moveOff(node) ) {
+		if ( selector.node == n->post )
+			++selectorIndex;
+		else
+			--selectorIndex;
+	}
+	n->destroy();
+	--nodeCount;
+}
+
+void
+ObjectList::insert( Object*  pItem, Integer  index ) {
+	if ( index >= nodeCount ) {
+		tail.append(pItem);
+		return;
+	}
+	if ( index <= 0 ) {
+		head.prepend(pItem);
+		return;
+	}
+	gotoIndex(index);
+	selector.insert(pItem);
+}
+
+void
+ObjectList::swap( Integer  index1, Integer  index2 ) {
+	if ( index1 > nodeCount || index1 < 0 || index2 > nodeCount || index2 < 0 )
+		return;
+
+	gotoIndex(index1);
+	Node* n = selector.node;
+	gotoIndex(index2);
+	selector.node->swapItem(n);
+}
+
+void
+ObjectList::replace( Integer  index, Object*  pNewItem ) {
+	if ( index > nodeCount || index < 0 )
+		return;
+
+	gotoIndex(index);
+	selector.node->replace(pNewItem);
+}
+
+
+//--------------------------------------
+
 RefVariableStorage::RefVariableStorage()
 	: variable( new Variable() )
 {
@@ -3151,7 +3294,7 @@ Engine::ParseFuncFound_VerifyParams(
 				print( LogLevel::error, EngineMessage::ExceededParamBodyCountLimit );
 				return ParseTask::Result::syntax_error;
 			}
-			openBodies++;
+			++openBodies;
 			break;
 		case TT_parambody_close:
 			openBodies--;
