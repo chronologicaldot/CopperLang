@@ -3,6 +3,7 @@
 v 5-0.31
 
 - Added ObjectList.
+- Fixed calls to _are_integer and _are_decimal in Engine::setupBuiltinFunctionExecution().
 
 
 ====================

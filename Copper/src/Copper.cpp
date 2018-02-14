@@ -4666,11 +4666,11 @@ Engine::setupBuiltinFunctionExecution(
 		break;
 
 	case SystemFunction::_are_integer:
-		process_sys_are_number(task);
+		process_sys_are_integer(task);
 		break;
 
 	case SystemFunction::_are_decimal:
-		process_sys_are_number(task);
+		process_sys_are_decimal(task);
 		break;
 
 	case SystemFunction::_assert:
