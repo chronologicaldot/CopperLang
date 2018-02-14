@@ -138,5 +138,9 @@ struct Incr : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
+struct Decr : public VariadicFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
 }}
 #endif

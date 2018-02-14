@@ -7,6 +7,7 @@ basicmath.h
 basicmath.cpp
 - Implemented classes Add, Subtract, Multiply, Divide, Modulus, Power, Pick_min, Pick_max, and Get_abs.
 - Fixed Get_abs and Avg.
+- Added Decrement.
 
 
 ===========

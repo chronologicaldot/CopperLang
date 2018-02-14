@@ -47,6 +47,7 @@ addFunctionsToEngine(
 
 	// Integer only
 	addForeignFuncInstance<Incr>					(engine, "++");
+	addForeignFuncInstance<Decr>					(engine, "--");
 
 /*
 	// Decimal only (Integers are casted)
@@ -875,6 +876,24 @@ Incr::call(
 			((ObjectInteger*)arg)->setValue(arg->getIntegerValue() + 1);
 		} else {
 			ffi.printWarning("Increment argument was not of type Integer. Ignoring.");
+		}
+	}
+	return true;
+}
+
+bool
+Decr::call(
+	FFIServices& ffi
+) {
+	Object*  arg;
+
+	while ( ffi.hasMoreArgs() ) {
+		arg = ffi.getNextArg();
+		if ( isObjectInteger(*arg) ) {
+			// Should check bounds
+			((ObjectInteger*)arg)->setValue(arg->getIntegerValue() - 1);
+		} else {
+			ffi.printWarning("Decrement argument was not of type Integer. Ignoring.");
 		}
 	}
 	return true;
