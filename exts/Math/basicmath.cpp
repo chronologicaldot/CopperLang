@@ -34,18 +34,17 @@ addFunctionsToEngine(
 	addForeignFuncInstance<Subtract>				(engine, "-");
 	addForeignFuncInstance<Multiply>				(engine, "*");
 	addForeignFuncInstance<Divide>					(engine, "/");
-/*
 	addForeignFuncInstance<Avg>						(engine, "avg");
 	addForeignFuncInstance<Get_abs>					(engine, "abs");
-	//addForeignFuncInstance<Pick_min>				(engine, "min");
-	//addForeignFuncInstance<Pick_max>				(engine, "max");
+	addForeignFuncInstance<Pick_min>				(engine, "min");
+	addForeignFuncInstance<Pick_max>				(engine, "max");
 
 	// Integer-return only
 	addForeignFuncInstance<Modulus>					(engine, "%");
 
 	// Decimal return only
 	addForeignFuncInstance<Power>					(engine, "pow");
-*/
+
 	// Integer only
 	addForeignFuncInstance<Incr>					(engine, "++");
 
@@ -802,6 +801,7 @@ Avg::call(
 			valueCount++;
 			avgValue.i_val = obj->getIntegerValue();
 			while ( ffi.hasMoreArgs() ) {
+				valueCount++;
 				nextValue.i_val = ffi.getNextArg()->getIntegerValue();
 				avgValue.i_val += nextValue.i_val;
 			}
@@ -814,6 +814,7 @@ Avg::call(
 			valueCount++;
 			avgValue.d_val = obj->getDecimalValue();
 			while ( ffi.hasMoreArgs() ) {
+				valueCount++;
 				nextValue.d_val = ffi.getNextArg()->getDecimalValue();
 				avgValue.d_val += nextValue.d_val;
 			}
@@ -845,15 +846,15 @@ Get_abs::call(
 	switch( obj->getType() )
 	{
 	case ObjectType::Decimal:
-		value.i_val = obj->getDecimalValue();
-		obj = new ObjectDecimal(value.i_val);
+		value.d_val = obj->getDecimalValue();
+		obj = new ObjectDecimal(value.d_val >= 0? value.d_val : -value.d_val);
 		ffi.setResult(obj);
 		obj->deref();
 		break;
 
 	default:
 		value.i_val = obj->getIntegerValue();
-		obj = new ObjectInteger(value.i_val);
+		obj = new ObjectInteger(value.i_val >= 0? value.i_val : -value.i_val);
 		ffi.setResult(obj);
 		obj->deref();
 		break;

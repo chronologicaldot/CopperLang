@@ -130,7 +130,7 @@ struct Avg : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Get_abs : public ForeignFunc {
+struct Get_abs : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
