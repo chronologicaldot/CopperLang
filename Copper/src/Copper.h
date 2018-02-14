@@ -24,7 +24,7 @@
 //#define COPPER_STRICT_CHECKS
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-//#include <cstdio>
+#include <cstdio>
 
 //#define COPPER_SPEED_PROFILE
 
@@ -1111,8 +1111,19 @@ struct Opcode : public Ref {
 		CreateDecimal
 	};
 
+	enum DataType {
+		ODT_Unset=0,
+		ODT_Name,
+		ODT_Address,
+		ODT_Integer,
+		ODT_Decimal,
+		ODT_Body,
+		ODT_CodeIndex,
+	};
+
 protected:
 	Type type;
+	DataType dtype;
 
 	// Non-trivial destructors
 	String name;
@@ -1134,7 +1145,7 @@ public:
 
 	Opcode( Opcode::Type pType );
 
-	Opcode( Opcode::Type pType, const String&  pStrValue );
+	Opcode( Opcode::Type pType, const String&  pStrValue, bool  onAddress );
 
 	Opcode( Opcode::Type pType, const VarAddress&  pAddress );
 
@@ -2217,7 +2228,7 @@ struct FuncFoundParseTask : public ParseTask {
 	FuncFoundParseTask( const String& pName )
 		: ParseTask(ParseTask::FuncFound)
 		, state(Start)
-		, code(new Opcode(Opcode::FuncFound_access, pName))
+		, code(new Opcode(Opcode::FuncFound_access, pName, true))
 		, waitingOnAssignment(false)
 		, openBodies(1)
 	{}

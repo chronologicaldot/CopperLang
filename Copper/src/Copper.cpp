@@ -71,15 +71,20 @@ OpcodeContainer::indie( Opcode* pCode ) {
 
 Opcode::Opcode( Opcode::Type pType )
 	: type(pType)
+	, dtype(ODT_Unset)
+	, name()
+	, address()
 {
 	switch(type)
 	{
 	case FuncBuild_execBody:
+		dtype = ODT_Body;
 		data.body = new Body(); // REQUIRED! (addToken depends on this)
 		break;
 
 	case Goto:
 	case ConditionalGoto:
+		dtype = ODT_CodeIndex;
 		data.target = REAL_NULL; // REQUIRED! (copy constructer depends on this)
 		break;
 
@@ -89,81 +94,65 @@ Opcode::Opcode( Opcode::Type pType )
 	}
 }
 
-Opcode::Opcode( Opcode::Type pType, const String&  pStrValue )
+Opcode::Opcode( Opcode::Type pType, const String&  pStrValue, bool  onAddress )
 	: type(pType)
+	, dtype(ODT_Unset)
+	, name()
+	, address()
 {
-	switch(type)
-	{
-	case FuncFound_access:
-	case FuncFound_assignment:
-	case FuncFound_pointerAssignment:
+	if ( onAddress ) {
+		dtype = ODT_Address;
 		address.push_back(pStrValue);
-		break;
-
-	case CreateString:
+	} else {
+		dtype = ODT_Name;
 		name = pStrValue;
-		break;
-
-	// WARNING: It is assumed that the other values are initialized via setters
-	default:
-		throw InvalidOpcodeInit();
 	}
 }
 
 Opcode::Opcode( Opcode::Type pType, const VarAddress&  pAddress )
 	: type(pType)
+	, dtype(ODT_Address)
+	, name()
 	, address(pAddress)
-{
-	switch(type)
-	{
-	case FuncFound_access:
-	case FuncFound_assignment:
-	case FuncFound_pointerAssignment:
-		break;
-
-	default:
-		throw InvalidOpcodeInit();
-	}
-}
+{}
 
 Opcode::Opcode( const Opcode& pOther )
 	: type( pOther.type )
+	, dtype(pOther.dtype)
+	, name()
+	, address()
 {
-	switch(type)
+	switch( pOther.dtype )
 	{
-	case FuncFound_access:
-	case FuncFound_assignment:
-	case FuncFound_pointerAssignment:
+	case ODT_Name:
+		name = pOther.name;
+		break;
+
+	case ODT_Address:
 		address = pOther.address;
 		break;
 
-	case FuncBuild_execBody:
-		// Copy for bodies not allowed
-		throw CopyBodyOpcodeException();
+	case ODT_Integer:
+		data.integer = pOther.data.integer;
 		break;
 
-	case Goto:
-	case ConditionalGoto:
+	case ODT_Decimal:
+		data.decimal = pOther.data.decimal;
+		break;
+
+	case ODT_Body:
+		// Copy for bodies not allowed
+		throw CopyBodyOpcodeException();
+
+	case ODT_CodeIndex:
 		data.target = REAL_NULL;
 		if ( data.target )
 			data.target = new OpStrandIter(*(pOther.data.target));
 		break;
 
-	case CreateString:
-		name = pOther.name;
-		break;
-
-	case CreateInteger:
-		data.integer = pOther.data.integer;
-		break;
-
-	case CreateDecimal:
-		data.decimal = pOther.data.decimal;
-		break;
-
 	default:
-		break;
-	}		
+		throw InvalidOpcodeInit();
+	}
 }
 
 Opcode::~Opcode() {
@@ -183,6 +172,7 @@ Opcode::setType( Opcode::Type pType ) {
 
 void
 Opcode::appendAddressData( const String&  pString ) {
+	dtype = ODT_Address;
 	address.push_back(pString);
 }
 
@@ -199,6 +189,7 @@ Opcode::getNameData() const {
 
 void
 Opcode::setIntegerData( Integer value ) {
+	dtype = ODT_Integer;
 	data.integer = value;
 }
 
@@ -209,6 +200,7 @@ Opcode::getIntegerData() const {
 
 void
 Opcode::setDecimalData( Decimal value ) {
+	dtype = ODT_Decimal;
 	data.decimal = value;
 }
 
@@ -219,7 +211,8 @@ Opcode::getDecimalData() const {
 
 void
 Opcode::addToken( const Token& pToken ) {
-	if ( type != FuncBuild_execBody )
+	//if ( type != FuncBuild_execBody )
+	if ( dtype != ODT_Body )
 		throw InvalidBodyOpcodeAccess();
 
 	data.body->addToken(pToken);
@@ -235,6 +228,7 @@ Opcode::getBody() const {
 
 void
 Opcode::setTarget( const OpStrandIter pTarget ) {
+	dtype = ODT_CodeIndex;
 	data.target = new OpStrandIter(pTarget);
 }
 
@@ -2452,7 +2446,7 @@ Engine::interpretToken(
 	//---------------
 
 	case TT_string:
-		code = new Opcode(Opcode::CreateString, currToken.name);
+		code = new Opcode(Opcode::CreateString, currToken.name, false);
 		context.addNewOperation(code);
 		break;
 
@@ -2547,14 +2541,14 @@ Engine::parseFuncBuildTask(
 
 	case FuncBuildParseTask::State::AwaitAssignment:
 		context.addNewOperation(
-			new Opcode( Opcode::FuncBuild_assignToVar, task->paramName )
+			new Opcode( Opcode::FuncBuild_assignToVar, task->paramName, false )
 		);
 		task->state = FuncBuildParseTask::State::CollectParams;
 		return ParseFunctionBuild_CollectParameters(task, context, srcDone);
 
 	case FuncBuildParseTask::State::AwaitPointerAssignment:
 		context.addNewOperation(
-			new Opcode( Opcode::FuncBuild_pointerAssignToVar, task->paramName )
+			new Opcode( Opcode::FuncBuild_pointerAssignToVar, task->paramName, false )
 		);
 		task->state = FuncBuildParseTask::State::CollectParams;
 		return ParseFunctionBuild_CollectParameters(task, context, srcDone);
@@ -2753,7 +2747,7 @@ Engine::ParseFunctionBuild_CollectParameters(
 		case TT_end_segment:
 			// Regular parameters
 			context.addNewOperation(
-				new Opcode( Opcode::FuncBuild_createRegularParam, task->paramName )
+				new Opcode( Opcode::FuncBuild_createRegularParam, task->paramName, false )
 			);
 			break;
 
