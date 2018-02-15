@@ -35,6 +35,64 @@ void handler(int sig) {
   exit(1);
 }
 
+class Cu_cb_receiver : public Cu::ForeignFunc, public Cu::Owner {
+	Cu::Engine&  engine;
+	Cu::FunctionContainer*  cb;
+
+public:
+	Cu_cb_receiver(Cu::Engine& e)
+		: engine(e)
+		, cb(REAL_NULL)
+	{}
+
+	~Cu_cb_receiver() {
+		cb->deref();
+	}
+
+	virtual bool
+	owns( Cu::FunctionContainer*  container ) const {
+		return cb == container;
+	}
+
+	virtual bool
+	call( Cu::FFIServices& ffi ) {
+		Cu::Object*  obj;
+		if ( ffi.hasMoreArgs() ) {
+			obj = ffi.getNextArg();
+			if ( Cu::isObjectFunction(*obj) ) {
+				cb = (Cu::FunctionContainer*)obj;
+				cb->ref();
+				cb->changeOwnerTo(this);
+				ffi.printInfo("Callback is set");
+			}
+		}
+		return true;
+	}
+/*
+	virtual bool
+	isVariadic() const {
+		return true;
+	}
+*/
+	virtual Cu::ObjectType::Value
+	getParameterType( Cu::UInteger index ) const {
+		return Cu::ObjectType::Function;
+	}
+
+	virtual Cu::UInteger
+	getParameterCount() const {
+		return 1;
+	}
+
+	Cu::EngineResult::Value
+	test() {
+		if ( cb ) {
+			return engine.runFunctionObject(cb);
+		}
+		return Cu::EngineResult::Ok;
+	}
+};
+
 int main() {
 	Cu::Engine engine;
 	CuStd::Printer printer;
@@ -43,23 +101,38 @@ int main() {
 	engine.addForeignFunction(util::String("print"), &printer);
 	//engine.setStackTracePrintingEnabled(true);
 
-	//Cu::Numeric::Int::addFunctionsToEngine(engine, false);
-	//Cu::Numeric::ULong::addFunctionsToEngine(engine, false);
-	//Cu::Numeric::Float::addFunctionsToEngine(engine, false);
-	//Cu::Numeric::Double::addFunctionsToEngine(engine, false);
 	//Cu::Numeric::Sizes::addFunctionsToEngine(engine);
 	//Cu::ManagedList::addFunctionsToEngine(engine, true);
 	//Cu::MSecTime::addFunctionsToEngine(engine, true);
 
 	Cu::Numeric::addFunctionsToEngine(engine);
 
+	Cu_cb_receiver  ccr(engine);
+	engine.addForeignFunction(util::String("set_callback"), &ccr);
+
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
 	std::printf("\n>> \t\tCOPPER LANGUAGE\n>>\t\tConsole Application\n>>\t\t(c) 2016-2018 Nicolaus Anderson\n\n");
 
+	Cu::EngineResult::Value  result;
+
 	int err = 0;
 	try {
-		while ( engine.run( streamLogger ) == Cu::EngineResult::Ok );
+		do {
+			result = engine.run( streamLogger ); 
+		} while ( result == Cu::EngineResult::Ok );
+		switch( result )
+		{
+		case Cu::EngineResult::Ok:
+			std::printf("\nEngine terminated but with ok status.");
+			break;
+		case Cu::EngineResult::Error:
+			std::printf("\nEngine terminated with error.");
+			break;
+		case Cu::EngineResult::Done:
+			std::printf("\nEngine finished.");
+			break;
+		}
 	}
 	catch( Cu::BadReferenceCountingException& brce ) {
 		if ( brce.object ) {
@@ -68,6 +141,15 @@ int main() {
 		} else {
 			std::printf("\nBad Reference Counting Exception. Object deleted.\n\n");
 			err = 1;
+		}
+	}
+	if ( err != 1 ) {
+		std::printf("\nTesting the callback...\n");
+		switch( ccr.test() )
+		{
+		case Cu::EngineResult::Error:
+			//err = 1;
+		default: break;
 		}
 	}
 	return err;

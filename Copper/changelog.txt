@@ -1,5 +1,5 @@
 ====================
-2018/2/14
+2018/2/14 - 2018/2/15
 v 5-0.31
 
 - Added ObjectList and fixed it.
@@ -11,6 +11,8 @@ v 5-0.31
 -- OpcodeContainer::getOp
 - Added Iter::peek to utility list.
 - Minor optimizations to RefPtr.
+- Re-added the callback system.
+- ForeignFunc::isVariadic is not const.
 
 
 ====================

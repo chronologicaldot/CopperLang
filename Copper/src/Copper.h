@@ -32,7 +32,7 @@
 //-----
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-//#include <cstdio>
+#include <cstdio>
 
 //#define COPPER_SPEED_PROFILE
 
@@ -1312,11 +1312,11 @@ protected:
 	String name;
 	VarAddress* address;
 	union {
-		Integer			integer;
-		Decimal			decimal;
 		Body*			body;
 		//CodeIndex		codeIndex; // or GotoWrap
 		OpStrandIter*	target;
+		Decimal			decimal;
+		Integer			integer;
 	} data;
 
 	/*
@@ -2199,7 +2199,7 @@ public:
 	virtual bool call( FFIServices& ffi )=0;
 
 	virtual bool
-	isVariadic() {
+	isVariadic() const {
 		return false;
 	}
 
@@ -2875,7 +2875,6 @@ class Engine {
 	bool ignoreBadForeignFunctionCalls;
 	bool ownershipChangingEnabled;
 	//bool stackTracePrintingEnabled; // TODO: Re-implement
-	//RefPtr<NumberObjectFactory> numberObjectFactoryPtr; // TODO: Re-implement
 	bool (* nameFilter)(const String& pName);
 
 public:
@@ -2889,8 +2888,8 @@ public:
 	void print( const LogLevel::Value& logLevel, const EngineMessage::Value& msg ) const;
 
 	// WARNING: endMainCallback is never referenced or dropped, so don't delete it before the Engine!
-	void setEndofProcessingCallback( EngineEndProcCallback* pCallback ) {
-		endMainCallback = pCallback;
+	void setEndofProcessingCallback( EngineEndProcCallback* callback ) {
+		endMainCallback = callback;
 	}
 
 	void setIgnoreBadForeignFunctionCalls( bool yes ) {
@@ -2905,12 +2904,6 @@ public:
 	// Print the stack trace when a function fails
 	//void setStackTracePrintingEnabled( bool on ) {
 	//	stackTracePrintingEnabled = on;
-	//}
-
-	// TODO: Re-implement
-	// Note: You will need to call "deref" (on the factory) separately anyways.
-	//void setNumberObjectFactory( NumberObjectFactory* pFactory ) {
-	//	numberObjectFactoryPtr.set(pFactory);
 	//}
 
 	/* Set the filter used for checking the validity of names.
@@ -2933,16 +2926,6 @@ public:
 	This accepts bytes from a byte stream and treats it as Copper code. */
 	EngineResult::Value
 	run( ByteStream& stream );
-
-	/*
-	This is meant to be called by extensions that need to run functions passed to them.
-	\param pFunction - the function container with the function whose body is to be run.
-	This is an object that the external function may receive as a parameter, so there's no need to modify.
-	\param pParams - the parameters that are passed to this function.
-	\return - Signal indicating the success (EngineResult::Ok) or failure (EngineResult::Error)
-		of processing. Return may also indicate the end of the VM running (EngineResult::Done).
-	*/
-	//runFunction( FunctionContainer* pFunction, const ArgsList& pArgs );
 
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	void
@@ -3022,8 +3005,7 @@ protected:
 	// operation codes, through which the execution of the code is performed, as opposed to executing the
 	// code using Tasks.
 
-	// The ParserContext must be passed in by whatever called this function. If none is provided, a new
-	// context is made.
+	// The ParserContext must be passed in by whatever called this function.
 public:
 	ParseResult::Value
 	parse(
@@ -3073,7 +3055,6 @@ protected:
 
 	ParseTask::Result::Value
 	ParseFunctionBuild_FromExecBody(
-		//FuncBuildParseTask*	task,
 		ParserContext&		context,
 		bool				srcDone
 	);
@@ -3204,6 +3185,19 @@ public:
 	EngineResult::Value
 	execute();
 
+	/*
+	This is meant to be called by extensions that need to run functions passed to them.
+	\param functionObject - the function container with the function whose body is to be run.
+	This is an object that the external function may receive as a parameter, so there's no need to modify it.
+	\param args - the arguments that are passed to this function.
+	\return - Signal indicating the success (EngineResult::Ok) or failure (EngineResult::Error)
+		of processing. Return may also indicate the end of the VM running (EngineResult::Done).
+	*/
+	EngineResult::Value
+	runFunctionObject(
+		FunctionContainer*	functionObject
+	);
+
 protected:
 	ExecutionResult::Value
 	operate(
@@ -3313,7 +3307,7 @@ public:
 	}
 
 	virtual bool
-	isVariadic() {
+	isVariadic() const {
 		return true;
 	}
 };

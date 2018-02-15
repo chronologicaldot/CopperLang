@@ -56,7 +56,7 @@ public:
 		return true;
 	}
 
-	virtual bool isVariadic() {
+	virtual bool isVariadic() const {
 		return true;
 	}
 };

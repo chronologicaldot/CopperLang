@@ -442,7 +442,7 @@ Add::call(
 			break;
 		}
 	}
-	return false;
+	return true; // Should be set to false if error-faulting enabled
 }
 
 bool
@@ -504,7 +504,7 @@ Subtract::call(
 			break;
 		}
 	}
-	return false;
+	return true; // Should be set to false if error-faulting enabled
 }
 
 bool
@@ -566,7 +566,7 @@ Multiply::call(
 			break;
 		}
 	}
-	return false;
+	return true; // Should be set to false if error-faulting enabled
 }
 
 bool
@@ -631,7 +631,7 @@ Divide::call(
 			break;
 		}
 	}
-	return false;
+	return true; // Should be set to false if error-faulting enabled
 }
 
 bool
@@ -717,7 +717,7 @@ Pick_min::call(
 			break;
 		}
 	}
-	return false;
+	return true; // Should be set to false if error-faulting enabled
 }
 
 bool
@@ -759,7 +759,7 @@ Pick_max::call(
 			break;
 		}
 	}
-	return false;
+	return true; // Should be set to false if error-faulting enabled
 }
 
 bool
@@ -806,7 +806,7 @@ Avg::call(
 			break;
 		}
 	}
-	return false;
+	return true; // Should be set to false if error-faulting enabled
 }
 
 bool

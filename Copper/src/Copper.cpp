@@ -1803,11 +1803,13 @@ Engine::run(
 #endif
 		return execute();
 	case ParseResult::Error:
+		print(LogLevel::error, "Parsing error.");
 		return EngineResult::Error;
 	case ParseResult::More:
 		return EngineResult::Ok;
 	// to get -Wall to stop griping:
 	default:
+		print(LogLevel::error, "Falloff error in run.");
 		return EngineResult::Error;
 	}
 }
@@ -4571,7 +4573,76 @@ Engine::operate(
 	return ExecutionResult::Ok;
 }
 
-//EngineResult::Value
+//! Runs a given function with the passed parameters.
+// This is useful for callback functions.
+// It must NOT be run alongside Engine::run() or Engine::execute() but
+// must be run after them.
+EngineResult::Value
+Engine::runFunctionObject(
+	FunctionContainer*  functionObject
+) {
+	// Slightly-varied version of setupUserFunctionExecution.
+
+	Function*  function;
+	if ( ! functionObject->getFunction(function) ) {
+		print(LogLevel::error, "(Error during Engine::runFunctionObject): Function object is empty.");
+		return EngineResult::Error;
+	}
+
+	// Short-circuit for constant-return functions
+	if ( function->constantReturn ) {
+		lastObject.set( function->result.raw() ); // Copy is created when saved to variable
+		return EngineResult::Ok;
+	}
+
+	// Parse function body if not done yet.
+	// If function body contained errors, return error.
+	// If function body has been / is parsed, add its opcodes to the stack.
+	Body* body;
+	if ( ! function->body.obtain(body) ) {
+		print(LogLevel::error, "(Error during Engine::runFunctionObject): Function body is missing.");
+		return EngineResult::Error;
+	}
+
+	if ( body->isEmpty() ) {
+		return EngineResult::Ok;
+	}
+
+	// Attempt to compile. Automatically returns true if compiled.
+	if ( ! body->compile(this) ) {
+		//print(LogLevel::error, "Function body contains errors.");
+		print(LogLevel::error, EngineMessage::UserFunctionBodyError);
+		return EngineResult::Error;
+	}
+
+	// "this" pointer is added to new stack context if the body can be run.
+	StackFrame* stackFrame = new StackFrame();
+
+	// Add "this" pointer
+	Variable* callVariable;
+	stackFrame->getScope().getVariable(CONSTANT_FUNCTION_SELF, callVariable);
+	callVariable->setFunc( functionObject, true );
+
+	// Argument-passing is not yet supported.
+	// See code in setupUserFunctionExecution for how to set args.
+
+	// Add stack frame
+	stack.push(stackFrame);
+	stackFrame->deref();
+
+	// Finally, add the body to be processed
+	addOpStrandToStack(body->getOpcodeStrand());
+
+	// Call it from the engine
+	EngineResult::Value  result = execute();
+	if ( result == EngineResult::Error ) {
+		return result;
+	}
+
+	return EngineResult::Ok;
+}
+
+
 FuncExecReturn::Value
 Engine::setupFunctionExecution(
 	FuncFoundTask& task,
@@ -4979,33 +5050,6 @@ Engine::setupUserFunctionExecution(
 
 	return FuncExecReturn::Reset;
 }
-
-//! Runs a given function with the passed parameters.
-// This is useful for callback functions.
-// It must NOT be run alongside Engine::run() or Engine::execute() but
-// must be run after them.
-/*
-	Currently, it is difficult to make this work.
-	It may be possible to simply append a set of function run opcodes to the end of the current operations
-	strand and then call Engine::execute().
-	Other than that, I can't think of a way that wouldn't overcomplicate the system.
-	Unfortunately, this wouldn't allow for functions like Foreach().
-
-	Update: I could have this mimic execute() and modify operate() to accept a task stack, allowing it
-	to be used by a separate process.
-*/
-/*
-bool
-Engine::runFunction(
-	FunctionContainer*	function,
-	ArgsList*			pArgs
-) {
-#ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::runFunction");
-#endif
-
-}
-*/
 
 Variable*
 Engine::resolveVariableAddress(

@@ -30,7 +30,7 @@ union IntDeciUnion {
 struct VariadicFunc : public ForeignFunc {
 	virtual ~VariadicFunc() {}
 
-	virtual bool isVariadic() {
+	virtual bool isVariadic() const {
 		return true;
 	}
 };
