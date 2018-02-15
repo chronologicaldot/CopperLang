@@ -14,6 +14,7 @@
 //#define COPPER_PARSER_LEVEL_MESSAGES
 //#define COPPER_DEBUG_ENGINE_MESSAGES
 //#define COPPER_USE_DEBUG_NAMES
+//#define COPPER_DEBUG_STACK
 
 // Shows the type of each opcode that is executed
 //#define COPPER_OPCODE_DEBUGGING
@@ -1958,6 +1959,10 @@ struct AppendObjectInterface {
 	// Append objects
 	// Implementers of this function are expected to call ref() on each object passed in.
 	virtual void append(Object* pObject)=0;
+
+	operator AppendObjectInterface* () {
+		return (AppendObjectInterface*)this;
+	}
 };
 
 //------------------
@@ -2350,6 +2355,24 @@ public:
 };
 
 
+#ifdef COPPER_DEBUG_STACK
+/*
+Debug testing setup:
+	std::printf("[DEBUG: Engine::execute() stack level = %d\n", stack.getCurrLevel());
+	PrintScopeObjectNames pson;
+	stack.getBottom().getScope().appendNamesByInterface(pson);
+*/
+struct PrintScopeObjectNames : public AppendObjectInterface {
+
+	virtual void append( Object* object ) {
+		String v;
+		object->writeToString(v);
+		std::printf( "Printing Scope Object Name: %s\n", v.c_str() );
+	}
+};
+#endif
+
+
 // Pre-declaration
 class Stack;
 
@@ -2375,6 +2398,11 @@ public:
 
 	~StackFrame() {
 		scope->deref();
+	}
+
+	void replaceScope() {
+		scope->deref();
+		scope = new Scope();
 	}
 
 	Scope& getScope() {
@@ -2412,6 +2440,8 @@ public:
 #endif
 	~Stack();
 	void clear();
+	void clearNonGlobal();
+	void clearGlobal();
 	StackFrame& getBottom();
 	StackFrame& getTop();
 	UInteger getCurrLevel();
@@ -2932,6 +2962,8 @@ public:
 	printGlobalStrand();
 #endif
 
+	void clearGlobals();
+
 protected:
 	void clearStacks();
 	void signalEndofProcessing();
@@ -3313,6 +3345,36 @@ public:
 };
 
 void addForeignFuncInstance( Engine& pEngine, const String& pName, bool (*pFunction)( FFIServices& ) );
+
+// Class for collecting callbacks
+class CallbackWrapper : public ForeignFunc, public Owner {
+
+	Engine& engine;
+	FunctionContainer*  callback;
+
+public:
+	CallbackWrapper( Engine&  pEngine, const String&  pName );
+
+	~CallbackWrapper();
+
+	bool
+	run();
+
+	virtual bool
+	owns( FunctionContainer*  container ) const;
+
+	virtual bool
+	call( FFIServices&  ffi );
+
+	virtual bool
+	isVadiadic() const;
+
+	virtual UInteger
+	getParameterCount() const;
+
+	virtual ObjectType::Value
+	getParameterType( UInteger ) const;
+};
 
 }
 

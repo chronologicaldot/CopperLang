@@ -1119,7 +1119,25 @@ Stack::clear() {
 		parent = top->parent;
 		top->deref();
 		top = parent;
+		--size;
 	}
+}
+
+void
+Stack::clearNonGlobal() {
+	StackFrame* parent;
+	while ( top != bottom ) {
+		parent = top->parent;
+		top->deref();
+		top = parent;
+		--size;
+	}
+}
+
+void
+Stack::clearGlobal() {
+	if ( notNull(bottom) )
+		bottom->replaceScope();
 }
 
 StackFrame&
@@ -1936,18 +1954,23 @@ void Engine::signalEndofProcessing() {
 	}
 }
 
+void Engine::clearGlobals() {
+	stack.clearGlobal();
+}
+
 void Engine::clearStacks() {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::clearStacks");
 #endif
 	taskStack.clear();
-	stack.clear();
+	stack.clearNonGlobal();
+	//stack.clear(); // now using clearNonGlobal
 	//globalParserContext.clear();
 	//globalParserContext.moveToFirstUnusedToken(); // may conflict with ParserContext.onError() ?
 
 	// Reinitialized the stack
 	// This is useful if the program should continue
-	stack.push();
+	//stack.push(); // now using clearNonGlobal
 }
 
 Scope&
@@ -4242,11 +4265,6 @@ Engine::execute() {
 
 	} while ( ! opcodeStrandStackIter.atStart() || ! currOp->atEnd() );
 
-	//std::printf("[Debug: Engine::execute final currOp index = %lu, type = %u\n",
-	//	opcodeStrandStackIter->getCurrStrand()->indexOf(*currOp),
-	//	(UInteger)((*currOp)->getOp()->getType())
-	//);
-
 	//printGlobalStrand();
 
 	// Clear all first-level opcodes that have been run up to this point
@@ -5713,10 +5731,88 @@ Engine::process_sys_assert(
 	return FuncExecReturn::Ran;
 }
 
-void addForeignFuncInstance( Engine& pEngine, const String& pName, bool (*pFunction)( FFIServices& ) ) {
+void addForeignFuncInstance(
+	Engine&  pEngine,
+	const String&  pName,
+	bool (*pFunction)( FFIServices& )
+) {
 	ForeignFunc* ff = new FuncWrapper(pFunction);
 	pEngine.addForeignFunction(pName, ff);
 	ff->deref();
+}
+
+CallbackWrapper::CallbackWrapper(
+	Engine&  pEngine,
+	const String&  pName
+)
+	: engine( pEngine )
+	, callback(REAL_NULL)
+{
+	engine.addForeignFunction(pName, this);
+}
+
+CallbackWrapper::~CallbackWrapper() {
+	if ( callback )
+		callback->deref();
+}
+
+bool
+CallbackWrapper::run() {
+	if ( callback ) {
+		return engine.runFunctionObject(callback) == EngineResult::Ok;
+	}
+	return true;
+}
+
+bool
+CallbackWrapper::owns(
+	FunctionContainer*  container
+) const {
+	return callback != REAL_NULL && callback == container;
+}
+
+bool
+CallbackWrapper::call(
+	FFIServices&  ffi
+) {
+	callback = (FunctionContainer*)(ffi.getNextArg());
+	callback->ref();
+	callback->changeOwnerTo(this);
+	return true;
+}
+
+/*
+bool
+CallbackWrapper::call(
+	FFISevices&  ffi
+) {
+	// Variadic version
+	Object* obj;
+	if ( ffi.hasMoreArgs() ) {
+		obj = ffi.getNextArg();
+		if ( isObjectFunction(obj) ) {
+			callback = (FunctionContainer*)obj;
+			callback->ref();
+			callback->changeOwnerTo(this);
+		}
+	}
+	return true;
+}
+*/
+
+bool
+CallbackWrapper::isVadiadic() const {
+	return false;
+}
+
+Cu::ObjectType::Value
+CallbackWrapper::getParameterType( Cu::UInteger index ) const {
+	return Cu::ObjectType::Function;
+}
+
+Cu::UInteger
+CallbackWrapper::getParameterCount() const {
+	return 1;
 }
 
 

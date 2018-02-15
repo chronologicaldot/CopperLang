@@ -46,7 +46,8 @@ public:
 	{}
 
 	~Cu_cb_receiver() {
-		cb->deref();
+		if ( cb )
+			cb->deref();
 	}
 
 	virtual bool
@@ -110,6 +111,8 @@ int main() {
 	Cu_cb_receiver  ccr(engine);
 	engine.addForeignFunction(util::String("set_callback"), &ccr);
 
+	Cu::CallbackWrapper ccw(engine, util::String("set_wrapper"));
+
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
 	std::printf("\n>> \t\tCOPPER LANGUAGE\n>>\t\tConsole Application\n>>\t\t(c) 2016-2018 Nicolaus Anderson\n\n");
@@ -152,5 +155,15 @@ int main() {
 		default: break;
 		}
 	}
+	if ( err != 1 ) {
+		std::printf("\nTesting second callback...\n");
+		if ( ! ccw.run() ) {
+			std::printf("\nError in second callback.\n");
+			// err = 1;
+		} else {
+			std::printf("\nSecond callback finished.\n");
+		}
+	}
+
 	return err;
 }

@@ -13,6 +13,11 @@ v 5-0.31
 - Minor optimizations to RefPtr.
 - Re-added the callback system.
 - ForeignFunc::isVariadic is not const.
+- Added #define COPPER_DEBUG_STACK
+- Added PrintScopeObjectNames for debugging the stack.
+- Fixed bug in Stack that didn't decrement the size in clear().
+- Added Stack::clearNonGlobal and changed Engine::clearStacks() to use it in place of Stack::clear().
+- Added Engine::clearGlobals(), Stack::clearGlobal(), and StackFrame::replaceScope().
 
 
 ====================
