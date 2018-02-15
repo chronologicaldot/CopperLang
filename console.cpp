@@ -94,6 +94,23 @@ public:
 	}
 };
 
+struct MethodSource {
+	char a;
+
+	MethodSource()
+		: a('a')
+	{}
+
+	bool run( Cu::FFIServices& ffi ) {
+		ffi.printInfo("Called method source");
+		a++;
+		const util::String c(a);
+		ffi.printInfo( c.c_str() );
+		return true;
+	}
+};
+
+
 int main() {
 	Cu::Engine engine;
 	CuStd::Printer printer;
@@ -112,6 +129,9 @@ int main() {
 	engine.addForeignFunction(util::String("set_callback"), &ccr);
 
 	Cu::CallbackWrapper ccw(engine, util::String("set_wrapper"));
+
+	MethodSource ms;
+	Cu::addForeignMethodInstance( engine, util::String("method"), &ms, &MethodSource::run );
 
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);

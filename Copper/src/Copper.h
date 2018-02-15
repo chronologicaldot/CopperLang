@@ -3346,7 +3346,7 @@ public:
 
 void addForeignFuncInstance( Engine& pEngine, const String& pName, bool (*pFunction)( FFIServices& ) );
 
-// Class for collecting callbacks
+// Class for wrapping callback functions and using them
 class CallbackWrapper : public ForeignFunc, public Owner {
 
 	Engine& engine;
@@ -3375,6 +3375,50 @@ public:
 	virtual ObjectType::Value
 	getParameterType( UInteger ) const;
 };
+
+//! Class for adding foreign methods
+/*
+	Example:
+	struct MyClass {
+		bool method( FFIServices& ffi );
+	};
+	//...
+	MyClass mc;
+	ForeignMethod<MyClass> fm( mc::method );
+*/
+template<class BaseClass>
+class ForeignMethod : public ForeignFunc {
+	BaseClass*  base;
+	bool (BaseClass::*method)( FFIServices& );
+
+public:
+	ForeignMethod( BaseClass* pBase, bool (BaseClass::*pMethod)( FFIServices& ) )
+		: base(pBase)
+		, method(pMethod)
+	{}
+
+	virtual bool
+	call( FFIServices& ffi ) {
+		return (base->*method)(ffi); // Calling the method
+	}
+
+	virtual bool
+	isVariadic() const {
+		return true;
+	}
+};
+
+template<class BaseClass>
+void addForeignMethodInstance(
+	Engine&  pEngine,
+	const String&  pName,
+	BaseClass*  pBase,
+	bool (BaseClass::*pMethod)( FFIServices& )
+) {
+	ForeignFunc* ff = new ForeignMethod<BaseClass>(pBase, pMethod);
+	pEngine.addForeignFunction(pName, ff);
+	ff->deref();
+}
 
 }
 

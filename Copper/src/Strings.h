@@ -61,10 +61,10 @@ public:
 	bool equals( const CharList& pList ) const;
 	bool equals( const char* pString ) const;
 	bool equalsIgnoreCase( const String& pOther ) const;
-	int toInt() const;				// DO NOT USE!
+	int toInt() const;				// TODO: Speed up
 	unsigned long toUnsignedLong() const;
-	float toFloat() const;			// DO NOT USE!
-	double toDouble() const;		// DO NOT USE!
+	float toFloat() const;			// FIXME: Handle NaN and infinity
+	double toDouble() const;		// FIXME: Handle NaN and infinity
 	void purgeNonPrintableASCII();
 	bool contains( char c ) const;
 	unsigned char numberType() const; // return 0 for no type, 1 for integer, 2 for decimal
