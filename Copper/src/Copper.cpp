@@ -4269,11 +4269,11 @@ Engine::operate(
 	print(LogLevel::debug, "[DEBUG: Engine::operate");
 #endif
 	//const Opcode* opcode = opIter->getOp();
-	Opcode& opcode = *(opIter->getOp());
+	Opcode* opcode = opIter->getOp();
 	Task* task;
 	Variable* variable;
 
-	switch( opcode.getType() ) {
+	switch( opcode->getType() ) {
 	case Opcode::Exit:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode Exit");
@@ -4296,7 +4296,7 @@ Engine::operate(
 #endif
 		task = getLastTask();
 		if ( task->name == TaskName::FuncBuild ) {
-			((FuncBuildTask*)task)->function->addParam( opcode.getNameData() );
+			((FuncBuildTask*)task)->function->addParam( opcode->getNameData() );
 		} else {
 			throw BadOpcodeException(Opcode::FuncBuild_createRegularParam);
 		}
@@ -4309,7 +4309,7 @@ Engine::operate(
 		task = getLastTask();
 		if ( task->name == TaskName::FuncBuild ) {
 			((FuncBuildTask*)task)->function->getPersistentScope().setVariableFrom(
-				opcode.getNameData(),
+				opcode->getNameData(),
 				lastObject.raw(),
 				false
 			);
@@ -4325,7 +4325,7 @@ Engine::operate(
 		task = getLastTask();
 		if ( task->name == TaskName::FuncBuild ) {
 			((FuncBuildTask*)task)->function->getPersistentScope().setVariableFrom(
-				opcode.getNameData(),
+				opcode->getNameData(),
 				lastObject.raw(),
 				true
 			);
@@ -4341,7 +4341,7 @@ Engine::operate(
 		task = getLastTask();
 		if ( task->name == TaskName::FuncBuild ) {
 			// Should check for function existence, but if there is no function, there is an internal failure
-			((FuncBuildTask*)task)->function->body.set( opcode.getBody() );
+			((FuncBuildTask*)task)->function->body.set( opcode->getBody() );
 		} else {
 			throw BadOpcodeException(Opcode::FuncBuild_execBody);
 		}
@@ -4368,7 +4368,7 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_access");
 #endif
-		variable = resolveVariableAddress( *(opcode.getAddressData()) );
+		variable = resolveVariableAddress( *(opcode->getAddressData()) );
 
 		if ( notNull(variable) ) {
 			lastObject.set( variable->getRawContainer() );
@@ -4381,14 +4381,14 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_assignment");
 #endif
-		setVariableByAddress( *(opcode.getAddressData()), lastObject.raw(), false );
+		setVariableByAddress( *(opcode->getAddressData()), lastObject.raw(), false );
 		break;
 
 	case Opcode::FuncFound_pointerAssignment:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_pointerAssignment");
 #endif
-		setVariableByAddress( *(opcode.getAddressData()), lastObject.raw(), true );
+		setVariableByAddress( *(opcode->getAddressData()), lastObject.raw(), true );
 		break;
 
 	case Opcode::FuncFound_call:
@@ -4396,7 +4396,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_call");
 #endif
 		//addNewTaskToStack( new FuncFoundTask( *(opcode->getAddressData()) ) );
-		addNewTaskToStack( new FuncFoundTask( opcode.getAddressData() ) );
+		addNewTaskToStack( new FuncFoundTask( opcode->getAddressData() ) );
 		break;
 
 	case Opcode::FuncFound_setParam:
@@ -4468,7 +4468,7 @@ Engine::operate(
 #endif
 		// Here we cheat and cast to volatile because we don't have a const iterator for the list
 		//opIter.set( ((const Opcode*)opcode)->getOpStrandIter() );
-		opIter.set( opcode.getOpStrandIter() );
+		opIter.set( opcode->getOpStrandIter() );
 		break;
 
 	case Opcode::ConditionalGoto:
@@ -4482,7 +4482,7 @@ Engine::operate(
 				if ( ((ObjectBool*)obj)->getValue() == false ) {
 					// Here we cheat and cast to volatile because we don't have a const iterator for the list
 					//opIter.set( ((const Opcode*)opcode)->getOpStrandIter() );
-					opIter.set( opcode.getOpStrandIter() );
+					opIter.set( opcode->getOpStrandIter() );
 				}
 			} else {
 				//print(LogLevel::warning, "Condition for goto operation is not boolean. Default is false.");
@@ -4490,7 +4490,7 @@ Engine::operate(
 				// Perform as though condition were "false"
 				// Here we cheat and cast to volatile because we don't have a const iterator for the list
 				//opIter.set( ((const Opcode*)opcode)->getOpStrandIter() );
-				opIter.set( opcode.getOpStrandIter() );
+				opIter.set( opcode->getOpStrandIter() );
 			}
 		} else {
 			//print(LogLevel::error, "Missing condition for goto operation.");
@@ -4505,19 +4505,19 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode Own");
 #endif
-		return run_Own( *(opcode.getAddressData()) );
+		return run_Own( *(opcode->getAddressData()) );
 
 	case Opcode::Is_owner:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode Is_owner");
 #endif
-		return run_Is_owner( *(opcode.getAddressData()) );
+		return run_Is_owner( *(opcode->getAddressData()) );
 
 	case Opcode::Is_pointer:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode Is_pointer");
 #endif
-		return run_Is_ptr( *(opcode.getAddressData()) );
+		return run_Is_ptr( *(opcode->getAddressData()) );
 
 	//------ Opcodes for creating basic types
 
@@ -4541,7 +4541,7 @@ Engine::operate(
 #endif
 		// Should be creating strings from a user-set factory
 		lastObject.setWithoutRef(
-			new ObjectString( opcode.getNameData() )
+			new ObjectString( opcode->getNameData() )
 		);
 		break;
 
@@ -4550,7 +4550,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode CreateInteger");
 #endif
 		lastObject.setWithoutRef(
-			new ObjectInteger( opcode.getIntegerData() )
+			new ObjectInteger( opcode->getIntegerData() )
 		);
 		break;
 
@@ -4559,7 +4559,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode CreateInteger");
 #endif
 		lastObject.setWithoutRef(
-			new ObjectDecimal( opcode.getDecimalData() )
+			new ObjectDecimal( opcode->getDecimalData() )
 		);
 		break;
 

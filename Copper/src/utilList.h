@@ -210,6 +210,11 @@ public:
 			node = node->next;
 			return true; // there may be more nodes
 		}
+	
+		T& peek() // UNSAFE
+		{
+			return node->next->getItem();
+		}
 
 		void reset()
 		{

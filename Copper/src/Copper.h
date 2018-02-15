@@ -891,9 +891,11 @@ public:
 	{}
 
 	RefPtr(const RefPtr& pOther)
-		: obj(REAL_NULL)
+		: obj(pOther.obj)
 	{
-		set(pOther.obj);
+		if ( notNull(obj) ) {
+			obj->ref();
+		}
 	}
 
 	~RefPtr() {
@@ -926,12 +928,8 @@ public:
 	}
 
 	bool obtain(T*& pStorage) {
-		if ( isNull(obj) ) {
-			pStorage = REAL_NULL;
-			return false;
-		}
 		pStorage = obj;
-		return true;
+		return notNull(obj);
 	}
 
 	T* raw() const {

@@ -9,6 +9,8 @@ v 5-0.31
 - Changed VarAddress to be reference-counted and saved as pointers, requiring the Opcode usage to be non-const. Effected:
 -- FuncFoundTask
 -- OpcodeContainer::getOp
+- Added Iter::peek to utility list.
+- Minor optimizations to RefPtr.
 
 
 ====================
