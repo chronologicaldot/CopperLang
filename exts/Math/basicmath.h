@@ -43,30 +43,12 @@ struct DecimalCast : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct ToString : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
 
-// Unimplemented
-struct Unimplemented : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
-};
+bool ToString( FFIServices& ffi );
 
-/*
-struct IsZero : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+bool Unimplemented( FFIServices& ffi );
 
-	const char*
-	getParameterType( UInteger index );
-
-	UInteger
-	getParameterCount();
-};
-*/
-
-struct AreZero : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
+bool AreZero( FFIServices& ffi );
 
 //! Foreign Function for checking numeric equality of a series of arguments
 /* Precedence for the type goes to the first argument. */

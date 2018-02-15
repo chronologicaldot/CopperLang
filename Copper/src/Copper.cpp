@@ -53,7 +53,8 @@ OpcodeContainer::~OpcodeContainer() {
 	code->deref();
 }
 
-const Opcode*
+//const Opcode*
+Opcode*
 OpcodeContainer::getOp() {
 	return code;
 }
@@ -73,7 +74,7 @@ Opcode::Opcode( Opcode::Type pType )
 	: type(pType)
 	, dtype(ODT_Unset)
 	, name()
-	, address()
+	, address(REAL_NULL)
 {
 	switch(type)
 	{
@@ -98,29 +99,34 @@ Opcode::Opcode( Opcode::Type pType, const String&  pStrValue, bool  onAddress )
 	: type(pType)
 	, dtype(ODT_Unset)
 	, name()
-	, address()
+	, address(REAL_NULL)
 {
 	if ( onAddress ) {
 		dtype = ODT_Address;
-		address.push_back(pStrValue);
+		//address.push_back(pStrValue);
+		address = new VarAddress();
+		address->push_back(pStrValue);
 	} else {
 		dtype = ODT_Name;
 		name = pStrValue;
 	}
 }
 
-Opcode::Opcode( Opcode::Type pType, const VarAddress&  pAddress )
+//Opcode::Opcode( Opcode::Type pType, const VarAddress&  pAddress )
+Opcode::Opcode( Opcode::Type pType, VarAddress*  pAddress )
 	: type(pType)
 	, dtype(ODT_Address)
 	, name()
 	, address(pAddress)
-{}
+{
+	address->ref();
+}
 
 Opcode::Opcode( const Opcode& pOther )
 	: type( pOther.type )
 	, dtype(pOther.dtype)
 	, name()
-	, address()
+	, address(REAL_NULL)
 {
 	switch( pOther.dtype )
 	{
@@ -130,6 +136,7 @@ Opcode::Opcode( const Opcode& pOther )
 
 	case ODT_Address:
 		address = pOther.address;
+		address->ref();
 		break;
 
 	case ODT_Integer:
@@ -156,8 +163,11 @@ Opcode::Opcode( const Opcode& pOther )
 }
 
 Opcode::~Opcode() {
-	if ( type == FuncBuild_execBody )
+	if ( dtype == ODT_Body ) // type == FuncBuild_execBody
 		data.body->deref();
+
+	else if ( dtype == ODT_Address )
+		address->deref();
 }
 
 Opcode::Type
@@ -173,12 +183,22 @@ Opcode::setType( Opcode::Type pType ) {
 void
 Opcode::appendAddressData( const String&  pString ) {
 	dtype = ODT_Address;
-	address.push_back(pString);
+	//address.push_back(pString);
+	if ( !address ) {
+		address = new VarAddress();
+	}
+	address->push_back(pString);
 }
 
+/*
 const VarAddress*
 Opcode::getAddressData() const {
 	return &address;
+}*/
+
+VarAddress*
+Opcode::getAddressData() {
+	return address;
 }
 
 // Used for function parameters and so forth
@@ -1377,6 +1397,7 @@ addNewParseTask(
 	newTask->deref();
 }
 
+/*
 FuncFoundTask::FuncFoundTask(
 	const VarAddress& pVarAddress
 )
@@ -1384,7 +1405,19 @@ FuncFoundTask::FuncFoundTask(
 	, varAddress(pVarAddress)
 	, args()
 {}
+*/
 
+FuncFoundTask::FuncFoundTask(
+	VarAddress* pVarAddress
+)
+	: Task(TaskName::FuncFound)
+	, varAddress(pVarAddress)
+	, args()
+{
+	varAddress->ref();
+}
+
+/*
 FuncFoundTask::FuncFoundTask(
 	const FuncFoundTask& pOther
 )
@@ -1392,6 +1425,17 @@ FuncFoundTask::FuncFoundTask(
 	, varAddress(pOther.varAddress)
 	, args(pOther.args)
 {}
+*/
+
+FuncFoundTask::FuncFoundTask(
+	FuncFoundTask& pOther
+)
+	: Task(TaskName::FuncFound)
+	, varAddress(pOther.varAddress)
+	, args(pOther.args)
+{
+	varAddress->ref();
+}
 
 FuncFoundTask::~FuncFoundTask() {
 	ArgsIter ai = args.start();
@@ -1400,6 +1444,7 @@ FuncFoundTask::~FuncFoundTask() {
 		(*ai)->deref();
 	} while ( ai.next() );
 	// args.clear(); // implicit
+	varAddress->deref();
 }
 
 void
@@ -4223,11 +4268,12 @@ Engine::operate(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::operate");
 #endif
-	const Opcode* opcode = opIter->getOp();
+	//const Opcode* opcode = opIter->getOp();
+	Opcode& opcode = *(opIter->getOp());
 	Task* task;
 	Variable* variable;
 
-	switch( opcode->getType() ) {
+	switch( opcode.getType() ) {
 	case Opcode::Exit:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode Exit");
@@ -4250,7 +4296,7 @@ Engine::operate(
 #endif
 		task = getLastTask();
 		if ( task->name == TaskName::FuncBuild ) {
-			((FuncBuildTask*)task)->function->addParam( opcode->getNameData() );
+			((FuncBuildTask*)task)->function->addParam( opcode.getNameData() );
 		} else {
 			throw BadOpcodeException(Opcode::FuncBuild_createRegularParam);
 		}
@@ -4263,7 +4309,7 @@ Engine::operate(
 		task = getLastTask();
 		if ( task->name == TaskName::FuncBuild ) {
 			((FuncBuildTask*)task)->function->getPersistentScope().setVariableFrom(
-				opcode->getNameData(),
+				opcode.getNameData(),
 				lastObject.raw(),
 				false
 			);
@@ -4279,7 +4325,7 @@ Engine::operate(
 		task = getLastTask();
 		if ( task->name == TaskName::FuncBuild ) {
 			((FuncBuildTask*)task)->function->getPersistentScope().setVariableFrom(
-				opcode->getNameData(),
+				opcode.getNameData(),
 				lastObject.raw(),
 				true
 			);
@@ -4295,7 +4341,7 @@ Engine::operate(
 		task = getLastTask();
 		if ( task->name == TaskName::FuncBuild ) {
 			// Should check for function existence, but if there is no function, there is an internal failure
-			((FuncBuildTask*)task)->function->body.set( opcode->getBody() );
+			((FuncBuildTask*)task)->function->body.set( opcode.getBody() );
 		} else {
 			throw BadOpcodeException(Opcode::FuncBuild_execBody);
 		}
@@ -4322,7 +4368,7 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_access");
 #endif
-		variable = resolveVariableAddress( *(opcode->getAddressData()) );
+		variable = resolveVariableAddress( *(opcode.getAddressData()) );
 
 		if ( notNull(variable) ) {
 			lastObject.set( variable->getRawContainer() );
@@ -4335,21 +4381,22 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_assignment");
 #endif
-		setVariableByAddress( *(opcode->getAddressData()), lastObject.raw(), false );
+		setVariableByAddress( *(opcode.getAddressData()), lastObject.raw(), false );
 		break;
 
 	case Opcode::FuncFound_pointerAssignment:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_pointerAssignment");
 #endif
-		setVariableByAddress( *(opcode->getAddressData()), lastObject.raw(), true );
+		setVariableByAddress( *(opcode.getAddressData()), lastObject.raw(), true );
 		break;
 
 	case Opcode::FuncFound_call:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_call");
 #endif
-		addNewTaskToStack( new FuncFoundTask( *(opcode->getAddressData()) ) );
+		//addNewTaskToStack( new FuncFoundTask( *(opcode->getAddressData()) ) );
+		addNewTaskToStack( new FuncFoundTask( opcode.getAddressData() ) );
 		break;
 
 	case Opcode::FuncFound_setParam:
@@ -4420,7 +4467,8 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode Goto");
 #endif
 		// Here we cheat and cast to volatile because we don't have a const iterator for the list
-		opIter.set( ((Opcode*)opcode)->getOpStrandIter() );
+		//opIter.set( ((const Opcode*)opcode)->getOpStrandIter() );
+		opIter.set( opcode.getOpStrandIter() );
 		break;
 
 	case Opcode::ConditionalGoto:
@@ -4433,14 +4481,16 @@ Engine::operate(
 				// Use the inverse of the value because if-statements request jumps when condition is false
 				if ( ((ObjectBool*)obj)->getValue() == false ) {
 					// Here we cheat and cast to volatile because we don't have a const iterator for the list
-					opIter.set( ((Opcode*)opcode)->getOpStrandIter() );
+					//opIter.set( ((const Opcode*)opcode)->getOpStrandIter() );
+					opIter.set( opcode.getOpStrandIter() );
 				}
 			} else {
 				//print(LogLevel::warning, "Condition for goto operation is not boolean. Default is false.");
 				print(LogLevel::warning, EngineMessage::ConditionlessIf);
-				// Perform false operation
+				// Perform as though condition were "false"
 				// Here we cheat and cast to volatile because we don't have a const iterator for the list
-				opIter.set( ((Opcode*)opcode)->getOpStrandIter() );
+				//opIter.set( ((const Opcode*)opcode)->getOpStrandIter() );
+				opIter.set( opcode.getOpStrandIter() );
 			}
 		} else {
 			//print(LogLevel::error, "Missing condition for goto operation.");
@@ -4455,19 +4505,19 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode Own");
 #endif
-		return run_Own( *(opcode->getAddressData()) );
+		return run_Own( *(opcode.getAddressData()) );
 
 	case Opcode::Is_owner:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode Is_owner");
 #endif
-		return run_Is_owner( *(opcode->getAddressData()) );
+		return run_Is_owner( *(opcode.getAddressData()) );
 
 	case Opcode::Is_pointer:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode Is_pointer");
 #endif
-		return run_Is_ptr( *(opcode->getAddressData()) );
+		return run_Is_ptr( *(opcode.getAddressData()) );
 
 	//------ Opcodes for creating basic types
 
@@ -4491,7 +4541,7 @@ Engine::operate(
 #endif
 		// Should be creating strings from a user-set factory
 		lastObject.setWithoutRef(
-			new ObjectString( opcode->getNameData() )
+			new ObjectString( opcode.getNameData() )
 		);
 		break;
 
@@ -4500,7 +4550,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode CreateInteger");
 #endif
 		lastObject.setWithoutRef(
-			new ObjectInteger( opcode->getIntegerData() )
+			new ObjectInteger( opcode.getIntegerData() )
 		);
 		break;
 
@@ -4509,7 +4559,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode CreateInteger");
 #endif
 		lastObject.setWithoutRef(
-			new ObjectDecimal( opcode->getDecimalData() )
+			new ObjectDecimal( opcode.getDecimalData() )
 		);
 		break;
 
@@ -4534,7 +4584,7 @@ Engine::setupFunctionExecution(
 	lastObject.setWithoutRef(new FunctionContainer());
 	FuncExecReturn::Value result;
 
-	if ( ! task.varAddress.has() )
+	if ( ! task.getAddress().has() )
 		throw VarAddressException( VarAddressException::is_empty );
 
 	result = setupBuiltinFunctionExecution(task);
@@ -4563,12 +4613,12 @@ Engine::setupBuiltinFunctionExecution(
 	// b) Using a virtual function
 	// Based on time tests, the first one. Using a switch is basically a manual lookup-table.
 
-	//VarAddressConstIter addrIter = task.varAddress.constStart();
+	//VarAddressConstIter addrIter = task.getAddress().constStart();
 	//RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
 	//	= builtinFunctions.getBucketData(*addrIter);
 
 	RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
-		= builtinFunctions.getBucketData(task.varAddress.first());
+		= builtinFunctions.getBucketData(task.getAddress().first());
 
 	// No matching function found
 	if ( ! bucketData )
@@ -4576,7 +4626,7 @@ Engine::setupBuiltinFunctionExecution(
 	// Else, bucketData found...
 
 	// Built-in function names should only have one name
-	if ( task.varAddress.hasOne() ) {
+	if ( task.getAddress().hasOne() ) {
 		//print(LogLevel::error, "Attempt to call member of built-in function.");
 		print(LogLevel::error, EngineMessage::SystemFuncInvalidAccess);
 		return FuncExecReturn::ErrorOnRun;
@@ -4691,7 +4741,7 @@ Engine::setupForeignFunctionExecution(
 #endif
 
 	RobinHoodHash<ForeignFuncContainer>::BucketData* bucketData
-		= foreignFunctions.getBucketData(task.varAddress.first());
+		= foreignFunctions.getBucketData(task.getAddress().first());
 
 	if ( ! bucketData ) {
 		return FuncExecReturn::NoMatch;
@@ -4791,7 +4841,7 @@ Engine::setupUserFunctionExecution(
 	Scope* scope = &getCurrentTopScope();
 	Function* func = REAL_NULL;
 	// TODO: Change to index
-	VarAddressConstIter addrIter = task.varAddress.constStart();
+	VarAddressConstIter addrIter = task.getAddress().constStart();
 	do {
 		super = callVariable;
 		scope->getVariable(*addrIter, callVariable);
@@ -4810,7 +4860,7 @@ Engine::setupUserFunctionExecution(
 	Scope* scope = &getCurrentTopScope();
 	Function* func = REAL_NULL;
 	bool foundVar = false;
-	VarAddress::Iterator ai = task.varAddress.iterator();
+	VarAddress::Iterator ai = task.getAddress().iterator();
 	do {
 		super = callVariable;
 		if ( scope->findVariable(ai.get(), callVariable) ) {
@@ -4890,19 +4940,19 @@ Engine::setupUserFunctionExecution(
 
 	// For each parameter that the function requires, take from the passed parameters and
 	// assign it by pointer to a parameter name within the newly added scope.
-	ArgsIter givenParamsIter = task.args.start();
+	ArgsIter givenArgsIter = task.args.start();
 	List<String>::Iter funcParamsIter = func->params.start();
 	bool done = false;
 	if ( funcParamsIter.has() ) {
-		if ( givenParamsIter.has() )
+		if ( givenArgsIter.has() )
 		do {
 			// Match parameters with parameter list items
-			stackFrame->getScope().setVariableFrom( *funcParamsIter, *givenParamsIter, true );
+			stackFrame->getScope().setVariableFrom( *funcParamsIter, *givenArgsIter, true );
 			if ( ! funcParamsIter.next() ) {
 				done = true;
 				break;
 			}
-		} while ( givenParamsIter.next() );
+		} while ( givenArgsIter.next() );
 		if ( !done )
 		do {
 			print( LogLevel::warning, EngineMessage::MissingFunctionCallParam );

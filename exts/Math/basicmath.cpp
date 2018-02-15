@@ -22,9 +22,11 @@ addFunctionsToEngine(
 ) {
 	addForeignFuncInstance<IntegerCast>	(engine, "int");
 	addForeignFuncInstance<DecimalCast>	(engine, "dcml");
-	addForeignFuncInstance<ToString> (engine, "num_to_str");
+	//addForeignFuncInstance<ToString> (engine, "num_to_str");
 
-	addForeignFuncInstance<AreZero>					(engine, "are_zero");
+	addForeignFuncInstance( engine, "num_to_str", ToString );
+	addForeignFuncInstance( engine, "are_zero", AreZero );
+
 	addForeignFuncInstance<AreEqual>				(engine, "equal");
 	addForeignFuncInstance<IsGreaterThan>			(engine, "gt");
 	addForeignFuncInstance<IsLessThan>				(engine, "lt");
@@ -104,8 +106,7 @@ DecimalCast::call(
 	return true;
 }
 
-bool
-ToString::call(
+bool ToString(
 	FFIServices& ffi
 ) {
 	Object*  arg;
@@ -131,39 +132,15 @@ ToString::call(
 }
 
 bool
-Unimplemented::call(
+Unimplemented(
 	FFIServices&  ffi
 ) {
 	ffi.printError("Unimplemented function for number type.");
 	return false;
 }
 
-/*
 bool
-IsZero::call(
-	FFIServices&  ffi
-) {
-	Object*  arg;
-	Integer  iValue = (ObjectInteger*)(ffi.getNextArg())->getIntegerValue();
-	ObjectBool*  out = new ObjectBool( iValue == 0 );
-	ffi.setResult(out);
-	out->deref();
-	return true;
-}
-
-const char*
-IsZero::getParameterType( UInteger index ) {
-	return ObjectInteger::StaticType();
-}
-
-UInteger
-IsZero::getParameterCount() {
-	return 1;
-}
-*/
-
-bool
-AreZero::call(
+AreZero(
 	FFIServices&  ffi
 ) {
 	Object*  arg;

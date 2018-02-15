@@ -24,7 +24,7 @@
 // These checks should not be necessary for safety of the final VM, but they aid in debugging.
 
 // IF YOU MODIFY THE PARSER, YOU SHOULD ENABLE THIS FLAG!
-#define COPPER_STRICT_CHECKS
+//#define COPPER_STRICT_CHECKS
 
 // Checks the "box" of instances of Variable.
 //define COPPER_VAR_STRICT_CHECKS
@@ -39,7 +39,7 @@
 #ifdef COPPER_SPEED_PROFILE
 #include <ctime>
 #include <sys/time.h>
-// Also requires cstdio
+#include <cstdio>
 #endif
 
 // Strict check for debug, ensuring variable scopes are never null
@@ -1091,7 +1091,7 @@ class Opcode; // pre-declaration
 	Addresses are constant after being built and are only iterated over from start-to-finish,
 	so there is no need for a doubly-linked list.
 */
-class VarAddress {
+class VarAddress : public Ref {
 
 	struct Node {
 		const String data;
@@ -1248,7 +1248,8 @@ public:
 
 	~OpcodeContainer();
 
-	const Opcode*
+	//const Opcode*
+	Opcode* // non-const required for referencing addresses
 	getOp();
 
 	//static OpcodeContainer
@@ -1311,7 +1312,7 @@ protected:
 
 	// Non-trivial destructors
 	String name;
-	VarAddress address;
+	VarAddress* address;
 	union {
 		Integer			integer;
 		Decimal			decimal;
@@ -1331,7 +1332,8 @@ public:
 
 	Opcode( Opcode::Type pType, const String&  pStrValue, bool  onAddress );
 
-	Opcode( Opcode::Type pType, const VarAddress&  pAddress );
+	//Opcode( Opcode::Type pType, const VarAddress&  pAddress );
+	Opcode( Opcode::Type pType, VarAddress*  pAddress );
 
 	Opcode( const Opcode& pOther );
 
@@ -1345,8 +1347,11 @@ public:
 	void
 	appendAddressData( const String&  pString );
 
-	const VarAddress*
-	getAddressData() const;
+	//const VarAddress*
+	//getAddressData() const;
+
+	VarAddress*
+	getAddressData();
 
 	// Used for function parameters and so forth
 	String
@@ -1687,6 +1692,16 @@ public:
 
 	bool getValue() const {
 		return value;
+	}
+
+	virtual Integer
+	getIntegerValue() const {
+		return (Integer)value;
+	}
+
+	virtual Decimal
+	getDecimalValue() const {
+		return (Decimal)value;
 	}
 
 	virtual const char* typeName() const {
@@ -2591,13 +2606,25 @@ typedef List<Object*>			ArgsList;
 typedef List<Object*>::Iter		ArgsIter;
 
 struct FuncFoundTask : public Task {
-	const VarAddress varAddress; // MUST NOT BE A VarAddress&!!
-	ArgsList args;
+	//const VarAddress  varAddress; // MUST NOT BE A VarAddress&!!
+	VarAddress*  varAddress;
+	ArgsList  args;
 
-	explicit FuncFoundTask( const VarAddress& pVarAddress );
-	FuncFoundTask( const FuncFoundTask& pOther );
+	//explicit FuncFoundTask( const VarAddress& pVarAddress );
+	explicit FuncFoundTask( VarAddress* pVarAddress );
+
+	//FuncFoundTask( const FuncFoundTask& pOther );
+	FuncFoundTask( FuncFoundTask& pOther );
+
 	~FuncFoundTask();
-	void addArg( Object* a );
+
+	void
+	addArg( Object* a );
+
+	const VarAddress&
+	getAddress() const {
+		return *varAddress;
+	}
 };
 
 struct FuncFoundParseTask : public ParseTask {

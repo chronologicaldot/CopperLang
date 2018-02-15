@@ -6,6 +6,9 @@ v 5-0.31
 - Fixed calls to _are_integer and _are_decimal in Engine::setupBuiltinFunctionExecution().
 - Added FuncWrapper and void addForeignFuncInstance( Engine&, const String&, bool (*f)( FFIServices& ) )
 - Changed VarAddress to be a singly-linked list.
+- Changed VarAddress to be reference-counted and saved as pointers, requiring the Opcode usage to be non-const. Effected:
+-- FuncFoundTask
+-- OpcodeContainer::getOp
 
 
 ====================
