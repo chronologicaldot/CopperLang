@@ -28,7 +28,7 @@ public:
 		if ( pFile ) {
 			writeFile = pFile;
 		} else {
-			writeFile = stderr;
+			writeFile = stdout;
 		}
 	}
 
@@ -37,20 +37,38 @@ public:
 		util::String  out;
 		while ( ffi.hasMoreArgs() ) {
 			arg = ffi.getNextArg();
-			switch( arg->getType() )
-			{
-			case ObjectType::Integer:
-				std::fprintf(writeFile, "%ld", arg->getIntegerValue());
-				break;
+			if ( writeFile == stdout ) {
+				switch( arg->getType() )
+				{
+				case ObjectType::Integer:
+					std::fprintf(writeFile, "\33[96m%ld\33[0m", arg->getIntegerValue());
+					break;
 
-			case ObjectType::Decimal:
-				std::fprintf(writeFile, "%lf", arg->getDecimalValue());
-				break;
+				case ObjectType::Decimal:
+					std::fprintf(writeFile, "\33[95m%lf\33[0m", arg->getDecimalValue());
+					break;
 
-			default:
-				arg->writeToString(out);
-				std::fprintf(writeFile, "%s", out.c_str());
-				break;
+				default:
+					arg->writeToString(out);
+					std::fprintf(writeFile, "\33[93m%s\33[0m", out.c_str());
+					break;
+				}
+			} else {
+				switch( arg->getType() )
+				{
+				case ObjectType::Integer:
+					std::fprintf(writeFile, "%ld", arg->getIntegerValue());
+					break;
+
+				case ObjectType::Decimal:
+					std::fprintf(writeFile, "%lf", arg->getDecimalValue());
+					break;
+
+				default:
+					arg->writeToString(out);
+					std::fprintf(writeFile, "%s", out.c_str());
+					break;
+				}
 			}
 		}
 		return true;

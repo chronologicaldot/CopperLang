@@ -42,6 +42,9 @@ EngMsgToStr
 InStreamLogger.h
 - Added pretty print.
 
+Printer.h
+- Added pretty print.
+
 
 ====================
 2018/2/13
