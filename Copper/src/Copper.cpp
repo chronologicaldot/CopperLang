@@ -1729,14 +1729,9 @@ Engine::Engine()
 	, ignoreBadForeignFunctionCalls(false)
 	, ownershipChangingEnabled(false)
 	//, stackTracePrintingEnabled(false)
-	//, numberObjectFactoryPtr()
 	, nameFilter(REAL_NULL)
 {
 	setupSystemFunctions();
-
-	// TODO:
-	// Initialize the number object factory to the default.
-	//numberObjectFactoryPtr.setWithoutRef(new NumberObjectFactory());
 
 	// Ensures global/starting OpStrandContainer gets a valid iterator
 	// Add a do-nothing "operation"
@@ -5729,6 +5724,16 @@ Engine::process_sys_assert(
 	} while ( paramsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(true));
 	return FuncExecReturn::Ran;
+}
+
+void
+addNewForeignFunc(
+	Engine& pEngine,
+	const String& pName,
+	ForeignFunc* pFunction
+) {
+	pEngine.addForeignFunction(pName, pFunction);
+	pFunction->deref();
 }
 
 void addForeignFuncInstance(

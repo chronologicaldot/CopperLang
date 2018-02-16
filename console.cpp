@@ -110,7 +110,6 @@ struct MethodSource {
 	}
 };
 
-
 int main() {
 	Cu::Engine engine;
 	CuStd::Printer printer;

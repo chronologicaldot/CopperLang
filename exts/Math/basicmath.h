@@ -48,7 +48,9 @@ bool ToString( FFIServices& ffi );
 
 bool Unimplemented( FFIServices& ffi );
 
-bool AreZero( FFIServices& ffi );
+struct AreZero : public VariadicFunc {
+	virtual bool call( FFIServices& ffi );
+};
 
 //! Foreign Function for checking numeric equality of a series of arguments
 /* Precedence for the type goes to the first argument. */

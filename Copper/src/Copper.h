@@ -33,7 +33,7 @@
 //-----
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-#include <cstdio>
+//#include <cstdio>
 
 //#define COPPER_SPEED_PROFILE
 
@@ -146,6 +146,7 @@ class RandomNullByteInStream {};
 // ******* System includes *******
 
 #include "utilList.h"
+#include "utilPile.h"
 #include "RHHash.h"
 #include "Strings.h"
 
@@ -154,6 +155,8 @@ namespace Cu {
 // ******* External Classes in Use ********
 
 using util::List;
+using util::Pile;
+using util::PileSize_t;
 using util::CharList;
 using util::String;
 using util::RobinHoodHash;
@@ -563,14 +566,14 @@ struct ObjectType {
 		Function	= 0, // Also handles pointers
 
 		// Built-in data
-		Bool		= 1,
-		String		= 2,
-		List		= 3,
-		Integer		= 4,
-		Decimal		= 5,
+		Bool,
+		String,
+		List,
+		Integer,
+		Decimal,
 
 		// For non-usable data
-		UnknownData	= 6,
+		UnknownData,
 
 		// Forces 32-bit compilation so that any user integer can be used to extend the enum
 		FORCE_32BIT = 0x7fffffff
@@ -2144,47 +2147,6 @@ public:
 
 //*********** FOREIGN FUNCTION HANDLING *********
 
-// Identifier Class for Object Types
-// Used by foreign functions
-class ObjectTypeIdentifier {
-protected:
-	friend Engine;
-	ObjectType::Value  type;
-
-	//! For use by the engine only
-	ObjectTypeIdentifier( ObjectType::Value  t )
-		: type(t)
-	{}
-
-public:
-	// Copy constructor
-	// For use by foreign functions
-	ObjectTypeIdentifier( const ObjectTypeIdentifier& other )
-		: type( other.type )
-	{}
-
-	//! Compares types
-	bool
-	isSameType( const ObjectTypeIdentifier& other )
-	{
-		return type == other.type;
-	}
-
-	//! Returns the type
-	/* NOT VALID FOR VALUES BEYOND BUILT-IN TYPES! */
-	ObjectType::Value
-	getType() {
-		return type;
-	}
-
-#ifdef COPPER_USE_DEBUG_NAMES
-	virtual const char* getDebugName() const {
-		return "ObjectTypeIdentifier";
-	}
-#endif
-};
-
-
 class FFIServices; // predeclaration
 
 // Shows up when the user tries to add a null pointer as a foreign function
@@ -3316,12 +3278,20 @@ protected:
 // Function for automatically creating foreign function instances and assigning them to the engine
 // NOTE: Must be after the definition of Engine.
 // WARNING: The typename MUST be of a type inheriting ForeignFunc.
+// Usage: addForeignFuncInstance<ClassDecententOfForeignFunc> ( engine, "callname" )
 template<typename ForeignFuncClass>
 void addForeignFuncInstance( Engine& pEngine, const String& pName ) {
 	ForeignFunc* f = new ForeignFuncClass();
 	pEngine.addForeignFunction(pName, f);
 	f->deref();
 }
+
+void
+addNewForeignFunc(
+	Engine&  pEngine,
+	const String&  pName,
+	ForeignFunc*  pFunction
+);
 
 // Class for wrapping variadic functions
 class FuncWrapper : public ForeignFunc {
@@ -3344,7 +3314,12 @@ public:
 	}
 };
 
-void addForeignFuncInstance( Engine& pEngine, const String& pName, bool (*pFunction)( FFIServices& ) );
+void
+addForeignFuncInstance(
+	Engine&  pEngine,
+	const String&  pName,
+	bool (*pFunction)( FFIServices& )
+);
 
 // Class for wrapping callback functions and using them
 class CallbackWrapper : public ForeignFunc, public Owner {

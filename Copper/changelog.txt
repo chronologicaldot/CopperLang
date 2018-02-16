@@ -21,6 +21,8 @@ v 5-0.31
 - Added helper class CallbackWrapper.
 - Added helper class ForeignMethod.
 - Added helper function void addForeignMethodInstance(Engine&, const String&, BaseClass*, bool (BaseClass::*pMethod)(FFIServices&)).
+- Added helper function void addNewForeignFuncInstance( Engine&, const String&, ForeignFunc* ).
+- New ObjectTypeIdentifier system tried and removed.
 
 utilPile.h created.
 

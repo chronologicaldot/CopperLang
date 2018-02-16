@@ -20,36 +20,35 @@ void
 addFunctionsToEngine(
 	Engine&		engine
 ) {
-	addForeignFuncInstance<IntegerCast>	(engine, "int");
-	addForeignFuncInstance<DecimalCast>	(engine, "dcml");
-	//addForeignFuncInstance<ToString> (engine, "num_to_str");
+	addNewForeignFunc( engine, "int", new IntegerCast() );
+	addNewForeignFunc( engine, "dcml", new DecimalCast() );
 
 	addForeignFuncInstance( engine, "num_to_str", ToString );
-	addForeignFuncInstance( engine, "are_zero", AreZero );
 
-	addForeignFuncInstance<AreEqual>				(engine, "equal");
-	addForeignFuncInstance<IsGreaterThan>			(engine, "gt");
-	addForeignFuncInstance<IsLessThan>				(engine, "lt");
-	addForeignFuncInstance<IsGreaterThanOrEqual>	(engine, "gte");
-	addForeignFuncInstance<IsLessThanOrEqual>		(engine, "lte");
-	addForeignFuncInstance<Add>						(engine, "+");
-	addForeignFuncInstance<Subtract>				(engine, "-");
-	addForeignFuncInstance<Multiply>				(engine, "*");
-	addForeignFuncInstance<Divide>					(engine, "/");
-	addForeignFuncInstance<Avg>						(engine, "avg");
-	addForeignFuncInstance<Get_abs>					(engine, "abs");
-	addForeignFuncInstance<Pick_min>				(engine, "min");
-	addForeignFuncInstance<Pick_max>				(engine, "max");
+	addNewForeignFunc( engine, "are_zero", new AreZero() );
+	addNewForeignFunc( engine, "equal", new AreEqual() );
+	addNewForeignFunc( engine, "gt", new IsGreaterThan() );
+	addNewForeignFunc( engine, "lt", new IsLessThan() );
+	addNewForeignFunc( engine, "gte", new IsGreaterThanOrEqual() );
+	addNewForeignFunc( engine, "lte", new IsLessThanOrEqual() );
+	addNewForeignFunc( engine, "+", new Add() );
+	addNewForeignFunc( engine, "-", new Subtract() );
+	addNewForeignFunc( engine, "*", new Multiply() );
+	addNewForeignFunc( engine, "/", new Divide() );
+	addNewForeignFunc( engine, "avg", new Avg() );
+	addNewForeignFunc( engine, "abs", new Get_abs() );
+	addNewForeignFunc( engine, "min", new Pick_min() );
+	addNewForeignFunc( engine, "max", new Pick_max() );
 
 	// Integer-return only
-	addForeignFuncInstance<Modulus>					(engine, "%");
+	addNewForeignFunc( engine, "%", new Modulus() );
 
 	// Decimal return only
-	addForeignFuncInstance<Power>					(engine, "pow");
+	addNewForeignFunc( engine, "pow", new Power() );
 
 	// Integer only
-	addForeignFuncInstance<Incr>					(engine, "++");
-	addForeignFuncInstance<Decr>					(engine, "--");
+	addNewForeignFunc( engine, "++", new Incr() );
+	addNewForeignFunc( engine, "--", new Decr() );
 
 /*
 	// Decimal only (Integers are casted)
@@ -140,7 +139,7 @@ Unimplemented(
 }
 
 bool
-AreZero(
+AreZero::call(
 	FFIServices&  ffi
 ) {
 	Object*  arg;

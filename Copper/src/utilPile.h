@@ -74,6 +74,13 @@ public:
 			throw BadPileIndexException(index);
 		return data[index];
 	}
+
+	const T&
+	operator[] ( PileSize_t  index ) const {
+		if ( index >= count )
+			throw BadPileIndexException(index);
+		return data[index];
+	}
 };
 
 }
