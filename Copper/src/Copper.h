@@ -1787,6 +1787,16 @@ public:
 		return value;
 	}
 
+	virtual Integer
+	getIntegerValue() const {
+		return value.toInt();
+	}
+
+	virtual Decimal
+	getDecimalValue() const {
+		return value.toDouble();
+	}
+
 #ifdef COPPER_PURGE_NON_PRINTABLE_ASCII_INPUT_STRINGS
 	void
 	purgeNonPrintableASCII() {

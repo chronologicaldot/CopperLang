@@ -545,8 +545,10 @@ int String::toInt() const
 	unsigned part;
 	uint i = 0;
 	bool flip = false;
-	if ( str[0] == '-' )
+	if ( str[0] == '-' ) {
 		flip = true;
+		++i;
+	}
 	for ( ; i < len; ++i )
 	{
 		if ( str[i] == '.' ) break;

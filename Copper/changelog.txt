@@ -31,6 +31,8 @@ v 5-0.31
 - Removed deprecated Logger interface function.
 - Added Logger::printTaskTrace() and Logger::printStackTrace().
 - Changed TaskName to TaskType.
+- Changed implementation of ObjectString::getIntegerValue() and ObjectString::getDecimalValue() to return converted value forms.
+- Fixed String::toInt() to return correct value when string begins with a minus sign.
 
 utilPile.h created.
 
