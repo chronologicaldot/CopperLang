@@ -100,41 +100,6 @@ public:
 			delink();
 			delete this;
 		}
-
-/*
-		// These don't handle correcting the list head and tail
-		// and fail to serve as all-in-one solutions
-
-		void removeBefore()
-		{
-			if ( !prev ) return;
-			Node* n;
-			if ( prev->prev ) {
-				n = prev->prev;
-				n->next = this;
-				delete prev;
-				prev = n;
-				return;
-			} // else
-			delete prev;
-			prev = 0;
-		}
-
-		void removeAfter()
-		{
-			if ( !next ) return;
-			Node* n;
-			if ( next->next ) {
-				n = next->next;
-				n->prev = this;
-				delete next;
-				next = n;
-				return;
-			} // else
-			delete next;
-			next = 0;
-		}
-*/
 	};
 
 	class Iter
@@ -226,15 +191,13 @@ public:
 			node = list->tail;
 		}
 
-		//bool start() const	// at the start.
-		bool atStart() const // should be named this
+		bool atStart() const
 		{
 			if ( ! list->has() ) return true;
 			return node == list->head;
 		}
 
-		//bool end() const	// at the end
-		bool atEnd() const // should be named this
+		bool atEnd() const
 		{
 			if ( ! list->has() ) return true;
 			return node == list->tail;
@@ -369,15 +332,13 @@ public:
 			node = list->tail;
 		}
 
-		//bool start() const	// at the start
-		bool atStart() const // should be named this
+		bool atStart() const
 		{
 			if ( ! list->has() ) return true;
 			return node == list->head;
 		}
 
-		//bool end() const	// at the end
-		bool atEnd() const // should be named this
+		bool atEnd() const
 		{
 			if ( ! list->has() ) return true;
 			return node == list->tail;
@@ -699,25 +660,6 @@ public:
 		}
 		count++;
 	}
-
-	// This method may be removed if found incompatible with types that need to use the list.
-	// Segfaults when the list is clear unless I create and uncomment the EmptyListException.
-	/*T pop()
-	{
-		// should throw exceptions when no items
-		//if ( count == 0 ) throw new EmptyListException();
-		T item = tail->getItem();
-		Node* n = tail->prev;
-		if ( head == tail )
-			head = 0;
-		tail->destroy();
-		if ( n )
-			tail = n;
-		else
-			tail = 0;
-		count--;
-		return item;
-	}*/
 
 	void pop()
 	{
