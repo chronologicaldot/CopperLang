@@ -533,6 +533,14 @@ struct EngineMessage {
 	SetMemberArg2NotString,
 
 	// WARNING
+	// Destroyed function passed to member_list. Parameter was probably a pointer.
+	DestroyedFuncAsMemberListArg,
+
+	// WARNING
+	// member_list was given an arg that is not a function.
+	NonFunctionAsMemberListArg,
+
+	// WARNING
 	// Destroyed function passed to union() function. Parameter was probably a pointer.
 	DestroyedFuncAsUnionArg,
 
@@ -752,6 +760,7 @@ struct SystemFunction {
 	_member_count,
 	_is_member,
 	_set_member,
+	_member_list,
 	_union,
 	_type,
 	_are_same_type,
@@ -1961,7 +1970,7 @@ struct AppendObjectInterface {
 	virtual ~AppendObjectInterface() {}
 	// Append objects
 	// Implementers of this function are expected to call ref() on each object passed in.
-	virtual void append(Object* pObject)=0;
+	virtual void append(Object*)=0;
 
 	operator AppendObjectInterface* () {
 		return (AppendObjectInterface*)this;
@@ -2086,6 +2095,9 @@ public:
 
 	ObjectList( const ObjectList&  pOther );
 
+	virtual Object*
+	copy();
+
 	Integer
 	size();
 
@@ -2101,7 +2113,10 @@ public:
 	append( Object*  pItem );
 
 	void
-	prepend( Object* pItem );
+	push_back( Object*  pItem );
+
+	void
+	push_front( Object* pItem );
 
 	void
 	remove( Integer  index );
@@ -2733,7 +2748,7 @@ class FFIMisuseException {};
 
 class FFIServices {
 	Engine&			engine;
-	ArgsIter		paramsIter;
+	ArgsIter		argsIter;
 	bool			done;		// Indicates parameter/arguments iteration is complete
 
 public:
@@ -3259,6 +3274,7 @@ protected:
 	FuncExecReturn::Value	process_sys_member_count(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_is_member(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_set_member(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_member_list(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_union(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_type(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_same_type(	FuncFoundTask& task );

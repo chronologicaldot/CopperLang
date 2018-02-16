@@ -436,6 +436,16 @@ getStringFromEngineMessage(
 		return "Destroyed function passed to set_member().";
 
 	// WARNING
+	// Destroyed function passed to member_list. Parameter was probably a pointer.
+	case EngineMessage::DestroyedFuncAsMemberListArg:
+		return "Destroyed function passed to member_list().";
+
+	// WARNING
+	// member_list was given an arg that is not a function.
+	case EngineMessage::NonFunctionAsMemberListArg:
+		return "Non-function passed to member_list().";
+
+	// WARNING
 	// Destroyed function passed to union() function. Parameter was probably a pointer.
 	case EngineMessage::DestroyedFuncAsUnionArg:
 		return "Destroyed function passed to union().";

@@ -734,6 +734,17 @@ ObjectList::ObjectList( const ObjectList&  pOther )
 	, tail()
 {}
 
+Object*
+ObjectList::copy() {
+	ObjectList*  outList = new ObjectList();
+	Node* n = head.node;
+	while( n ) {
+		outList->push_back( n->item->copy() );
+		n = n->post;
+	}
+	return outList;
+}
+
 Integer
 ObjectList::size() {
 	return nodeCount;
@@ -783,6 +794,11 @@ ObjectList::clear() {
 
 void
 ObjectList::append( Object*  pItem ) {
+	push_back(pItem);
+}
+
+void
+ObjectList::push_back( Object*  pItem ) {
 	if ( nodeCount == 0 ) {
 		head.node = new Node(pItem);
 		tail.node = head.node;
@@ -794,7 +810,7 @@ ObjectList::append( Object*  pItem ) {
 }
 
 void
-ObjectList::prepend( Object* pItem ) {
+ObjectList::push_front( Object* pItem ) {
 	if ( nodeCount == 0 ) {
 		head.node = new Node(pItem);
 		tail.node = head.node;
@@ -1609,8 +1625,8 @@ FFIServices::FFIServices(
 	ArgsIter		paramsStart
 )
 	: engine(enginePtr)
-	, paramsIter(paramsStart)
-	, done( ! paramsIter.has() )
+	, argsIter(paramsStart)
+	, done( ! argsIter.has() )
 {}
 
 // returns each successive parameter sent to the function
@@ -1620,8 +1636,8 @@ FFIServices::getNextArg() {
 	if ( done )
 		throw FFIMisuseException(); // Prevents accidental misuse
 
-	out = *paramsIter;
-	done = ! paramsIter.next();
+	out = *argsIter;
+	done = ! argsIter.next();
 	return out;
 }
 
@@ -2355,6 +2371,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("member_count"), SystemFunction::_member_count);
 	builtinFunctions.insert(String("is_member"), SystemFunction::_is_member);
 	builtinFunctions.insert(String("set_member"), SystemFunction::_set_member);
+	builtinFunctions.insert(String("member_list"), SystemFunction::_member_list);
 	builtinFunctions.insert(String("union"), SystemFunction::_union);
 	builtinFunctions.insert(String("type_of"), SystemFunction::_type);
 	builtinFunctions.insert(String("are_same_type"), SystemFunction::_are_same_type);
@@ -4775,6 +4792,9 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_set_member:
 		return process_sys_set_member(task);
 
+	case SystemFunction::_member_list:
+		return process_sys_member_list(task);
+
 	case SystemFunction::_union:
 		process_sys_union(task);
 		break;
@@ -5361,17 +5381,17 @@ Engine::process_sys_member(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_member");
 #endif
-	ArgsIter paramsIter = task.args.start();
+	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 2 ) {
 		print(LogLevel::error, EngineMessage::MemberWrongArgCount);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the member sought
-	if ( ! isObjectFunction(**paramsIter) ) {
+	if ( ! isObjectFunction(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::MemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	FunctionContainer* parentFc = (FunctionContainer*)*paramsIter;
+	FunctionContainer* parentFc = (FunctionContainer*)*argsIter;
 	Function* parentFunc;
 		// Attempt to extract the function
 		// Failure occurs for "pointer variables" that have not reset
@@ -5380,12 +5400,12 @@ Engine::process_sys_member(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Second parameter is the name of the member
-	paramsIter.next();
-	if ( !isObjectString(**paramsIter) ) {
+	argsIter.next();
+	if ( !isObjectString(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::MemberArg2NotString);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectString* objStr = (ObjectString*)(*paramsIter);
+	ObjectString* objStr = (ObjectString*)(*argsIter);
 	String& rawStr = objStr->getString();
 	if ( ! isValidName( rawStr ) ) {
 		print(LogLevel::error, EngineMessage::MemberFunctionInvalidNameArg);
@@ -5405,19 +5425,19 @@ Engine::process_sys_member_count(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_member_count");
 #endif
-	ArgsIter paramsIter = task.args.start();
+	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 1 ) {
 		print(LogLevel::warning, EngineMessage::MemberCountWrongArgCount);
 		lastObject.setWithoutRef(new ObjectInteger(0));
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// The only parameter is the parent function of the members
-	if ( ! isObjectFunction(**paramsIter) ) {
+	if ( ! isObjectFunction(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::MemberCountArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
-	FunctionContainer* fc = (FunctionContainer*)(*paramsIter);
+	FunctionContainer* fc = (FunctionContainer*)(*argsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberCountArg);
 		return FuncExecReturn::ErrorOnRun;
@@ -5436,31 +5456,31 @@ Engine::process_sys_is_member(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_is_member");
 #endif
-	ArgsIter paramsIter = task.args.start();
+	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 2 ) {
 		print(LogLevel::error, EngineMessage::IsMemberWrongArgCount);
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the members
-	if ( ! isObjectFunction(**paramsIter) ) {
+	if ( ! isObjectFunction(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::IsMemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
-	FunctionContainer* fc = (FunctionContainer*)(*paramsIter);
+	FunctionContainer* fc = (FunctionContainer*)(*argsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsIsMemberArg);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Second parameter should be a string
-	paramsIter.next();
+	argsIter.next();
 	bool result = false;
-	if ( ! isObjectString(**paramsIter) ) {
+	if ( ! isObjectString(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::IsMemberArg2NotString);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	const String& memberName = ((ObjectString*)*paramsIter)->getString();
+	const String& memberName = ((ObjectString*)*argsIter)->getString();
 	result = parentFunc->getPersistentScope().variableExists( memberName );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
@@ -5474,38 +5494,71 @@ Engine::process_sys_set_member(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_set_member");
 #endif
-	ArgsIter paramsIter = task.args.start();
+	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 3 ) {
 		print(LogLevel::error, EngineMessage::SetMemberWrongArgCount);
 		lastObject.setWithoutRef(new FunctionContainer());
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter should be the parent function of the members
-	if ( ! isObjectFunction(**paramsIter) ) {
+	if ( ! isObjectFunction(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::SetMemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
-	FunctionContainer* fc = (FunctionContainer*)(*paramsIter);
+	FunctionContainer* fc = (FunctionContainer*)(*argsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsSetMemberArg);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Second parameter should be a string
-	paramsIter.next();
-	if ( ! isObjectString(**paramsIter) ) {
+	argsIter.next();
+	if ( ! isObjectString(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::SetMemberArg2NotString);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	String& memberName = ((ObjectString*)*paramsIter)->getString();
+	String& memberName = ((ObjectString*)*argsIter)->getString();
 	if ( !isValidName(memberName) ) {
 		print(LogLevel::error, EngineMessage::SystemFunctionBadArg);
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Third parameter can be anything
-	paramsIter.next();
-	parentFunc->getPersistentScope().setVariableFrom( memberName, *paramsIter, false );
+	argsIter.next();
+	parentFunc->getPersistentScope().setVariableFrom( memberName, *argsIter, false );
 	lastObject.setWithoutRef(new FunctionContainer());
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_member_list(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_member_list");
+#endif
+	ArgsIter  argsIter = task.args.start();
+	if ( !argsIter.has() ) {
+		// Nothing to do here
+		lastObject.setWithoutRef(new ObjectList());
+		return FuncExecReturn::Ran;
+	}
+	// This function can take any number of functions; it will simply add them to the same list.
+	ObjectList* outList = new ObjectList();
+	FunctionContainer* usableFC;
+	Function* usableFunc;
+	do {
+		if ( isObjectFunction(**argsIter) ) {
+			usableFC = (FunctionContainer*)(*argsIter);
+			if ( usableFC->getFunction(usableFunc) ) {
+				usableFunc->getPersistentScope().appendNamesByInterface(outList);
+			} else {
+				print(LogLevel::warning, EngineMessage::DestroyedFuncAsMemberListArg);
+			}
+		} else {
+			print(LogLevel::warning, EngineMessage::NonFunctionAsMemberListArg);
+		}
+	} while ( argsIter.next() );
+	lastObject.setWithoutRef(outList);
 	return FuncExecReturn::Ran;
 }
 
@@ -5516,9 +5569,9 @@ Engine::process_sys_union(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_union");
 #endif
-	ArgsIter paramsIter = task.args.start();
-	if ( !paramsIter.has() ) {
-		print(LogLevel::info, "Union function called without parameters. Default return is empty function.");
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
+		//print(LogLevel::info, "union function called without parameters. Default return is empty function.");
 		lastObject.setWithoutRef(new FunctionContainer());
 		return FuncExecReturn::Ran;
 	}
@@ -5528,8 +5581,8 @@ Engine::process_sys_union(
 	FunctionContainer* usableFC;
 	Function* usableFunc;
 	do {
-		if ( isObjectFunction(**paramsIter) ) {
-			usableFC = (FunctionContainer*)(*paramsIter);
+		if ( isObjectFunction(**argsIter) ) {
+			usableFC = (FunctionContainer*)(*argsIter);
 			if ( usableFC->getFunction(usableFunc) ) {
 				finalFunc->getPersistentScope().copyMembersFrom( usableFunc->getPersistentScope() );
 			} else {
@@ -5539,7 +5592,7 @@ Engine::process_sys_union(
 		} else {
 			print(LogLevel::warning, EngineMessage::NonFunctionAsUnionArg);
 		}
-	} while( paramsIter.next() );
+	} while( argsIter.next() );
 	lastObject.set(finalFC);
 	return FuncExecReturn::Ran;
 }
@@ -5551,13 +5604,13 @@ Engine::process_sys_type(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_type");
 #endif
-	ArgsIter paramsIter = task.args.start();
-	if ( !paramsIter.has() ) {
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectString());
 		return FuncExecReturn::Ran;
 	}
 	// Get only the first parameter
-	lastObject.setWithoutRef(new ObjectString( (*paramsIter)->typeName() ));
+	lastObject.setWithoutRef(new ObjectString( (*argsIter)->typeName() ));
 	return FuncExecReturn::Ran;
 }
 
@@ -5568,23 +5621,23 @@ Engine::process_sys_are_same_type(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_same_type");
 #endif
-	ArgsIter paramsIter = task.args.start();
-	if ( !paramsIter.has() ) {
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
 		lastObject.setWithoutRef(new FunctionContainer());
 		return FuncExecReturn::Ran;
 	}
 	// First parameter, to which all other parameters are compared
-	ObjectType::Value firstType = (*paramsIter)->getType();
-	String first( (*paramsIter)->typeName() );
+	ObjectType::Value firstType = (*argsIter)->getType();
+	String first( (*argsIter)->typeName() );
 	bool same = true;
 	do {
-		same = firstType == (*paramsIter)->getType();
+		same = firstType == (*argsIter)->getType();
 		if ( same ) {
-			same = first.equals( (*paramsIter)->typeName() );
+			same = first.equals( (*argsIter)->typeName() );
 		}
 		if ( !same )
 			break;
-	} while( paramsIter.next() );
+	} while( argsIter.next() );
 	// Get only the first parameter
 	lastObject.setWithoutRef(new ObjectBool(same));
 	return FuncExecReturn::Ran;
@@ -5597,17 +5650,17 @@ Engine::process_sys_are_bool(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_bool");
 #endif
-	ArgsIter paramsIter = task.args.start();
-	if ( !paramsIter.has() ) {
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectBool(**paramsIter);
+		out = isObjectBool(**argsIter);
 		if ( !out) break;
-	} while ( paramsIter.next() );
+	} while ( argsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(out));
 	return FuncExecReturn::Ran;
 }
@@ -5619,18 +5672,18 @@ Engine::process_sys_are_string(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_string");
 #endif
-	ArgsIter paramsIter = task.args.start();
-	if ( !paramsIter.has() ) {
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectString(**paramsIter);
+		out = isObjectString(**argsIter);
 		if ( !out)
 			break;
-	} while ( paramsIter.next() );
+	} while ( argsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(out));
 	return FuncExecReturn::Ran;
 }
@@ -5642,18 +5695,18 @@ Engine::process_sys_are_number(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_number");
 #endif
-	ArgsIter paramsIter = task.args.start();
-	if ( !paramsIter.has() ) {
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectInteger(**paramsIter) || isObjectDecimal(**paramsIter);
+		out = isObjectInteger(**argsIter) || isObjectDecimal(**argsIter);
 		if ( !out)
 			break;
-	} while ( paramsIter.next() );
+	} while ( argsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(out));
 	return FuncExecReturn::Ran;
 }
@@ -5665,18 +5718,18 @@ Engine::process_sys_are_integer(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_number");
 #endif
-	ArgsIter paramsIter = task.args.start();
-	if ( !paramsIter.has() ) {
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectInteger(**paramsIter);
+		out = isObjectInteger(**argsIter);
 		if ( !out)
 			break;
-	} while ( paramsIter.next() );
+	} while ( argsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(out));
 	return FuncExecReturn::Ran;
 }
@@ -5688,18 +5741,18 @@ Engine::process_sys_are_decimal(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_number");
 #endif
-	ArgsIter paramsIter = task.args.start();
-	if ( !paramsIter.has() ) {
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
 		lastObject.setWithoutRef(new ObjectBool(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectDecimal(**paramsIter);
+		out = isObjectDecimal(**argsIter);
 		if ( !out)
 			break;
-	} while ( paramsIter.next() );
+	} while ( argsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(out));
 	return FuncExecReturn::Ran;
 }
@@ -5712,16 +5765,16 @@ Engine::process_sys_assert(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_assert");
 #endif
-	ArgsIter paramsIter = task.args.start();
-	if ( !paramsIter.has() ) {
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
 		return FuncExecReturn::Ran;
 	}
 	do {
-		if ( ! getBoolValue(**paramsIter) ) {
+		if ( ! getBoolValue(**argsIter) ) {
 			print(LogLevel::error, EngineMessage::AssertionFailed);
 			return FuncExecReturn::ErrorOnRun;
 		}
-	} while ( paramsIter.next() );
+	} while ( argsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(true));
 	return FuncExecReturn::Ran;
 }
