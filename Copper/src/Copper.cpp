@@ -4461,6 +4461,9 @@ Engine::operate(
 				return ExecutionResult::Reset; // Restart the iterator
 
 			case FuncExecReturn::ErrorOnRun:
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+				print(LogLevel::debug, "[DEBUG: Function call exited with error.");
+#endif
 				return ExecutionResult::Error;
 
 			case FuncExecReturn::ExitCalled:
@@ -4722,12 +4725,13 @@ Engine::setupBuiltinFunctionExecution(
 		= builtinFunctions.getBucketData(task.getAddress().first());
 
 	// No matching function found
-	if ( ! bucketData )
+	if ( ! bucketData ) {
 		return FuncExecReturn::NoMatch;
+	}
 	// Else, bucketData found...
 
 	// Built-in function names should only have one name
-	if ( task.getAddress().hasOne() ) {
+	if ( ! task.getAddress().hasOne() ) {
 		//print(LogLevel::error, "Attempt to call member of built-in function.");
 		print(LogLevel::error, EngineMessage::SystemFuncInvalidAccess);
 		return FuncExecReturn::ErrorOnRun;
@@ -4796,41 +4800,36 @@ Engine::setupBuiltinFunctionExecution(
 		return process_sys_member_list(task);
 
 	case SystemFunction::_union:
-		process_sys_union(task);
-		break;
+		return process_sys_union(task);
 
 	case SystemFunction::_type:
-		process_sys_type(task);
-		break;
+		return process_sys_type(task);
 
 	case SystemFunction::_are_same_type:
-		process_sys_are_same_type(task);
-		break;
+		return process_sys_are_same_type(task);
 
 	case SystemFunction::_are_bool:
-		process_sys_are_bool(task);
-		break;
+		return process_sys_are_bool(task);
 
 	case SystemFunction::_are_string:
-		process_sys_are_string(task);
-		break;
+		return process_sys_are_string(task);
 
 	case SystemFunction::_are_number:
-		process_sys_are_number(task);
-		break;
+		return process_sys_are_number(task);
 
 	case SystemFunction::_are_integer:
-		process_sys_are_integer(task);
-		break;
+		return process_sys_are_integer(task);
 
 	case SystemFunction::_are_decimal:
-		process_sys_are_decimal(task);
-		break;
+		return process_sys_are_decimal(task);
 
 	case SystemFunction::_assert:
 		return process_sys_assert(task);
 
 	default:
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::setupBuiltinFunctionExecution could not match function");
+#endif
 		return FuncExecReturn::NoMatch;
 	}
 	return FuncExecReturn::Ran;
@@ -5241,9 +5240,9 @@ Engine::process_sys_not(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_not");
 #endif
 	bool result = true;
-	ArgsIter pi = task.args.start();
-	if ( pi.has() ) {
-		result = ! getBoolValue(**pi);
+	ArgsIter ai = task.args.start();
+	if ( ai.has() ) {
+		result = ! getBoolValue(**ai);
 	}
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
@@ -5257,11 +5256,11 @@ Engine::process_sys_all(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_all");
 #endif
 	bool result = false;
-	ArgsIter pi = task.args.start();
-	if ( pi.has() )
+	ArgsIter ai = task.args.start();
+	if ( ai.has() )
 	do {
-		result = getBoolValue(**pi);
-	} while ( pi.next() && ! result );
+		result = getBoolValue(**ai);
+	} while ( ai.next() && ! result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -5274,11 +5273,11 @@ Engine::process_sys_any(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_any");
 #endif
 	bool result = false;
-	ArgsIter pi = task.args.start();
-	if ( pi.has() )
+	ArgsIter ai = task.args.start();
+	if ( ai.has() )
 	do {
-		result = getBoolValue(**pi);
-	} while ( pi.next() && result );
+		result = getBoolValue(**ai);
+	} while ( ai.next() && result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -5291,11 +5290,11 @@ Engine::process_sys_nall(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_nall");
 #endif
 	bool result = true;
-	ArgsIter pi = task.args.start();
-	if ( pi.has() )
+	ArgsIter ai = task.args.start();
+	if ( ai.has() )
 	do {
-		result = ! getBoolValue(**pi);
-	} while ( pi.next() && !result );
+		result = ! getBoolValue(**ai);
+	} while ( ai.next() && !result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -5308,11 +5307,11 @@ Engine::process_sys_none(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_none");
 #endif
 	bool result = true;
-	ArgsIter pi = task.args.start();
-	if ( pi.has() )
+	ArgsIter ai = task.args.start();
+	if ( ai.has() )
 	do {
-		result = ! getBoolValue(**pi);
-	} while ( pi.next() && !result );
+		result = ! getBoolValue(**ai);
+	} while ( ai.next() && !result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -5325,11 +5324,11 @@ Engine::process_sys_are_fn(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_fn");
 #endif
 	bool result = false;
-	ArgsIter pi = task.args.start();
-	if ( pi.has() )
+	ArgsIter ai = task.args.start();
+	if ( ai.has() )
 	do {
-		result = isObjectFunction(**pi);
-	} while ( pi.next() && !result );
+		result = isObjectFunction(**ai);
+	} while ( ai.next() && !result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -5342,11 +5341,11 @@ Engine::process_sys_are_empty(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_empty");
 #endif
 	bool result = false;
-	ArgsIter pi = task.args.start();
-	if ( pi.has() )
+	ArgsIter ai = task.args.start();
+	if ( ai.has() )
 	do {
-		result = isObjectEmptyFunction(**pi);
-	} while ( pi.next() && result );
+		result = isObjectEmptyFunction(**ai);
+	} while ( ai.next() && result );
 	lastObject.setWithoutRef(new ObjectBool(result));
 	return FuncExecReturn::Ran;
 }
@@ -5362,11 +5361,11 @@ Engine::process_sys_are_same(
 	// to the same function, but as data is copied by default anyways, it won't matter.
 	bool result = true;
 	Object* firstPtr = REAL_NULL;
-	ArgsIter pi = task.args.start();
-	if ( pi.has() ) {
-		firstPtr = *pi;
-		while( pi.next() && result ) {
-			result = ( firstPtr == *pi );
+	ArgsIter ai = task.args.start();
+	if ( ai.has() ) {
+		firstPtr = *ai;
+		while( ai.next() && result ) {
+			result = ( firstPtr == *ai );
 		}
 	}
 	lastObject.setWithoutRef(new ObjectBool(result));

@@ -220,9 +220,10 @@ getStringFromEngineMessage(
 	case EngineMessage::MissingFunctionCallParam:
 		return "Missing parameter for function call. Defaulting to empty function.";
 
-	// WARNING
+	// ERROR
 	// Attempting to treat a built-in function like a variable.
 	case EngineMessage::SystemFuncInvalidAccess:
+		errLevel = EngineErrorLevel::error;
 		return "Attempting to treat a built-in function like a variable";
 
 	// WARNING

@@ -373,7 +373,7 @@ struct EngineMessage {
 	This results in a default value (of empty function) for the parameter. */
 	MissingFunctionCallParam,
 
-	// WARNING
+	// ERROR
 	// Attempting to treat a built-in function like a variable.
 	SystemFuncInvalidAccess,
 

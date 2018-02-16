@@ -26,11 +26,15 @@ v 5-0.31
 - Added "member_list" as a new built-in function for creating a list of members of a function.
 - Added EngineMessage::DestroyedFuncAsMemberListArg and EngineMessage::NonFunctionAsMemberListArg.
 - Changed ObjectList::prepend() to push_front() and added push_back(), changing append() to defer to calling it.
+- Fixed bug in setupBuiltinFunctionExecution preventing system function calls.
 
 utilPile.h created.
 
 EngMsgToStr
 - Updated.
+
+InStreamLogger.h
+- Added pretty print.
 
 
 ====================

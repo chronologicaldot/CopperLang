@@ -110,23 +110,36 @@ public:
 
 protected:
 	void printInfo(const char* msg) {
+		//std::fprintf(outFile, "\033[0;46m%s\033[0m\n", msg);
 		std::fprintf(outFile, "%s\n", msg);
 	}
 
 	void printWarning(const char* msg) {
-		std::fprintf(outFile, "Warning (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
+		if ( outFile == stdout )
+			std::printf("\033[34m\033[103m Warning \33[0m\33[44m (%lu:%lu) \033[0m\033[0m \033[93m%s\033[0m\n", prev_lines, prev_columns, msg);
+		else
+			std::fprintf(outFile, " Warning  (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
 	}
 
 	void printError(const char* msg) {
-		std::fprintf(outFile, "Error (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
+		if ( outFile == stdout )
+			std::printf("\33[101m Error \33[44m (%lu:%lu) \033[0m\33[31m %s\33[0m\n", prev_lines, prev_columns, msg);
+		else
+			std::fprintf(outFile, " Error  (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
 	}
 
 	void printSystemError(const char* msg) {
-		std::fprintf(outFile, "System Error (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
+		if ( outFile == stdout )
+			std::printf("\033[45m System Error \033[44m (%lu:%lu) \033[0m\33[35m%s\33[0m\n", prev_lines, prev_columns, msg);
+		else
+			std::fprintf(outFile, " System Error  (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
 	}
 
 	void printCPPError(const char* msg) {
-		std::fprintf(outFile, "C++ Error (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
+		if ( outFile == stdout )
+			std::printf("\033[100m C++ Error \033[44m (%lu:%lu) \033[0m\033[91m%s\033[0m\n", prev_lines, prev_columns, msg);
+		else
+			std::fprintf(outFile, " C++ Error  (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
 	}
 
 public:
@@ -174,7 +187,10 @@ public:
 	}
 
 	virtual void printFunctionError(UInteger functionId, UInteger tokenIndex, const Cu::TokenType& tokenType) {
-		fprintf(outFile, "STACK TRACE: fn( %u ) token( %u ):id(%u)\n", functionId, tokenIndex, (unsigned int)tokenType);
+		if ( outFile == stdout )
+			std::printf("\033[46m STACK TRACE \33[0m \033[96m fn( %u ) token( %u ):id(%u)\33[0m\n", functionId, tokenIndex, (unsigned int)tokenType);
+		else
+			fprintf(outFile, "STACK TRACE: fn( %u ) token( %u ):id(%u)\n", functionId, tokenIndex, (unsigned int)tokenType);
 	}
 
 };
