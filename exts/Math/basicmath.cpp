@@ -45,19 +45,19 @@ addFunctionsToEngine(
 
 	// Decimal return only
 	addNewForeignFunc( engine, "pow", new Power() );
+	addNewForeignFunc( engine, "PI", new PI() );
+	addNewForeignFunc( engine, "small_PI", new SmallPI() );
 
 	// Integer only
 	addNewForeignFunc( engine, "++", new Incr() );
 	addNewForeignFunc( engine, "--", new Decr() );
 
-/*
 	// Decimal only (Integers are casted)
-	addForeignFuncInstance<Unimplemented>			(engine, "sin");
-	addForeignFuncInstance<Unimplemented>			(engine, "cos");
-	addForeignFuncInstance<Unimplemented>			(engine, "tan");
-	addForeignFuncInstance<Unimplemented>			(engine, "floor");
-	addForeignFuncInstance<Unimplemented>			(engine, "ceiling");
-*/
+	addNewForeignFunc(engine, "sin", new Sine() );
+	addNewForeignFunc(engine, "cos", new Cosine() );
+	addNewForeignFunc(engine, "tan", new Tangent() );
+	addNewForeignFunc(engine, "floor", new Floor() );
+	addNewForeignFunc(engine, "ceiling", new Ceiling() );
 }
 
 /*
@@ -678,6 +678,26 @@ Power::call(
 }
 
 bool
+PI::call(
+	FFIServices& ffi
+) {
+	Object* obj = new ObjectDecimal(3.1415926535897932384626433832795028841971693993751);
+	ffi.setResult(obj);
+	obj->deref();
+	return true;
+}
+
+bool
+SmallPI::call(
+	FFIServices& ffi
+) {
+	Object* obj = new ObjectDecimal(3.1415926);
+	ffi.setResult(obj);
+	obj->deref();
+	return true;
+}
+
+bool
 Pick_min::call(
 	FFIServices& ffi
 ) {
@@ -872,6 +892,56 @@ Decr::call(
 			ffi.printWarning("Decrement argument was not of type Integer. Ignoring.");
 		}
 	}
+	return true;
+}
+
+bool
+Sine::call(
+	FFIServices&  ffi
+) {
+	Object* obj = new ObjectDecimal( sin( ffi.getNextArg()->getDecimalValue() ) );
+	ffi.setResult(obj);
+	obj->deref();
+	return true;
+}
+
+bool
+Cosine::call(
+	FFIServices&  ffi
+) {
+	Object* obj = new ObjectDecimal( cos( ffi.getNextArg()->getDecimalValue() ) );
+	ffi.setResult(obj);
+	obj->deref();
+	return true;
+}
+
+bool
+Tangent::call(
+	FFIServices&  ffi
+) {
+	Object* obj = new ObjectDecimal( tan( ffi.getNextArg()->getDecimalValue() ) );
+	ffi.setResult(obj);
+	obj->deref();
+	return true;
+}
+
+bool
+Ceiling::call(
+	FFIServices&  ffi
+) {
+	Object* obj = new ObjectDecimal( ceil( ffi.getNextArg()->getDecimalValue() ) );
+	ffi.setResult(obj);
+	obj->deref();
+	return true;
+}
+
+bool
+Floor::call(
+	FFIServices&  ffi
+) {
+	Object* obj = new ObjectDecimal( floor( ffi.getNextArg()->getDecimalValue() ) );
+	ffi.setResult(obj);
+	obj->deref();
 	return true;
 }
 

@@ -30,8 +30,23 @@ union IntDeciUnion {
 struct VariadicFunc : public ForeignFunc {
 	virtual ~VariadicFunc() {}
 
-	virtual bool isVariadic() const {
+	virtual bool
+	isVariadic() const {
 		return true;
+	}
+};
+
+struct LoneDecimalFunc : public ForeignFunc {
+	virtual ~LoneDecimalFunc() {}
+
+	virtual UInteger
+	getParameterCount() const {
+		return 1;
+	}
+
+	virtual ObjectType::Value
+	getParameterType( UInteger  index ) const {
+		return ObjectType::Decimal;
 	}
 };
 
@@ -102,6 +117,14 @@ struct Power : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
+struct PI : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct SmallPI : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
 struct Pick_max : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
@@ -123,6 +146,26 @@ struct Incr : public VariadicFunc {
 };
 
 struct Decr : public VariadicFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Sine : public LoneDecimalFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Cosine : public LoneDecimalFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Tangent : public LoneDecimalFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Ceiling : public LoneDecimalFunc {
+	virtual bool call( FFIServices& ffi );
+};
+
+struct Floor : public LoneDecimalFunc {
 	virtual bool call( FFIServices& ffi );
 };
 

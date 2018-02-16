@@ -1,4 +1,12 @@
 ===========
+2018/2/15
+
+basicmath
+- Changed method of adding foreign functions to the engine.
+- Added classes Sine, Cosine, Tangent, Floor, Ceiling, PI, and SmallPI.
+
+
+===========
 2018/2/13
 
 basicmath.h
