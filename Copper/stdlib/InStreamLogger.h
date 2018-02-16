@@ -123,7 +123,7 @@ protected:
 
 	void printError(const char* msg) {
 		if ( outFile == stdout )
-			std::printf("\33[101m Error \33[44m (%lu:%lu) \033[0m\33[31m %s\33[0m\n", prev_lines, prev_columns, msg);
+			std::printf("\33[41m Error \33[44m (%lu:%lu) \033[0m\33[91m %s\33[0m\n", prev_lines, prev_columns, msg);
 		else
 			std::fprintf(outFile, " Error  (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
 	}

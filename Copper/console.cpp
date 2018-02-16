@@ -37,7 +37,7 @@ int main() {
 	//engine.setStackTracePrintingEnabled(true);
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
-	std::printf("\n>> \t\tCOPPER LANGUAGE\n>>\t\tConsole Application\n>>\t\t(c) 2016-2018 Nicolaus Anderson\n\n");
+	std::printf("\33[92m\n \t\tCOPPER LANGUAGE\n\t\tConsole Application\n\t\t(c) 2016-2018 Nicolaus Anderson\n\33[4m                                                              \33[0m\n");
 
 #ifdef COPPER_REF_LEVEL_MESSAGES
 	printer.declareStackBased();
