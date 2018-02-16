@@ -140,7 +140,7 @@ getStringFromEngineMessage(
 	// Token could not be handled. This results when the system has not implemented it.
 	case EngineMessage::TokenNotHandled:
 		errLevel = EngineErrorLevel::error;
-		return "Handling for this token has not been implemented. Are you using beta version?";
+		return "Unhandled token.";
 
 	// ERROR
 	// Invalid token encountered in the object body construction.

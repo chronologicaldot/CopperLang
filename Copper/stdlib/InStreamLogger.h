@@ -123,9 +123,9 @@ protected:
 
 	void printError(const char* msg) {
 		if ( outFile == stdout )
-			std::printf("\33[41m Error \33[44m (%lu:%lu) \033[0m\33[91m %s\33[0m\n", prev_lines, prev_columns, msg);
+			std::printf("\33[41m ERROR \33[44m (%lu:%lu) \033[0m\33[91m %s\33[0m\n", prev_lines, prev_columns, msg);
 		else
-			std::fprintf(outFile, " Error  (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
+			std::fprintf(outFile, " ERROR  (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
 	}
 
 	void printSystemError(const char* msg) {
@@ -186,11 +186,34 @@ public:
 		}
 	}
 
+/*
 	virtual void printFunctionError(UInteger functionId, UInteger tokenIndex, const Cu::TokenType& tokenType) {
 		if ( outFile == stdout )
 			std::printf("\033[46m STACK TRACE \33[0m \033[96m fn( %u ) token( %u ):id(%u)\33[0m\n", functionId, tokenIndex, (unsigned int)tokenType);
 		else
 			fprintf(outFile, "STACK TRACE: fn( %u ) token( %u ):id(%u)\n", functionId, tokenIndex, (unsigned int)tokenType);
+	}
+*/
+
+	virtual void printTaskTrace( Cu::TaskType::Value  taskType, const Cu::String&  taskName, UInteger  taskNumber ) {
+		if ( taskType == Cu::TaskType::FuncFound ) {
+			if ( outFile == stdout )
+				fprintf(outFile, "\33[46m TASK TRACE %u \33[0m \33[96m[CALL] %s\33[0m\n", taskNumber, taskName.c_str());
+			else
+				fprintf(outFile, " TASK TRACE %u : %s\n", taskNumber, taskName.c_str());
+		} else {
+			if ( outFile == stdout )
+				fprintf(outFile, "\33[46m TASK TRACE %u \33[0m \33[96m[BUILD] %s\33[0m\n", taskNumber, taskName.c_str());
+			else
+				fprintf(outFile, " TASK TRACE %u : %s\n", taskNumber, taskName.c_str());
+		}
+	}
+
+	virtual void printStackTrace( const Cu::String&  frameName, UInteger  frameNumber ) {
+		if ( outFile == stdout )
+			fprintf(outFile, "\33[44m STACK TRACE %u \33[0m \33[94m %s\33[0m\n", frameNumber, frameName.c_str());
+		else
+			fprintf(outFile, " STACK TRACE %u : %s\n", frameNumber, frameName.c_str());
 	}
 
 };

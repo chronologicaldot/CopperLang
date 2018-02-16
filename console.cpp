@@ -116,7 +116,7 @@ int main() {
 	CuStd::InStreamLogger streamLogger;
 	engine.setLogger(&streamLogger);
 	engine.addForeignFunction(util::String("print"), &printer);
-	//engine.setStackTracePrintingEnabled(true);
+	engine.setStackTracePrintingEnabled(true);
 
 	//Cu::Numeric::Sizes::addFunctionsToEngine(engine);
 	//Cu::ManagedList::addFunctionsToEngine(engine, true);

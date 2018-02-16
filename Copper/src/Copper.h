@@ -33,7 +33,7 @@
 //-----
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-//#include <cstdio>
+#include <cstdio>
 
 //#define COPPER_SPEED_PROFILE
 
@@ -773,6 +773,15 @@ struct SystemFunction {
 	};
 };
 
+//------------
+
+// Execution Task Types
+struct TaskType {
+	enum Value {
+		FuncBuild=0,
+		FuncFound
+	};
+};
 
 //----------
 
@@ -797,10 +806,10 @@ struct LogLevel {
 
 // Interface for a logger
 struct Logger {
-	virtual void print(const LogLevel::Value& logLevel, const char* msg)=0;
-	virtual void print(const LogLevel::Value& logLevel, const EngineMessage::Value& msg)=0;
-	// DEPRECATED
-	virtual void printFunctionError(UInteger functionId, UInteger tokenIndex, const TokenType& tokenType)=0;
+	virtual void print(const LogLevel::Value&  logLevel, const char*  msg)=0;
+	virtual void print(const LogLevel::Value&  logLevel, const EngineMessage::Value&  msg)=0;
+	virtual void printTaskTrace( TaskType::Value  taskType, const String&  taskName, UInteger  taskNumber )=0;
+	virtual void printStackTrace( const String&  frameName, UInteger  frameNumber )=0;
 };
 
 //----------
@@ -1007,17 +1016,10 @@ public:
 
 // *********** OPERATION PROCESSING BASE COMPONENTS **********
 
-struct TaskName {
-	enum Value {
-		FuncBuild=0,
-		FuncFound
-	};
-};
-
 struct Task : public Ref {
-	TaskName::Value name;
+	TaskType::Value name;
 
-	Task(TaskName::Value pName) : name(pName) {}
+	Task(TaskType::Value pName) : name(pName) {}
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
@@ -1029,7 +1031,7 @@ struct Task : public Ref {
 class TaskContainer {
 	Task* task;
 public:
-	// Expected to be passed: new Task() (e.g. "new TaskFunctionConstruct()")
+	// Expected to be passed: new Task() (e.g. "new FuncFoundTask()")
 	TaskContainer(Task* newTask)
 		: task(newTask)
 	{}
@@ -2358,33 +2360,23 @@ class StackFrame : public Ref {
 
 	StackFrame* parent; // Set by Stack
 	Scope* scope;
+	VarAddress* address;
 
 public:
-	StackFrame()
-		: parent(REAL_NULL)
-		, scope(new Scope())
-	{}
+	StackFrame( VarAddress* pAddress );
 
-	StackFrame(const StackFrame& pOther)
-		: parent(REAL_NULL)
-		, scope(REAL_NULL)
-	{
-		// Copy, don't share
-		*scope = *(pOther.scope);
-	}
+	StackFrame( const StackFrame& pOther );
 
-	~StackFrame() {
-		scope->deref();
-	}
+	~StackFrame();
 
-	void replaceScope() {
-		scope->deref();
-		scope = new Scope();
-	}
+	void
+	replaceScope();
 
-	Scope& getScope() {
-		return *scope;
-	}
+	Scope&
+	getScope();
+
+	VarAddress*
+	getAddress();
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
@@ -2401,18 +2393,21 @@ enum StackPopReturn {
 
 // Stack class
 class Stack {
-	UInteger size;
+	UInteger  size;
 	// Singly Linked List from top-to-bottom
-	StackFrame* bottom;
-	StackFrame* top;
+	StackFrame*  bottom;
+	StackFrame*  top;
+
+	// Bottom frame name
+	VarAddress*  globalName;
 
 public:
 	Stack();
 #ifdef COMPILE_COPPER_FOR_C_PLUS_PLUS_11
-	Stack(const Stack& pOther) = delete;
+	Stack( const Stack& ) = delete;
 #else
 private:
-	Stack(const Stack& pOther);
+	Stack( const Stack& );
 public:
 #endif
 	~Stack();
@@ -2423,8 +2418,9 @@ public:
 	StackFrame& getTop();
 	UInteger getCurrLevel();
 	StackPopReturn pop();
-	void push();
-	void push(StackFrame* pContext);
+	void push( VarAddress* pAddress );
+	void push( StackFrame* );
+	void print( Logger* );
 };
 
 
@@ -2575,7 +2571,7 @@ struct FuncBuildTask : public Task {
 	Function* function;
 
 	FuncBuildTask()
-		: Task(TaskName::FuncBuild)
+		: Task(TaskType::FuncBuild)
 		, function(new Function())
 	{}
 
@@ -2881,7 +2877,7 @@ class Engine {
 	RobinHoodHash<ForeignFuncContainer> foreignFunctions;
 	bool ignoreBadForeignFunctionCalls;
 	bool ownershipChangingEnabled;
-	//bool stackTracePrintingEnabled; // TODO: Re-implement
+	bool stackTracePrintingEnabled;
 	bool (* nameFilter)(const String& pName);
 
 public:
@@ -2907,11 +2903,10 @@ public:
 		ownershipChangingEnabled = yes;
 	}
 
-	// TODO: Re-implement
 	// Print the stack trace when a function fails
-	//void setStackTracePrintingEnabled( bool on ) {
-	//	stackTracePrintingEnabled = on;
-	//}
+	void setStackTracePrintingEnabled( bool on ) {
+		stackTracePrintingEnabled = on;
+	}
 
 	/* Set the filter used for checking the validity of names.
 	The filter should return true if the name is valid.
@@ -2944,6 +2939,8 @@ public:
 protected:
 	void clearStacks();
 	void signalEndofProcessing();
+	void printTaskTrace();
+	void printStackTrace();
 
 	Scope&
 	getGlobalScope();

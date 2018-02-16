@@ -27,6 +27,10 @@ v 5-0.31
 - Added EngineMessage::DestroyedFuncAsMemberListArg and EngineMessage::NonFunctionAsMemberListArg.
 - Changed ObjectList::prepend() to push_front() and added push_back(), changing append() to defer to calling it.
 - Fixed bug in setupBuiltinFunctionExecution preventing system function calls.
+- Implemented stack trace printing in Engine and Stack.
+- Removed deprecated Logger interface function.
+- Added Logger::printTaskTrace() and Logger::printStackTrace().
+- Changed TaskName to TaskType.
 
 utilPile.h created.
 

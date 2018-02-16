@@ -1107,12 +1107,57 @@ UInteger Scope::occupancy() {
 
 //--------------------------------------
 
+StackFrame::StackFrame( VarAddress* pAddress )
+	: parent(REAL_NULL)
+	, scope(new Scope())
+	, address(pAddress)
+{
+	if ( address )
+		address->ref();
+}
+
+StackFrame::StackFrame( const StackFrame& pOther )
+	: parent(REAL_NULL)
+	, scope(REAL_NULL)
+	, address(REAL_NULL)
+{
+	// Copy, don't share
+	*scope = *(pOther.scope);
+	address = pOther.address;
+	if ( address )
+		address->ref();
+}
+
+StackFrame::~StackFrame() {
+	scope->deref();
+	if ( address )
+		address->deref();
+}
+
+void
+StackFrame::replaceScope() {
+	scope->deref();
+	scope = new Scope();
+}
+
+Scope&
+StackFrame::getScope() {
+	return *scope;
+}
+
+VarAddress*
+StackFrame::getAddress() {
+	return address;
+}
+
 Stack::Stack()
 	: size(1)
 	, bottom(REAL_NULL)
 	, top(REAL_NULL)
+	, globalName(new VarAddress())
 {
-	bottom = new StackFrame();
+	globalName->push_back("[global scope]");
+	bottom = new StackFrame(globalName);
 	top = bottom;
 }
 /*
@@ -1126,6 +1171,7 @@ Stack::Stack(const Stack& pOther)
 */
 Stack::~Stack() {
 	clear();
+	globalName->deref();
 }
 
 void
@@ -1199,21 +1245,21 @@ Stack::pop() {
 }
 
 void
-Stack::push() {
+Stack::push( VarAddress*  pAddress ) {
 	if ( isNull(bottom) ) {
-		bottom = new StackFrame();
+		bottom = new StackFrame(globalName);
 		top = bottom;
 		++size;
 		return;
 	}
 	StackFrame* parent = top;
-	top = new StackFrame();
+	top = new StackFrame(globalName);
 	top->parent = parent;
 	++size;
 }
 
 void
-Stack::push(StackFrame* pContext) {
+Stack::push( StackFrame*  pContext ) {
 	if ( pContext == 0 )
 		throw UninitializedStackContextException();
 	pContext->ref();
@@ -1227,6 +1273,26 @@ Stack::push(StackFrame* pContext) {
 	top = pContext;
 	top->parent = parent;
 	++size;
+}
+
+void
+Stack::print( Logger*  pLogger ) {
+	if ( isNull(pLogger) )
+		return;
+
+	StackFrame* sf = top;
+	UInteger i=size;
+	VarAddress* address;
+	while ( notNull(sf) ) {
+		address = sf->getAddress();
+		if ( address ) {
+			pLogger->printStackTrace( addressToString(*address), i);
+		} else {
+			pLogger->printStackTrace( "[Nameless frame]", i);
+		}
+		sf = sf->parent;
+		--i;
+	}
 }
 
 // ************ PARSE TASKS **********
@@ -1435,7 +1501,7 @@ addNewParseTask(
 FuncFoundTask::FuncFoundTask(
 	const VarAddress& pVarAddress
 )
-	: Task(TaskName::FuncFound)
+	: Task(TaskType::FuncFound)
 	, varAddress(pVarAddress)
 	, args()
 {}
@@ -1444,7 +1510,7 @@ FuncFoundTask::FuncFoundTask(
 FuncFoundTask::FuncFoundTask(
 	VarAddress* pVarAddress
 )
-	: Task(TaskName::FuncFound)
+	: Task(TaskType::FuncFound)
 	, varAddress(pVarAddress)
 	, args()
 {
@@ -1455,7 +1521,7 @@ FuncFoundTask::FuncFoundTask(
 FuncFoundTask::FuncFoundTask(
 	const FuncFoundTask& pOther
 )
-	: Task(TaskName::FuncFound)
+	: Task(TaskType::FuncFound)
 	, varAddress(pOther.varAddress)
 	, args(pOther.args)
 {}
@@ -1464,7 +1530,7 @@ FuncFoundTask::FuncFoundTask(
 FuncFoundTask::FuncFoundTask(
 	FuncFoundTask& pOther
 )
-	: Task(TaskName::FuncFound)
+	: Task(TaskType::FuncFound)
 	, varAddress(pOther.varAddress)
 	, args(pOther.args)
 {
@@ -1744,7 +1810,7 @@ Engine::Engine()
 	, foreignFunctions(100)
 	, ignoreBadForeignFunctionCalls(false)
 	, ownershipChangingEnabled(false)
-	//, stackTracePrintingEnabled(false)
+	, stackTracePrintingEnabled(false)
 	, nameFilter(REAL_NULL)
 {
 	setupSystemFunctions();
@@ -1963,6 +2029,33 @@ void Engine::signalEndofProcessing() {
 	if ( notNull(endMainCallback) ) {
 		endMainCallback->CuEngineDoneProcessing();
 	}
+}
+
+void Engine::printTaskTrace() {
+	if ( isNull(logger) )
+		return;
+	List<TaskContainer>::Iter  ti = taskStack.start();
+	if ( ! ti.has() )
+		return;
+	UInteger  t_index = 1;
+	do {
+		if ( ti->getTask().name == TaskType::FuncBuild ) {
+			logger->printTaskTrace(TaskType::FuncBuild, "Body construction", t_index);
+		} else if ( ti->getTask().name == TaskType::FuncFound ) {
+			logger->printTaskTrace(
+				TaskType::FuncFound,
+				addressToString(
+					((FuncFoundTask&)(ti->getTask())).getAddress()
+				),
+				t_index
+			);
+		}
+		++t_index;
+	} while ( ti.next() );
+}
+
+void Engine::printStackTrace() {
+	stack.print(logger);
 }
 
 void Engine::clearGlobals() {
@@ -4327,7 +4420,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_createRegularParam");
 #endif
 		task = getLastTask();
-		if ( task->name == TaskName::FuncBuild ) {
+		if ( task->name == TaskType::FuncBuild ) {
 			((FuncBuildTask*)task)->function->addParam( opcode->getNameData() );
 		} else {
 			throw BadOpcodeException(Opcode::FuncBuild_createRegularParam);
@@ -4339,7 +4432,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_assignToVar");
 #endif
 		task = getLastTask();
-		if ( task->name == TaskName::FuncBuild ) {
+		if ( task->name == TaskType::FuncBuild ) {
 			((FuncBuildTask*)task)->function->getPersistentScope().setVariableFrom(
 				opcode->getNameData(),
 				lastObject.raw(),
@@ -4355,7 +4448,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_pointerAssignToVar");
 #endif
 		task = getLastTask();
-		if ( task->name == TaskName::FuncBuild ) {
+		if ( task->name == TaskType::FuncBuild ) {
 			((FuncBuildTask*)task)->function->getPersistentScope().setVariableFrom(
 				opcode->getNameData(),
 				lastObject.raw(),
@@ -4371,7 +4464,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_execBody");
 #endif
 		task = getLastTask();
-		if ( task->name == TaskName::FuncBuild ) {
+		if ( task->name == TaskType::FuncBuild ) {
 			// Should check for function existence, but if there is no function, there is an internal failure
 			((FuncBuildTask*)task)->function->body.set( opcode->getBody() );
 		} else {
@@ -4384,7 +4477,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncBuild_end");
 #endif
 		task = getLastTask();
-		if ( task->name == TaskName::FuncBuild ) {
+		if ( task->name == TaskType::FuncBuild ) {
 			lastObject.setWithoutRef(
 				new FunctionContainer( ((FuncBuildTask*)task)->function )
 			);
@@ -4436,7 +4529,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_setParam");
 #endif
 		task = getLastTask();
-		if ( task->name == TaskName::FuncFound ) {
+		if ( task->name == TaskType::FuncFound ) {
 			((FuncFoundTask*)task)->addArg( lastObject.raw() );
 		} else {
 			throw BadOpcodeException(Opcode::FuncFound_setParam);
@@ -4448,7 +4541,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode FuncFound_finishCall");
 #endif
 		task = getLastTask();
-		if ( task->name == TaskName::FuncFound ) {
+		if ( task->name == TaskType::FuncFound ) {
 			opIter.next(); // Increment to the Terminal
 			switch( setupFunctionExecution(*((FuncFoundTask*)task), opStrandStackIter) ) {
 
@@ -4464,6 +4557,10 @@ Engine::operate(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 				print(LogLevel::debug, "[DEBUG: Function call exited with error.");
 #endif
+				if ( stackTracePrintingEnabled ) {
+					printTaskTrace();
+					printStackTrace();
+				}
 				return ExecutionResult::Error;
 
 			case FuncExecReturn::ExitCalled:
@@ -4648,8 +4745,13 @@ Engine::runFunctionObject(
 		return EngineResult::Error;
 	}
 
+	// TODO: Should be passed in as a name so that the user can identify the name
+	VarAddress* foreignAddr = new VarAddress();
+	foreignAddr->push_back("[FOREIGN FUNCTION]");
+
 	// "this" pointer is added to new stack context if the body can be run.
-	StackFrame* stackFrame = new StackFrame();
+	StackFrame* stackFrame = new StackFrame(foreignAddr);
+	foreignAddr->deref();
 
 	// Add "this" pointer
 	Variable* callVariable;
@@ -5031,7 +5133,7 @@ Engine::setupUserFunctionExecution(
 	}
 
 	// "super" and "this" are added to new stack context if the body can be run.
-	StackFrame* stackFrame = new StackFrame();
+	StackFrame* stackFrame = new StackFrame(task.varAddress);
 
 	if ( notNull(super) ) {
 		// Add "super" pointer
