@@ -1740,6 +1740,14 @@ FFIServices::setResult(
 	engine.lastObject.set(obj);
 }
 
+void
+FFIServices::setNewResult(
+	Object* obj
+) {
+	engine.lastObject.set(obj);
+	obj->deref();
+}
+
 
 // *********** HELPER FUNCTIONS ********
 

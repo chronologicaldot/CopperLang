@@ -34,6 +34,7 @@ v 5-0.31
 - Changed implementation of ObjectString::getIntegerValue() and ObjectString::getDecimalValue() to return converted value forms.
 - Fixed String::toInt() to return correct value when string begins with a minus sign.
 - Removed address requirement from Logger:::print(LogLevel::Value, EngineMessage::Value) and Logger::print(LogLevel::Value, const char*).
+- Added FFIServices::setNewResult().
 
 utilPile.h created.
 

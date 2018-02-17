@@ -60,6 +60,7 @@ struct DecimalCast : public VariadicFunc {
 
 
 bool ToString( FFIServices& ffi );
+bool DecimalInfinity( FFIServices& ffi );
 
 bool Unimplemented( FFIServices& ffi );
 

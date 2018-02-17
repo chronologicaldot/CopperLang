@@ -2777,6 +2777,9 @@ public:
 
 	// Sets the Engine lastObject.
 	void setResult(Object* obj);
+
+	// Sets the Engine lastObject with a new Object (calls deref)
+	void setNewResult(Object* obj);
 };
 
 // ********** HELPER FUNCTIONS **********

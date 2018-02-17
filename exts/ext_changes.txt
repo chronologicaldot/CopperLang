@@ -1,4 +1,12 @@
 ===========
+2018/2/16
+
+basicmath
+- Added class DecimalInfinity.
+- Optimized math calls.
+
+
+===========
 2018/2/15
 
 basicmath

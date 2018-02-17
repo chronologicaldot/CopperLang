@@ -24,6 +24,7 @@ addFunctionsToEngine(
 	addNewForeignFunc( engine, "dcml", new DecimalCast() );
 
 	addForeignFuncInstance( engine, "num_to_str", ToString );
+	addForeignFuncInstance( engine, "infinity", DecimalInfinity );
 
 	addNewForeignFunc( engine, "are_zero", new AreZero() );
 	addNewForeignFunc( engine, "equal", new AreEqual() );
@@ -124,9 +125,19 @@ bool ToString(
 			break;
 		}
 	}
-	ObjectString*  out = new ObjectString(sstream.str().c_str());
-	ffi.setResult(out);
-	out->deref();
+	ffi.setNewResult(
+		new ObjectString(sstream.str().c_str())
+	);
+	return true;
+}
+
+bool
+DecimalInfinity(
+	FFIServices& ffi
+) {
+	ffi.setNewResult(
+		new ObjectDecimal( std::numeric_limits<double>::infinity() )
+	);
 	return true;
 }
 
@@ -165,9 +176,9 @@ AreZero::call(
 		}
 		if ( !is_zero ) break;
 	}
-	out = new ObjectBool(is_zero);
-	ffi.setResult(out);
-	out->deref();
+	ffi.setNewResult(
+		new ObjectBool(is_zero)
+	);
 	return true;
 }
 
@@ -205,9 +216,9 @@ AreEqual::call(
 			break;
 		}
 	}
-	ObjectBool*  out = new ObjectBool(are_equal);
-	ffi.setResult(out);
-	out->deref();
+	ffi.setNewResult(
+		new ObjectBool(are_equal)
+	);
 	return true;
 };
 
@@ -246,9 +257,9 @@ IsGreaterThan::call(
 			break;
 		}
 	}
-	out = new ObjectBool(result);
-	ffi.setResult(out);
-	out->deref();
+	ffi.setNewResult(
+		new ObjectBool(result)
+	);
 	return true;
 }
 
@@ -288,9 +299,9 @@ IsLessThan::call(
 			break;
 		}
 	}
-	out = new ObjectBool(result);
-	ffi.setResult(out);
-	out->deref();
+	ffi.setNewResult(
+		new ObjectBool(result)
+	);
 	return true;
 }
 
@@ -330,9 +341,9 @@ IsGreaterThanOrEqual::call(
 			break;
 		}
 	}
-	out = new ObjectBool(result);
-	ffi.setResult(out);
-	out->deref();
+	ffi.setNewResult(
+		new ObjectBool(result)
+	);
 	return true;
 }
 
@@ -372,9 +383,9 @@ IsLessThanOrEqual::call(
 			break;
 		}
 	}
-	out = new ObjectBool(result);
-	ffi.setResult(out);
-	out->deref();
+	ffi.setNewResult(
+		new ObjectBool(result)
+	);
 	return true;
 }
 
@@ -421,9 +432,7 @@ Add::call(
 				startValue.i_val += ffi.getNextArg()->getIntegerValue();
 #endif
 			}
-			obj = new ObjectInteger( startValue.i_val );
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectInteger( startValue.i_val ) );
 			return true;
 
 		case ObjectType::Decimal:
@@ -431,9 +440,7 @@ Add::call(
 			while ( ffi.hasMoreArgs() ) {
 				startValue.d_val += ffi.getNextArg()->getDecimalValue();
 			}
-			obj = new ObjectDecimal( startValue.d_val );
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectDecimal( startValue.d_val ) );
 			return true;
 
 		default:
@@ -483,9 +490,7 @@ Subtract::call(
 				startValue.i_val -= ffi.getNextArg()->getIntegerValue();
 #endif
 			}
-			obj = new ObjectInteger( startValue.i_val );
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectInteger( startValue.i_val ) );
 			return true;
 
 		case ObjectType::Decimal:
@@ -493,9 +498,7 @@ Subtract::call(
 			while ( ffi.hasMoreArgs() ) {
 				startValue.d_val -= ffi.getNextArg()->getDecimalValue();
 			}
-			obj = new ObjectDecimal( startValue.d_val );
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectDecimal( startValue.d_val ) );
 			return true;
 
 		default:
@@ -545,9 +548,7 @@ Multiply::call(
 				startValue.i_val *= ffi.getNextArg()->getIntegerValue();
 #endif
 			}
-			obj = new ObjectInteger( startValue.i_val );
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectInteger( startValue.i_val ) );
 			return true;
 
 		case ObjectType::Decimal:
@@ -555,9 +556,7 @@ Multiply::call(
 			while ( ffi.hasMoreArgs() ) {
 				startValue.d_val *= ffi.getNextArg()->getDecimalValue();
 			}
-			obj = new ObjectDecimal( startValue.d_val );
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectDecimal( startValue.d_val ) );
 			return true;
 
 		default:
@@ -602,9 +601,7 @@ Divide::call(
 				// else
 				startValue.i_val /= nextValue;
 			}
-			obj = new ObjectInteger( startValue.i_val );
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectInteger( startValue.i_val ) );
 			return true;
 
 		case ObjectType::Decimal:
@@ -614,15 +611,15 @@ Divide::call(
 				if ( iszero( nextValue ) ) {
 					ffi.printWarning("Decimal-division is zero. Returning infinity.");
 					startValue.d_val = (startValue.d_val > 0 ?
-							std::numeric_limits<Decimal>::max()
-							: std::numeric_limits<Decimal>::min());
+							std::numeric_limits<Decimal>::infinity()
+							: - std::numeric_limits<Decimal>::infinity());
+							//std::numeric_limits<Decimal>::max()
+							//: std::numeric_limits<Decimal>::lowest());
 					break;
 				}
 				startValue.d_val /= nextValue;
 			}
-			obj = new ObjectDecimal( startValue.d_val );
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectDecimal( startValue.d_val ) );
 			return true;
 
 		default:
@@ -652,9 +649,7 @@ Modulus::call(
 			}
 		}
 	}
-	obj = new ObjectInteger(total);
-	ffi.setResult(obj);
-	obj->deref();
+	ffi.setNewResult( new ObjectInteger(total) );
 	return true;
 }
 
@@ -671,9 +666,7 @@ Power::call(
 			base = pow( base, ffi.getNextArg()->getDecimalValue() );
 		}
 	}
-	obj = new ObjectDecimal(base);
-	ffi.setResult(obj);
-	obj->deref();
+	ffi.setNewResult( new ObjectDecimal(base) );
 	return true;
 }
 
@@ -681,9 +674,9 @@ bool
 PI::call(
 	FFIServices& ffi
 ) {
-	Object* obj = new ObjectDecimal(3.1415926535897932384626433832795028841971693993751);
-	ffi.setResult(obj);
-	obj->deref();
+	ffi.setNewResult(
+		new ObjectDecimal(3.1415926535897932384626433832795028841971693993751)
+	);
 	return true;
 }
 
@@ -691,9 +684,9 @@ bool
 SmallPI::call(
 	FFIServices& ffi
 ) {
-	Object* obj = new ObjectDecimal(3.1415926);
-	ffi.setResult(obj);
-	obj->deref();
+	ffi.setNewResult(
+		new ObjectDecimal(3.1415926)
+	);
 	return true;
 }
 
@@ -715,9 +708,7 @@ Pick_min::call(
 				nextValue.i_val = ffi.getNextArg()->getIntegerValue();
 				minValue.i_val = ( minValue.i_val <= nextValue.i_val ) ? minValue.i_val : nextValue.i_val;
 			}
-			obj = new ObjectInteger(minValue.i_val);
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectInteger(minValue.i_val) );
 			return true;
 
 		case ObjectType::Decimal:
@@ -726,9 +717,7 @@ Pick_min::call(
 				nextValue.d_val = ffi.getNextArg()->getDecimalValue();
 				minValue.d_val = ( minValue.d_val <= nextValue.d_val ) ? minValue.d_val : nextValue.d_val;
 			}
-			obj = new ObjectDecimal(minValue.d_val);
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectDecimal(minValue.d_val) );
 			return true;
 
 		default:
@@ -757,9 +746,7 @@ Pick_max::call(
 				nextValue.i_val = ffi.getNextArg()->getIntegerValue();
 				maxValue.i_val = ( maxValue.i_val >= nextValue.i_val ) ? maxValue.i_val : nextValue.i_val;
 			}
-			obj = new ObjectInteger(maxValue.i_val);
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectInteger(maxValue.i_val) );
 			return true;
 
 		case ObjectType::Decimal:
@@ -768,9 +755,7 @@ Pick_max::call(
 				nextValue.d_val = ffi.getNextArg()->getDecimalValue();
 				maxValue.d_val = ( maxValue.d_val >= nextValue.d_val ) ? maxValue.d_val : nextValue.d_val;
 			}
-			obj = new ObjectDecimal(maxValue.d_val);
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectDecimal(maxValue.d_val) );
 			return true;
 
 		default:
@@ -802,9 +787,7 @@ Avg::call(
 				nextValue.i_val = ffi.getNextArg()->getIntegerValue();
 				avgValue.i_val += nextValue.i_val;
 			}
-			obj = new ObjectInteger(avgValue.i_val / valueCount);
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectInteger(avgValue.i_val / valueCount) );
 			return true;
 
 		case ObjectType::Decimal:
@@ -815,9 +798,7 @@ Avg::call(
 				nextValue.d_val = ffi.getNextArg()->getDecimalValue();
 				avgValue.d_val += nextValue.d_val;
 			}
-			obj = new ObjectDecimal(avgValue.d_val / (Decimal)valueCount);
-			ffi.setResult(obj);
-			obj->deref();
+			ffi.setNewResult( new ObjectDecimal(avgValue.d_val / (Decimal)valueCount) );
 			return true;
 
 		default:
@@ -844,16 +825,16 @@ Get_abs::call(
 	{
 	case ObjectType::Decimal:
 		value.d_val = obj->getDecimalValue();
-		obj = new ObjectDecimal(value.d_val >= 0? value.d_val : -value.d_val);
-		ffi.setResult(obj);
-		obj->deref();
+		ffi.setNewResult(
+			new ObjectDecimal(value.d_val >= 0? value.d_val : -value.d_val)
+		);
 		break;
 
 	default:
 		value.i_val = obj->getIntegerValue();
-		obj = new ObjectInteger(value.i_val >= 0? value.i_val : -value.i_val);
-		ffi.setResult(obj);
-		obj->deref();
+		ffi.setNewResult(
+			new ObjectInteger(value.i_val >= 0? value.i_val : -value.i_val)
+		);
 		break;
 	}
 	return true;
@@ -899,9 +880,9 @@ bool
 Sine::call(
 	FFIServices&  ffi
 ) {
-	Object* obj = new ObjectDecimal( sin( ffi.getNextArg()->getDecimalValue() ) );
-	ffi.setResult(obj);
-	obj->deref();
+	ffi.setNewResult(
+		new ObjectDecimal( sin( ffi.getNextArg()->getDecimalValue() ) )
+	);
 	return true;
 }
 
@@ -909,9 +890,9 @@ bool
 Cosine::call(
 	FFIServices&  ffi
 ) {
-	Object* obj = new ObjectDecimal( cos( ffi.getNextArg()->getDecimalValue() ) );
-	ffi.setResult(obj);
-	obj->deref();
+	ffi.setNewResult(
+		new ObjectDecimal( cos( ffi.getNextArg()->getDecimalValue() ) )
+	);
 	return true;
 }
 
@@ -919,9 +900,9 @@ bool
 Tangent::call(
 	FFIServices&  ffi
 ) {
-	Object* obj = new ObjectDecimal( tan( ffi.getNextArg()->getDecimalValue() ) );
-	ffi.setResult(obj);
-	obj->deref();
+	ffi.setNewResult(
+		new ObjectDecimal( tan( ffi.getNextArg()->getDecimalValue() ) )
+	);
 	return true;
 }
 
@@ -929,9 +910,9 @@ bool
 Ceiling::call(
 	FFIServices&  ffi
 ) {
-	Object* obj = new ObjectDecimal( ceil( ffi.getNextArg()->getDecimalValue() ) );
-	ffi.setResult(obj);
-	obj->deref();
+	ffi.setNewResult(
+		new ObjectDecimal( ceil( ffi.getNextArg()->getDecimalValue() ) )
+	);
 	return true;
 }
 
@@ -939,9 +920,9 @@ bool
 Floor::call(
 	FFIServices&  ffi
 ) {
-	Object* obj = new ObjectDecimal( floor( ffi.getNextArg()->getDecimalValue() ) );
-	ffi.setResult(obj);
-	obj->deref();
+	ffi.setNewResult(
+		new ObjectDecimal( floor( ffi.getNextArg()->getDecimalValue() ) )
+	);
 	return true;
 }
 
