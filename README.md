@@ -29,9 +29,9 @@ loop {
 	if ( gte(a: 100) ) {
 		stop
 	}
-	if ( eq(a: 13) ) {
+	if ( equal(a: 13) ) {
 		skip
-	} elif ( eq(a:, 21) ) {
+	} elif ( equal(a:, 21) ) {
 		print("Still young!")
 	}
 	print("Value = ", a: "\n")
@@ -61,6 +61,7 @@ The Premake files are not necessary for the project as it is simply enough to in
 The following files must be included for the basic interpreter (without the printer):
 
 * utilList.h
+* utilPipe.h
 * RRHash.h
 * String.h
 * String.cpp
@@ -72,7 +73,7 @@ In addition, there is a file called EngMsgToStr.h that contains useful string tr
 
 The basic console application could be build with sh using a build.sh file containing:
 ```bash
-g++ ./console.cpp src/Copper.h src/Copper.cpp src/utilList.h src/Strings.h src/Strings.cpp stdlib/Printer.h stdlib/InStreamLogger.h -Wall -Wfatal-errors -O3 -o bin/Copper.exe
+g++ ./console.cpp src/Copper.h src/Copper.cpp src/utilList.h src/utilPipe.h src/Strings.h src/RRHash.h src/Strings.cpp stdlib/Printer.h stdlib/InStreamLogger.h -Wall -Wfatal-errors -O3 -o bin/Copper.exe
 ```
 
 For debugging on ARM, you may need to add -funwind-tables to your gcc compiler flags.
@@ -80,9 +81,9 @@ For debugging on ARM, you may need to add -funwind-tables to your gcc compiler f
 
 ### Extensions Build Notes
 
-A primitives (number) extension group has been provided. The specific classes (intmath.h, ulongmath.h, etc.) are dependent on BasicPrimitive.h but do not all need to be included with each other in the project. (They each only depend on BasicPrimitive.h.)
+Extensions for Copper are provided in the ext folder. These can be include in your main.cpp file along with Copper, and their functionality can be added to the engine by calling their respective addFunctionsToEngine(Engine&) functions.
 
-The integer extension provided ("intmath.h") can optionally be compiled using the flag #define ENABLE_COPPER_INTEGER_BOUNDS_CHECKS for ensuring numbers don't exceed their cap and produce undefined behavior. Compiling without this flag creates a warning that the logger in the function is not used. This is not an error nor does it affect functionality, but if you are picky about having clean builds, you should use the aforementioned flag.
+The numbers extension provided ("basicmath.h") can optionally be compiled using the flag #define ENABLE_COPPER_INTEGER_BOUNDS_CHECKS for ensuring numbers don't exceed their cap and produce undefined behavior. Compiling without this flag creates a warning that the logger in the function is not used. This is not an error nor does it affect functionality, but if you are picky about having clean builds, you should use the aforementioned flag.
 
 
 ### Alternate C++ Build Notes
@@ -107,13 +108,13 @@ Optionally, you may define the compiler flag COMPILE_COPPER_FOR_C_PLUS_PLUS_11. 
 
 ### Build Warnings
 
-This project has been compiled with -Wall and -Wfatal-errors on GCC. However, when compiled with foreign functions, it warns of the unused variable "index". This variable is used within foreign functions and is sometimes needed, sometimes not. To eradicate this warning will require removing and not using certain sections of the foreign function handling code. This code is not necessary but a great convenience.
+This project has been compiled with -Wall and -Wfatal-errors on GCC.
+A warning for an unused variable ("index") in the FFIServices has been silenced with a macro.
 
 
 #### Extension Flags
 
 * Defining ENABLE_COPPER_INTEGER_BOUNDS_CHECKS enables bounds checks for the unsigned long extension.
-* Defining ENABLE_COPPER_ULONG_BOUNDS_CHECKS enables bounds checks for the unsigned long extension.
 
 
 ## Incorporating into other Projects
@@ -121,7 +122,7 @@ This project has been compiled with -Wall and -Wfatal-errors on GCC. However, wh
 You need to include the core interpreter files, as given in section <i>Project Structure and Building</i>.
 
 All interaction with the interpreter occurs through the small Cu::Engine API.
-A normal process is as follows:
+For running a command-line-based version, the setup process is as follows:
 * creating the engine
 * setting the logger
 * adding foreign functions
@@ -143,6 +144,8 @@ while( engine.run(insl) == EngineResult::Ok );
 New functionality can be added through objects inheriting the class Cu::ForeignFunc, which are then passed to the engine via Engine::addForeignFunction(). This class contains a single method - "call()" - that is to return true if the "result" parameter is set.
 
 The method "call()" is called whenever the name associated with the function (the string passed to Engine::addForeignFunction()) is called in Copper.
+
+A number of helper classes have been provided for adding functions and class methods directly (so that there is no need to implement Cu::ForeignFunc).
 
 
 ## Legal
