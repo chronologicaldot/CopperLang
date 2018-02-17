@@ -28,11 +28,12 @@ v 5-0.31
 - Changed ObjectList::prepend() to push_front() and added push_back(), changing append() to defer to calling it.
 - Fixed bug in setupBuiltinFunctionExecution preventing system function calls.
 - Implemented stack trace printing in Engine and Stack.
-- Removed deprecated Logger interface function.
+- Removed Logger::printFunctionError interface function.
 - Added Logger::printTaskTrace() and Logger::printStackTrace().
 - Changed TaskName to TaskType.
 - Changed implementation of ObjectString::getIntegerValue() and ObjectString::getDecimalValue() to return converted value forms.
 - Fixed String::toInt() to return correct value when string begins with a minus sign.
+- Removed address requirement from Logger:::print(LogLevel::Value, EngineMessage::Value) and Logger::print(LogLevel::Value, const char*).
 
 utilPile.h created.
 
@@ -41,6 +42,7 @@ EngMsgToStr
 
 InStreamLogger.h
 - Added pretty print.
+- Move implementation of print(LogLevel::Value, EngineMessage::Value) to print(LogLevel::Value, const char*).
 
 Printer.h
 - Added pretty print.

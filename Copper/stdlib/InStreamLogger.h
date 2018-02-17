@@ -20,6 +20,7 @@ class InStreamLogger : public Cu::Logger, public Cu::ByteStream {
 	unsigned long columns;
 	unsigned long prev_lines;
 	unsigned long prev_columns;
+	EngineErrorLevel::Value errLevel;
 
 public:
 
@@ -36,6 +37,7 @@ public:
 		, columns(0)
 		, prev_lines(1)
 		, prev_columns(0)
+		, errLevel(EngineErrorLevel::error)
 		, enabled(true)
 		, showInfo(true)
 		, showWarnings(true)
@@ -143,39 +145,30 @@ protected:
 	}
 
 public:
-	virtual void print(const LogLevel::Value& logLevel, const char* msg) {
+	virtual void print(const LogLevel::Value logLevel, const char* msg) {
 		if ( !enabled || !willShow(logLevel) ) return;
-
-		fprintf(outFile, "%s\n", msg);
-	}
-
-	virtual void print(const LogLevel::Value& logLevel, const EngineMessage::Value& msg) {
-		if ( !enabled || !willShow(logLevel) ) return;
-
-		EngineErrorLevel::Value errLevel;
-		const char* strMsg = Cu::getStringFromEngineMessage(msg, errLevel);
 
 		switch( logLevel ) {
 		case LogLevel::info:
-			printInfo(strMsg);
+			printInfo(msg);
 			break;
 
 		case LogLevel::warning:
-			printWarning(strMsg);
+			printWarning(msg);
 			break;
 
 		case LogLevel::error:
 			switch( errLevel ) {
 				case EngineErrorLevel::error:
-					printError(strMsg);
+					printError(msg);
 					break;
 
 				case EngineErrorLevel::system:
-					printSystemError(strMsg);
+					printSystemError(msg);
 					break;
 
 				case EngineErrorLevel::cpp:
-					printCPPError(strMsg);
+					printCPPError(msg);
 					break;
 
 				default: break;
@@ -184,16 +177,15 @@ public:
 
 		default: break;
 		}
+		errLevel = EngineErrorLevel::error;
 	}
 
-/*
-	virtual void printFunctionError(UInteger functionId, UInteger tokenIndex, const Cu::TokenType& tokenType) {
-		if ( outFile == stdout )
-			std::printf("\033[46m STACK TRACE \33[0m \033[96m fn( %u ) token( %u ):id(%u)\33[0m\n", functionId, tokenIndex, (unsigned int)tokenType);
-		else
-			fprintf(outFile, "STACK TRACE: fn( %u ) token( %u ):id(%u)\n", functionId, tokenIndex, (unsigned int)tokenType);
+	virtual void print(const LogLevel::Value logLevel, const EngineMessage::Value msg) {
+		if ( !enabled || !willShow(logLevel) )
+			return;
+
+		print(logLevel, Cu::getStringFromEngineMessage(msg, errLevel));
 	}
-*/
 
 	virtual void printTaskTrace( Cu::TaskType::Value  taskType, const Cu::String&  taskName, UInteger  taskNumber ) {
 		if ( taskType == Cu::TaskType::FuncFound ) {

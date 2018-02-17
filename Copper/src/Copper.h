@@ -806,8 +806,8 @@ struct LogLevel {
 
 // Interface for a logger
 struct Logger {
-	virtual void print(const LogLevel::Value&  logLevel, const char*  msg)=0;
-	virtual void print(const LogLevel::Value&  logLevel, const EngineMessage::Value&  msg)=0;
+	virtual void print(const LogLevel::Value  logLevel, const char*  msg)=0;
+	virtual void print(const LogLevel::Value  logLevel, const EngineMessage::Value  msg)=0;
 	virtual void printTaskTrace( TaskType::Value  taskType, const String&  taskName, UInteger  taskNumber )=0;
 	virtual void printStackTrace( const String&  frameName, UInteger  frameNumber )=0;
 };
@@ -2897,8 +2897,8 @@ public:
 	void setLogger( Logger* pLogger );
 
 	// Print functions. Both of these call the logger (if it exists) or print to stdout (if enabled).
-	void print( const LogLevel::Value& logLevel, const char* msg ) const;
-	void print( const LogLevel::Value& logLevel, const EngineMessage::Value& msg ) const;
+	void print( const LogLevel::Value logLevel, const char* msg ) const;
+	void print( const LogLevel::Value logLevel, const EngineMessage::Value msg ) const;
 
 	// WARNING: endMainCallback is never referenced or dropped, so don't delete it before the Engine!
 	void setEndofProcessingCallback( EngineEndProcCallback* callback ) {

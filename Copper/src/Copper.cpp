@@ -1829,7 +1829,7 @@ void Engine::setLogger( Logger* pLogger ) {
 	logger = pLogger;
 }
 
-void Engine::print(const LogLevel::Value& logLevel, const char* msg) const {
+void Engine::print(const LogLevel::Value logLevel, const char* msg) const {
 	if ( notNull(logger) ) {
 		logger->print(logLevel, msg);
 	}
@@ -1850,7 +1850,7 @@ void Engine::print(const LogLevel::Value& logLevel, const char* msg) const {
 #endif
 }
 
-void Engine::print(const LogLevel::Value& logLevel, const EngineMessage::Value& msg) const {
+void Engine::print(const LogLevel::Value logLevel, const EngineMessage::Value msg) const {
 	if ( notNull(logger) ) {
 		logger->print(logLevel, msg);
 	}
