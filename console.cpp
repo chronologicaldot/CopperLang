@@ -19,6 +19,7 @@
 //#include "exts/Time/timemath.h"
 
 #include "exts/Math/basicmath.h"
+#include "exts/Time/systime.h"
 
 // function by tgamblin
 // https://stackoverflow.com/questions/77005/how-to-generate-a-stacktrace-when-my-gcc-c-app-crashes
@@ -120,9 +121,9 @@ int main() {
 
 	//Cu::Numeric::Sizes::addFunctionsToEngine(engine);
 	//Cu::ManagedList::addFunctionsToEngine(engine, true);
-	//Cu::MSecTime::addFunctionsToEngine(engine, true);
 
 	Cu::Numeric::addFunctionsToEngine(engine);
+	Cu::Time::addFunctionsToEngine(engine);
 
 	Cu_cb_receiver  ccr(engine);
 	engine.addForeignFunction(util::String("set_callback"), &ccr);

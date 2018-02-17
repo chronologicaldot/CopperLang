@@ -40,7 +40,8 @@ project "Copper"
 		"Copper/src/*.h", "Copper/src/*.cpp",
 		"Copper/stdlib/*.h", "Copper/stdlib/*.cpp",
 		--"exts/**.*"
-		"exts/Math/basicmath.h", "exts/Math/basicmath.cpp"
+		"exts/Math/basicmath.h", "exts/Math/basicmath.cpp",
+		"exts/Time/systime.h", "exts/Time/systime.cpp"
 	}
 
 	excludes
