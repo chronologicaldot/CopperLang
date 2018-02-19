@@ -4,6 +4,7 @@
 basicmath
 - Added class DecimalInfinity.
 - Optimized math calls.
+- Changed Incr::call and Decr::call to check bounds and also increment/decrement decimal values.
 
 Created systime.h and systime.cpp
 

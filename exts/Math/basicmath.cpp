@@ -845,14 +845,31 @@ Incr::call(
 	FFIServices& ffi
 ) {
 	Object*  arg;
+	Integer  curr;
 
 	while ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
-		if ( isObjectInteger(*arg) ) {
-			// Should check bounds
+		switch( arg->getType() )
+		{
+		case ObjectType::Integer:
+			curr = arg->getIntegerValue();
+#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
+			if ( curr == std::numeric_limits<Integer>::max() ) {
+				ffi.printWarning("Increment integer already at maximum value.");
+			} else {
+				((ObjectInteger*)arg)->setValue(arg->getIntegerValue() + 1);
+			}
+#else
 			((ObjectInteger*)arg)->setValue(arg->getIntegerValue() + 1);
-		} else {
-			ffi.printWarning("Increment argument was not of type Integer. Ignoring.");
+#endif
+			break;
+
+		case ObjectType::Decimal:
+			((ObjectDecimal*)arg)->setValue(arg->getDecimalValue() + 1.0);	
+
+		default:
+			ffi.printWarning("Increment argument was not a numeric type. Ignoring.");
+			break;
 		}
 	}
 	return true;
@@ -863,14 +880,31 @@ Decr::call(
 	FFIServices& ffi
 ) {
 	Object*  arg;
+	Integer curr;
 
 	while ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
-		if ( isObjectInteger(*arg) ) {
-			// Should check bounds
+		switch( arg->getType() )
+		{
+		case ObjectType::Integer:
+			curr = arg->getIntegerValue();
+#ifdef ENABLE_COPPER_INTEGER_BOUNDS_CHECKS
+			if ( curr == std::numeric_limits<Integer>::min() ) {
+				ffi.printWarning("Decrement integer already at minimum value.");
+			} else {
+				((ObjectInteger*)arg)->setValue(arg->getIntegerValue() - 1);
+			}
+#else
 			((ObjectInteger*)arg)->setValue(arg->getIntegerValue() - 1);
-		} else {
-			ffi.printWarning("Decrement argument was not of type Integer. Ignoring.");
+#endif
+			break;
+
+		case ObjectType::Decimal:
+			((ObjectDecimal*)arg)->setValue(arg->getDecimalValue() - 1.0);	
+
+		default:
+			ffi.printWarning("Decrement argument was not a numeric type. Ignoring.");
+			break;
 		}
 	}
 	return true;
