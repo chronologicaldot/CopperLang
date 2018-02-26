@@ -719,7 +719,8 @@ Variable::getCopy() {
 //--------------------------------------
 
 ObjectList::ObjectList()
-	: nodeCount(0)
+	: Object( ObjectType::List )
+	, nodeCount(0)
 	, selectorIndex(0)
 	, selector()
 	, head()
@@ -727,7 +728,8 @@ ObjectList::ObjectList()
 {}
 
 ObjectList::ObjectList( const ObjectList&  pOther )
-	: nodeCount(0)
+	: Object( ObjectType::List )
+	, nodeCount(0)
 	, selectorIndex(0)
 	, selector()
 	, head()
@@ -1082,7 +1084,6 @@ void Scope::appendNamesByInterface(AppendObjectInterface* aoi) {
 				obj->deref();
 			}
 		}
-		return;
 	}
 }
 
@@ -2478,10 +2479,13 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("are_same_type"), SystemFunction::_are_same_type);
 	builtinFunctions.insert(String("are_bool"), SystemFunction::_are_bool);
 	builtinFunctions.insert(String("are_string"), SystemFunction::_are_string);
+	builtinFunctions.insert(String("are_list"), SystemFunction::_are_list);
 	builtinFunctions.insert(String("are_number"), SystemFunction::_are_number);
 	builtinFunctions.insert(String("are_int"), SystemFunction::_are_integer);
 	builtinFunctions.insert(String("are_dcml"), SystemFunction::_are_decimal);
 	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
+
+	builtinFunctions.insert(String("list"), SystemFunction::_make_list);
 }
 
 //-------------------------------------
@@ -4924,6 +4928,9 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_are_string:
 		return process_sys_are_string(task);
 
+	case SystemFunction::_are_list:
+		return process_sys_are_list(task);
+
 	case SystemFunction::_are_number:
 		return process_sys_are_number(task);
 
@@ -4935,6 +4942,9 @@ Engine::setupBuiltinFunctionExecution(
 
 	case SystemFunction::_assert:
 		return process_sys_assert(task);
+
+	case SystemFunction::_make_list:
+		return process_sys_make_list(task);
 
 	default:
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
@@ -5798,6 +5808,29 @@ Engine::process_sys_are_string(
 }
 
 FuncExecReturn::Value
+Engine::process_sys_are_list(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_list");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
+		lastObject.setWithoutRef(new ObjectBool(false));
+		return FuncExecReturn::Ran;
+	}
+	// Check all parameters
+	bool out = true;
+	do {
+		out = isObjectList(**argsIter);
+		if ( !out)
+			break;
+	} while ( argsIter.next() );
+	lastObject.setWithoutRef(new ObjectBool(out));
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
 Engine::process_sys_are_number(
 	FuncFoundTask& task
 ) {
@@ -5825,7 +5858,7 @@ Engine::process_sys_are_integer(
 	FuncFoundTask& task
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_number");
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_integer");
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
@@ -5848,7 +5881,7 @@ Engine::process_sys_are_decimal(
 	FuncFoundTask& task
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_number");
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_decimal");
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
@@ -5885,6 +5918,24 @@ Engine::process_sys_assert(
 		}
 	} while ( argsIter.next() );
 	lastObject.setWithoutRef(new ObjectBool(true));
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_make_list(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_make_list");
+#endif
+	ArgsIter argsIter = task.args.start();
+	ObjectList* out = new ObjectList();
+	lastObject.setWithoutRef(out);
+	if ( argsIter.has() ) {
+		do {
+			out->push_back(*argsIter);
+		} while ( argsIter.next() );
+	}
 	return FuncExecReturn::Ran;
 }
 

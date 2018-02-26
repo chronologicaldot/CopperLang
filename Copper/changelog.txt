@@ -1,4 +1,16 @@
 ====================
+2018/2/26
+v 5-0.32
+
+- Changed isObject**** checks to use struct enum value directly.
+- Added isObjectList().
+- Added _are_list system function and implementation of "are_list" in the engine.
+- Fixed bug in ObjectList - failed to set its type upon initialization.
+- Fixed ObjectDecimal::typeName() return to say "dcml" instead of "dec".
+- Added _make_list system function and implementation of "list" in the engine.
+
+
+====================
 2018/2/14 - 2018/2/15
 v 5-0.31
 

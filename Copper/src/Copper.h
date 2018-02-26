@@ -766,10 +766,13 @@ struct SystemFunction {
 	_are_same_type,
 	_are_bool,
 	_are_string,
+	_are_list,
 	_are_number,
 	_are_integer,
 	_are_decimal,
 	_assert,
+
+	_make_list,
 	};
 };
 
@@ -1607,11 +1610,13 @@ public:
 		return fc;
 	}
 
-	virtual void writeToString(String& out) const {
+	virtual void
+	writeToString(String& out) const {
 		out = "{fn}";
 	}
 
-	virtual const char* typeName() const {
+	virtual const char*
+	typeName() const {
 		return "fn";
 	}
 
@@ -1699,11 +1704,13 @@ public:
 		, value(b)
 	{}
 
-	virtual Object* copy() {
+	virtual Object*
+	copy() {
 		return new ObjectBool(value);
 	}
 
-	bool getValue() const {
+	bool
+	getValue() const {
 		return value;
 	}
 
@@ -1717,7 +1724,8 @@ public:
 		return (Decimal)value;
 	}
 
-	virtual const char* typeName() const {
+	virtual const char*
+	typeName() const {
 		return StaticTypeName();
 	}
 
@@ -1731,7 +1739,8 @@ public:
 		return ObjectType::Bool;
 	}
 
-	virtual void writeToString(String& out) const {
+	virtual void
+	writeToString(String& out) const {
 		out = value?"true":"false";
 	}
 
@@ -1742,8 +1751,6 @@ public:
 #endif
 };
 
-
-//static const char* STRING_TYPENAME = "string";
 
 class ObjectString : public Object {
 	String value;
@@ -1764,11 +1771,13 @@ public:
 		, value(pValue)
 	{}
 
-	virtual Object* copy() {
+	virtual Object*
+	copy() {
 		return new ObjectString(value);
 	}
 
-	virtual const char* typeName() const {
+	virtual const char*
+	typeName() const {
 		return StaticTypeName();
 	}
 
@@ -1947,7 +1956,7 @@ public:
 
 	static const char*
 	StaticTypeName() {
-		return "dec";
+		return "dcml";
 	}
 
 	virtual const char*
@@ -2826,7 +2835,7 @@ inline bool
 isObjectBool(
 	const Object& pObject
 ) {
-	return ( pObject.getType() == ObjectBool::StaticType() );
+	return ( pObject.getType() == ObjectType::Bool );
 }
 
 inline bool
@@ -2843,21 +2852,28 @@ inline bool
 isObjectString(
 	const Object& pObject
 ) {
-	return ( pObject.getType() == ObjectString::StaticType() );
+	return ( pObject.getType() == ObjectType::String );
+}
+
+inline bool
+isObjectList(
+	const Object& pObject
+) {
+	return ( pObject.getType() == ObjectType::List );
 }
 
 inline bool
 isObjectInteger(
 	const Object& pObject
 ) {
-	return ( pObject.getType() == ObjectInteger::StaticType() );
+	return ( pObject.getType() == ObjectType::Integer );
 }
 
 inline bool
 isObjectDecimal(
 	const Object& pObject
 ) {
-	return ( pObject.getType() == ObjectDecimal::StaticType() );
+	return ( pObject.getType() == ObjectType::Decimal );
 }
 
 //--------------------------------
@@ -3290,10 +3306,13 @@ protected:
 	FuncExecReturn::Value	process_sys_are_same_type(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_bool(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_string(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_list(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_number(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_integer(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_decimal(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
+
+	FuncExecReturn::Value	process_sys_make_list(		FuncFoundTask& task );
 
 #ifdef COPPER_SPEED_PROFILE
 	timeval sp_startTime, sp_endTime;
