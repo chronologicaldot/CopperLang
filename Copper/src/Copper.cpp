@@ -756,7 +756,9 @@ bool
 ObjectList::gotoIndex( Integer  index ) {
 	if ( index >= nodeCount )
 		return false;
-
+	while ( index < 0 ) {
+		index += nodeCount;
+	}
 	if ( selectorIndex - index > index ) {
 		selectorIndex = 0;
 		selector.node = head.node;

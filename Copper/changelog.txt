@@ -8,6 +8,7 @@ v 5-0.32
 - Fixed bug in ObjectList - failed to set its type upon initialization.
 - Fixed ObjectDecimal::typeName() return to say "dcml" instead of "dec".
 - Added _make_list system function and implementation of "list" in the engine.
+- Fixed ObjectList::gotoIndex() to now perform wrapping for negative indices.
 
 
 ====================
