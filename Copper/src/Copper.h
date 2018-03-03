@@ -12,6 +12,7 @@
 //#define COPPER_TASK_LEVEL_MESSAGES
 //#define COPPER_DEBUG_ADDRESS_MESSAGES
 //#define COPPER_PARSER_LEVEL_MESSAGES
+//#define COPPER_DEBUG_ADDRESS
 //#define COPPER_DEBUG_ENGINE_MESSAGES
 //#define COPPER_USE_DEBUG_NAMES
 //#define COPPER_DEBUG_STACK
@@ -28,12 +29,12 @@
 //#define COPPER_STRICT_CHECKS
 
 // Checks the "box" of instances of Variable.
-//define COPPER_VAR_STRICT_CHECKS
+//#define COPPER_VAR_STRICT_CHECKS
 
 //-----
 
 //#define COPPER_PRINT_ENGINE_PROCESS_TOKENS
-#include <cstdio>
+//#include <cstdio>
 
 //#define COPPER_SPEED_PROFILE
 
@@ -90,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.31
+#define COPPER_INTERPRETER_VERSION 0.4
 #define COPPER_INTERPRETER_BRANCH 5
 
 // ******* Language version *******
@@ -561,6 +562,46 @@ struct EngineMessage {
 	// Usually, the other error will be printed. This just indicates that the problem is within a function body.
 	UserFunctionBodyError,
 
+	// ERROR
+	// List function began with non-list.
+	ListAppendFunctionGivenNonList,
+
+	// ERROR
+	// List function began with non-list.
+	ListPrependFunctionGivenNonList,
+
+	// ERROR
+	// List function began with non-list.
+	ListInsertFunctionGivenNonList,
+
+	// ERROR
+	// List function began with non-list.
+	ListGetItemFunctionGivenNonList,
+
+	// ERROR
+	// List function began with non-list.
+	ListRemoveFunctionGivenNonList,
+
+	// ERROR
+	// List function began with non-list.
+	ListClearFunctionGivenNonList,
+
+	// ERROR
+	// List function began with non-list.
+	ListSwapFunctionGivenNonList,
+
+	// ERROR
+	// List function missing an argument
+	ListSwapFunctionMissingArg,
+
+	// ERROR
+	// List function began with non-list.
+	ListReplaceFunctionGivenNonList,
+
+	// ERROR
+	// List function missing an argument
+	ListReplaceFunctionMissingArg,
+
 	// Total number of engine messages
 	COUNT
 
@@ -772,7 +813,15 @@ struct SystemFunction {
 	_are_decimal,
 	_assert,
 
-	_make_list,
+	_make_list,		// "list"
+	_list_append,	// "append"
+	_list_prepend,	// "prepend"
+	_list_insert,	// "insert"
+	_list_get_item,	// "item"
+	_list_remove,	// "erase"
+	_list_clear, 	// "dump"
+	_list_swap,		// "swap"
+	_list_replace,	// "replace"
 	};
 };
 
@@ -1084,7 +1133,7 @@ public:
 	{}
 
 	Value
-	getErrorValue() {
+	getErrorValue() const {
 		return v;
 	}
 };
@@ -1248,6 +1297,18 @@ public:
 	iterator() const {
 		return Iterator(head);
 	}
+
+#ifdef COPPER_DEBUG_ADDRESS
+	void print() const {
+		std::printf("[DEBUG: Address = ");
+		Iterator i = iterator();
+		while ( ! i.atEnd() ) {
+			std::printf("%s ", i.get().c_str());
+			i.next();
+		}
+		std::printf("\n");
+	}
+#endif
 };
 
 //----------
@@ -2008,10 +2069,11 @@ class ObjectList : public Object, public AppendObjectInterface {
 		Node* post;
 
 		Node( Object* pItem )
-			: item(pItem)
+			: item( pItem )
 			, prior( REAL_NULL )
 			, post( REAL_NULL )
 		{
+			item->ref();
 			if ( item->getType() == ObjectType::Function )
 				((FunctionContainer*)item)->own(this);
 		}
@@ -2023,7 +2085,13 @@ class ObjectList : public Object, public AppendObjectInterface {
 
 		void
 		destroy() {
+			if ( item->getType() == ObjectType::Function )
+				((FunctionContainer*)item)->disown(this);
 			item->deref();
+			if ( prior )
+				prior->post = post;
+			if ( post )
+				post->prior = prior;
 			delete this;
 		}
 
@@ -2032,15 +2100,25 @@ class ObjectList : public Object, public AppendObjectInterface {
 			Object*  temp = pOther.item;
 			pOther.item = item;
 			item = temp;
+			if ( item->getType() == ObjectType::Function )
+				((FunctionContainer*)item)->changeOwnerTo(this);
+			if ( pOther.item->getType() == ObjectType::Function )
+				((FunctionContainer*)(pOther.item))->changeOwnerTo(&pOther);
 		}
 
 		void
 		replace( Object*  pItem ) {
-			if ( item )
+			if ( item ) {
+				if ( item->getType() == ObjectType::Function )
+					((FunctionContainer*)item)->disown(this);
 				item->deref();
+			}
 			item = pItem;
-			if ( item )
+			if ( item ) {
+				if ( item->getType() == ObjectType::Function )
+					((FunctionContainer*)item)->own(this);
 				item->ref();
+			}
 		}
 	};
 
@@ -2071,9 +2149,11 @@ class ObjectList : public Object, public AppendObjectInterface {
 		moveOff( Node* n ) {
 			if ( !node || node != n )
 				return false;
-			if ( node->post )
+			if ( node->post ) {
 				node = node->post;
+			}
 			node = node->prior; // Move even if null
+			return true;
 		}
 
 		void
@@ -2110,11 +2190,12 @@ class ObjectList : public Object, public AppendObjectInterface {
 	NodePtr  head;
 	NodePtr  tail;
 
+	// Copy-constructor forbidden
+	ObjectList( const ObjectList&  pOther );
+
 public:
 
 	ObjectList();
-
-	ObjectList( const ObjectList&  pOther );
 
 	virtual Object*
 	copy();
@@ -2123,6 +2204,7 @@ public:
 	size();
 
 protected:
+
 	bool
 	gotoIndex( Integer  index );
 
@@ -2143,7 +2225,7 @@ public:
 	remove( Integer  index );
 
 	void
-	insert( Object*  pItem, Integer  index );
+	insert( Integer  index, Object*  pItem );
 
 	void
 	swap( Integer  index1, Integer  index2 );
@@ -3313,6 +3395,14 @@ protected:
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
 
 	FuncExecReturn::Value	process_sys_make_list(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_append(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_prepend(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_insert(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_get_item(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_remove(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_clear(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_swap(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_replace(	FuncFoundTask& task );
 
 #ifdef COPPER_SPEED_PROFILE
 	timeval sp_startTime, sp_endTime;
@@ -3393,7 +3483,7 @@ public:
 	getParameterCount() const;
 
 	virtual ObjectType::Value
-	getParameterType( UInteger ) const;
+	getParameterType( UInteger CU_UNUSED_ARG(i) ) const;
 };
 
 //! Class for adding foreign methods

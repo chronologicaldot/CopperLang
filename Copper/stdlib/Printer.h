@@ -40,6 +40,11 @@ public:
 			if ( writeFile == stdout ) {
 				switch( arg->getType() )
 				{
+				case ObjectType::Bool:
+					arg->writeToString(out);
+					std::fprintf(writeFile, "\33[92m%s\33[0m", out.c_str());
+					break;
+
 				case ObjectType::Integer:
 					std::fprintf(writeFile, "\33[96m%ld\33[0m", arg->getIntegerValue());
 					break;
@@ -56,6 +61,11 @@ public:
 			} else {
 				switch( arg->getType() )
 				{
+				case ObjectType::Bool:
+					arg->writeToString(out);
+					std::fprintf(writeFile, "%s", out.c_str());
+					break;
+
 				case ObjectType::Integer:
 					std::fprintf(writeFile, "%ld", arg->getIntegerValue());
 					break;

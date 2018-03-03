@@ -1,4 +1,14 @@
 ===========
+2018/3/3
+
+basicmath
+- Cleaned up to eliminate compiler warnings.
+
+systime
+- Added correct returns.
+
+
+===========
 2018/2/16
 
 basicmath

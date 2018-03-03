@@ -37,6 +37,7 @@ GetSeconds( FFIServices& ffi ) {
 		}
 	}
 	ffi.setNewResult( new ObjectInteger( totalTime ) );
+	return true;
 }
 
 bool
@@ -51,6 +52,7 @@ GetMilliseconds( FFIServices& ffi ) {
 		}
 	}
 	ffi.setNewResult( new ObjectDecimal( totalTime ) );
+	return true;
 }
 
 bool
@@ -65,6 +67,7 @@ GetNanoseconds( FFIServices& ffi ) {
 		}
 	}
 	ffi.setNewResult( new ObjectDecimal( totalTime ) );
+	return true;
 }
 
 }

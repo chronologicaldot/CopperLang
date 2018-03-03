@@ -93,6 +93,11 @@ Opcode::Opcode( Opcode::Type pType )
 	default:
 		break;
 	}
+
+#ifdef COPPER_DEBUG_ADDRESS
+	if ( dtype == ODT_Address )
+		address->print();
+#endif
 }
 
 Opcode::Opcode( Opcode::Type pType, const String&  pStrValue, bool  onAddress )
@@ -110,6 +115,11 @@ Opcode::Opcode( Opcode::Type pType, const String&  pStrValue, bool  onAddress )
 		dtype = ODT_Name;
 		name = pStrValue;
 	}
+
+#ifdef COPPER_DEBUG_ADDRESS
+	if ( dtype == ODT_Address )
+		address->print();
+#endif
 }
 
 //Opcode::Opcode( Opcode::Type pType, const VarAddress&  pAddress )
@@ -120,6 +130,11 @@ Opcode::Opcode( Opcode::Type pType, VarAddress*  pAddress )
 	, address(pAddress)
 {
 	address->ref();
+
+#ifdef COPPER_DEBUG_ADDRESS
+	if ( dtype == ODT_Address )
+		address->print();
+#endif
 }
 
 Opcode::Opcode( const Opcode& pOther )
@@ -137,6 +152,9 @@ Opcode::Opcode( const Opcode& pOther )
 	case ODT_Address:
 		address = pOther.address;
 		address->ref();
+#ifdef COPPER_DEBUG_ADDRESS
+		address->print();
+#endif
 		break;
 
 	case ODT_Integer:
@@ -188,6 +206,9 @@ Opcode::appendAddressData( const String&  pString ) {
 		address = new VarAddress();
 	}
 	address->push_back(pString);
+#ifdef COPPER_DEBUG_ADDRESS
+		address->print();
+#endif
 }
 
 /*
@@ -240,7 +261,7 @@ Opcode::addToken( const Token& pToken ) {
 
 Body*
 Opcode::getBody() const {
-	if ( type != FuncBuild_execBody )
+	if ( dtype != ODT_Body )
 		throw InvalidBodyOpcodeAccess();
 
 	return data.body;
@@ -473,11 +494,11 @@ bool FunctionContainer::isOwned() const {
 	return notNull(owner);
 }
 
-bool FunctionContainer::isOwner( const Owner* pVariable ) const {
+bool FunctionContainer::isOwner( const Owner* pOwner ) const {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionContainer::isOwner [%p]\n", (void*)this);
 #endif
-	return owner == pVariable;
+	return owner == pOwner;
 }
 
 void FunctionContainer::changeOwnerTo( Owner* pNewOwner ) {
@@ -490,7 +511,7 @@ void FunctionContainer::changeOwnerTo( Owner* pNewOwner ) {
 		owner = pNewOwner;
 	} else {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-		std::printf("[ERROR: Attempting to change function owner to variable that doesn't point to this container.\n");
+		std::printf("[ERROR: Attempting to change function owner to an owner that doesn't point to this container.\n");
 #endif
 		throw BadFunctionContainerOwnerException();
 	}
@@ -727,6 +748,7 @@ ObjectList::ObjectList()
 	, tail()
 {}
 
+/*
 ObjectList::ObjectList( const ObjectList&  pOther )
 	: Object( ObjectType::List )
 	, nodeCount(0)
@@ -734,7 +756,9 @@ ObjectList::ObjectList( const ObjectList&  pOther )
 	, selector()
 	, head()
 	, tail()
-{}
+{	
+}
+*/
 
 Object*
 ObjectList::copy() {
@@ -763,15 +787,17 @@ ObjectList::gotoIndex( Integer  index ) {
 		selectorIndex = 0;
 		selector.node = head.node;
 	}
-	else if ( nodeCount - 1 - index > index - selectorIndex ) {
+	else if ( nodeCount - index < nodeCount - selectorIndex ) {
 		selectorIndex = nodeCount - 1;
 		selector.node = tail.node;
 	}
-	while ( selectorIndex > index ) {
+	// NOTE: The selectorIndex and the selector.node should not be out of sync
+	// but this double-check is necessary to prevent segfaults.
+	while ( selectorIndex > index && selector.node->prior ) {
 		selector.node = selector.node->prior;
 		--selectorIndex;
 	}
-	while ( selectorIndex < index ) {
+	while ( selectorIndex < index && selector.node->post ) {
 		selector.node = selector.node->post;
 		++selectorIndex;
 	}
@@ -803,10 +829,13 @@ ObjectList::append( Object*  pItem ) {
 
 void
 ObjectList::push_back( Object*  pItem ) {
+	if ( isNull(pItem) )
+		return;
 	if ( nodeCount == 0 ) {
 		head.node = new Node(pItem);
 		tail.node = head.node;
 		selector.node = head.node;
+		selectorIndex = 0;
 	} else {
 		tail.append(pItem);
 	}
@@ -815,10 +844,13 @@ ObjectList::push_back( Object*  pItem ) {
 
 void
 ObjectList::push_front( Object* pItem ) {
+	if ( isNull(pItem) )
+		return;
 	if ( nodeCount == 0 ) {
 		head.node = new Node(pItem);
 		tail.node = head.node;
 		selector.node = head.node;
+		selectorIndex = 0;
 	} else {
 		head.prepend(pItem);
 		++selectorIndex;
@@ -838,20 +870,24 @@ ObjectList::remove( Integer  index ) {
 		if ( selector.node == n->post )
 			++selectorIndex;
 		else
-			--selectorIndex;
+			if ( notNull(selector.node) )
+				--selectorIndex;
 	}
 	n->destroy();
 	--nodeCount;
 }
 
 void
-ObjectList::insert( Object*  pItem, Integer  index ) {
+ObjectList::insert( Integer  index, Object*  pItem ) {
+	if ( isNull(pItem) )
+		return;
 	if ( index >= nodeCount ) {
 		tail.append(pItem);
 		return;
 	}
 	if ( index <= 0 ) {
 		head.prepend(pItem);
+		++selectorIndex;
 		return;
 	}
 	gotoIndex(index);
@@ -860,22 +896,30 @@ ObjectList::insert( Object*  pItem, Integer  index ) {
 
 void
 ObjectList::swap( Integer  index1, Integer  index2 ) {
-	if ( index1 > nodeCount || index1 < 0 || index2 > nodeCount || index2 < 0 )
-		return;
-
-	gotoIndex(index1);
-	Node* n = selector.node;
-	gotoIndex(index2);
-	selector.node->swapItem(*n);
+	Node* n;
+	if ( gotoIndex(index1) ) {
+		n = selector.node;
+		if ( gotoIndex(index2) ) {
+			selector.node->swapItem(*n);
+		}
+	}
 }
 
 void
 ObjectList::replace( Integer  index, Object*  pNewItem ) {
-	if ( index > nodeCount || index < 0 )
+	if ( isNull(pNewItem) )
 		return;
+	if ( gotoIndex(index) ) {
+		selector.node->replace(pNewItem);
+	}
+}
 
-	gotoIndex(index);
-	selector.node->replace(pNewItem);
+Object*
+ObjectList::getItem( Integer  index ) {
+	if ( gotoIndex(index) ) {
+		return selector.node->item;
+	}
+	return REAL_NULL;
 }
 
 
@@ -1256,7 +1300,7 @@ Stack::push( VarAddress*  pAddress ) {
 		return;
 	}
 	StackFrame* parent = top;
-	top = new StackFrame(globalName);
+	top = new StackFrame(pAddress);
 	top->parent = parent;
 	++size;
 }
@@ -2117,6 +2161,11 @@ Engine::setVariableByAddress(
 		if ( isNull(obj) ) {
 			throw BadParameterException<Engine>();
 		}
+
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	std::printf("[DEBUG: Engine::setVariableByAddress: object addr=%p\n\t\tvar raw container address = %p\n", obj, var->getRawContainer());
+#endif
+
 		switch( obj->getType() ) {
 		case ObjectType::Function:
 			var->setFunc((FunctionContainer*)obj, reuseStorage);
@@ -2488,6 +2537,14 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
 
 	builtinFunctions.insert(String("list"), SystemFunction::_make_list);
+	builtinFunctions.insert(String("append"), SystemFunction::_list_append);
+	builtinFunctions.insert(String("prepend"), SystemFunction::_list_prepend);
+	builtinFunctions.insert(String("insert"), SystemFunction::_list_insert);
+	builtinFunctions.insert(String("item"), SystemFunction::_list_get_item);
+	builtinFunctions.insert(String("erase"), SystemFunction::_list_remove);
+	builtinFunctions.insert(String("dump"), SystemFunction::_list_clear);
+	builtinFunctions.insert(String("swap"), SystemFunction::_list_swap);
+	builtinFunctions.insert(String("replace"), SystemFunction::_list_replace);
 }
 
 //-------------------------------------
@@ -2769,6 +2826,7 @@ Engine::interpretToken(
 			context.taskStack,
 			new FuncFoundParseTask( currToken.name )
 		);
+		context.commitTokenUsage();
 		return ParseResult::More;
 
 	//---------------
@@ -3253,22 +3311,10 @@ Engine::parseFuncFoundTask(
 
 	switch( task->state ) {
 	case FuncFoundParseTask::Start:
-		// First token is a name, the start of a variable's address
+		// Get next token, which is the first one after the name
 		r = moveToFirstUnusedToken(context, srcDone);
 		if ( r != ParseTask::Result::task_done )
 			return r;
-
-		// Skip the name and get the next token.
-		// We know the name is the current token because we immediately come here after interpretToken()
-		if ( ! context.moveToNextToken() ) {
-			if ( srcDone ) {
-				task->code->appendAddressData( context.peekAtToken().name );
-				context.addOperation( task->code );
-				return ParseTask::Result::task_done;
-			} else {
-				return ParseTask::Result::need_more;
-			}
-		}
 
 		// It is possible that this is a chain of member names, connected by the member link.
 		while( context.peekAtToken().type == TT_member_link ) {
@@ -3276,6 +3322,7 @@ Engine::parseFuncFoundTask(
 			if ( context.moveToNextToken() ) {
 				if ( context.peekAtToken().type == TT_name ) {
 					task->code->appendAddressData( context.peekAtToken().name );
+					context.commitTokenUsage();
 					// Next token should be member-link, assignment, pointer-assignment, or parambody-open
 					if ( context.moveToNextToken() ) {
 						continue;
@@ -4128,6 +4175,12 @@ Engine::ParseLoop_AddLoopSkip(
 	if ( context.peekAtToken().type != TT_skip )
 		throw ParserTokenException( context.peekAtToken() );
 #endif
+	if ( context.taskStack.size() == 0 ) {
+		//print(LogLevel::error, "Loop-stop token found outside a loop.");
+		print(LogLevel::error, EngineMessage::UselessLoopSkipper);
+		return ParseResult::Error;
+	}
+
 	context.commitTokenUsage(); // Use this token
 	// Must search for the top-most loop task in the parser task stack
 	Opcode* code;
@@ -4948,6 +5001,30 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_make_list:
 		return process_sys_make_list(task);
 
+	case SystemFunction::_list_append:
+		return process_sys_list_append(task);
+
+	case SystemFunction::_list_prepend:
+		return process_sys_list_prepend(task);
+
+	case SystemFunction::_list_insert:
+		return process_sys_list_insert(task);
+
+	case SystemFunction::_list_get_item:
+		return process_sys_list_get_item(task);
+
+	case SystemFunction::_list_remove:
+		return process_sys_list_remove(task);
+
+	case SystemFunction::_list_clear:
+		return process_sys_list_clear(task);
+
+	case SystemFunction::_list_swap:
+		return process_sys_list_swap(task);
+
+	case SystemFunction::_list_replace:
+		return process_sys_list_replace(task);
+
 	default:
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupBuiltinFunctionExecution could not match function");
@@ -5085,6 +5162,7 @@ Engine::setupUserFunctionExecution(
 	Scope* scope = &getCurrentTopScope();
 	Function* func = REAL_NULL;
 	bool foundVar = false;
+
 	VarAddress::Iterator ai = task.getAddress().iterator();
 	do {
 		super = callVariable;
@@ -5123,6 +5201,11 @@ Engine::setupUserFunctionExecution(
 			scope = &(func->getPersistentScope());
 		} while ( ai.next() );
 	}
+
+	// Short form (but re-checks globals and foreigns)
+	//callVariable = resolveVariableAddress( task.getAddress() );
+	//func = callVariable->getFunction(logger);
+	//scope = &(func->getPersistentScope());
 
 //----------
 
@@ -5219,6 +5302,10 @@ Engine::resolveVariableAddress(
 	if ( ! address.has() )
 		throw VarAddressException( VarAddressException::is_empty );
 
+#ifdef COPPER_DEBUG_ADDRESS
+	address.print();
+#endif
+
 	// Should return REAL_NULL if the address belongs to a non-variable, such as a
 	// built-in function or foreign function.
 
@@ -5239,8 +5326,8 @@ Engine::resolveVariableAddress(
 	}
 
 	Scope* scope = &getCurrentTopScope();
-	Variable* var;
-	Function* func;
+	Variable* var = REAL_NULL;
+	Function* func = REAL_NULL;
 	VarAddress::Iterator ai = address.iterator();
 	do {
 		if ( scope->findVariable(ai.get(), var) ) {
@@ -5304,7 +5391,7 @@ Engine::is_var_pointer(
 	const VarAddress& address
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::run_Is_owner");
+	print(LogLevel::debug, "[DEBUG: Engine::is_var_pointer");
 #endif
 	Variable* var = resolveVariableAddress(address);
 	if ( isNull(var) ) {
@@ -5941,6 +6028,215 @@ Engine::process_sys_make_list(
 	return FuncExecReturn::Ran;
 }
 
+FuncExecReturn::Value
+Engine::process_sys_list_append(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_append");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListAppendFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	ObjectList* listPtr = (ObjectList*)*argsIter;
+
+	while ( argsIter.next() ) {
+		listPtr->push_back(*argsIter);
+	}
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_list_prepend(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_prepend");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListAppendFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	ObjectList* listPtr = (ObjectList*)*argsIter;
+
+	while ( argsIter.next() ) {
+		listPtr->push_front(*argsIter);
+	}
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_list_insert(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_insert");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListInsertFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	ObjectList* listPtr = (ObjectList*)*argsIter;
+
+	if ( ! argsIter.next() )
+		return FuncExecReturn::Ran;
+
+	Integer index = (*argsIter)->getIntegerValue();
+
+	while ( argsIter.next() ) {
+		listPtr->insert(index, *argsIter);
+	}
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_list_get_item(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_get_item");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListGetItemFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	ObjectList* listPtr = (ObjectList*)*argsIter;
+
+	if ( ! argsIter.next() )
+		return FuncExecReturn::Ran;
+
+	Integer index = (*argsIter)->getIntegerValue();
+
+	Object* out = listPtr->getItem(index);
+	if ( notNull(out) )
+		lastObject.set(out);
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_list_remove(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_remove");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListRemoveFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	ObjectList* listPtr = (ObjectList*)*argsIter;
+
+	if ( ! argsIter.next() )
+		return FuncExecReturn::Ran;
+
+	Integer index = (*argsIter)->getIntegerValue();
+	listPtr->remove(index);
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_list_clear(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_clear");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListClearFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	((ObjectList*)*argsIter)->clear();
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_list_swap(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_swap");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListSwapFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	ObjectList* listPtr = (ObjectList*)*argsIter;
+
+	if ( ! argsIter.next() )
+		return FuncExecReturn::Ran;
+
+	Integer index1 = (*argsIter)->getIntegerValue();
+
+	if ( ! argsIter.next() ) {
+		print(LogLevel::error, EngineMessage::ListSwapFunctionMissingArg);
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	Integer index2 = (*argsIter)->getIntegerValue();
+	listPtr->swap(index1, index2);
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_list_replace(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_replace");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListReplaceFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	ObjectList* listPtr = (ObjectList*)*argsIter;
+
+	if ( ! argsIter.next() )
+		return FuncExecReturn::Ran;
+
+	Integer index = (*argsIter)->getIntegerValue();
+
+	if ( ! argsIter.next() ) {
+		print(LogLevel::error, EngineMessage::ListReplaceFunctionMissingArg);
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	listPtr->replace(index, *argsIter);
+	return FuncExecReturn::Ran;
+}
+
 void
 addNewForeignFunc(
 	Engine& pEngine,
@@ -6026,7 +6322,7 @@ CallbackWrapper::isVadiadic() const {
 }
 
 Cu::ObjectType::Value
-CallbackWrapper::getParameterType( Cu::UInteger index ) const {
+CallbackWrapper::getParameterType( Cu::UInteger CU_UNUSED_ARG(i) ) const {
 	return Cu::ObjectType::Function;
 }
 

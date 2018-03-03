@@ -83,9 +83,7 @@ IntegerCast::call(
 		arg = ffi.getNextArg();
 		value = arg->getIntegerValue();
 	}
-	ObjectInteger*  out = new ObjectInteger(value);
-	ffi.setResult(out);
-	out->deref();
+	ffi.setNewResult( new ObjectInteger(value) );
 	return true;
 }
 
@@ -100,9 +98,7 @@ DecimalCast::call(
 		arg = ffi.getNextArg();
 		value = arg->getDecimalValue();
 	}
-	ObjectDecimal*  out = new ObjectDecimal(value);
-	ffi.setResult(out);
-	out->deref();
+	ffi.setNewResult( new ObjectDecimal(value) );
 	return true;
 }
 
@@ -155,7 +151,6 @@ AreZero::call(
 ) {
 	Object*  arg;
 	bool  is_zero = true;
-	ObjectBool*  out = REAL_NULL;
 	while ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
 		switch( arg->getType() )
@@ -227,7 +222,6 @@ IsGreaterThan::call(
 	FFIServices& ffi
 ) {
 	bool  result = false;
-	Object*  out;
 	Object*  arg;
 	IntDeciUnion  startValue;
 	if ( ffi.hasMoreArgs() ) {
@@ -269,7 +263,6 @@ IsLessThan::call(
 ) {
 	// All same as GreaterThan::call code but with the comparison and warning message changed
 	bool  result = false;
-	Object*  out;
 	Object*  arg;
 	IntDeciUnion  startValue;
 	if ( ffi.hasMoreArgs() ) {
@@ -311,7 +304,6 @@ IsGreaterThanOrEqual::call(
 ) {
 	// All same as GreaterThan::call code but with the comparison and warning message changed
 	bool  result = false;
-	Object*  out;
 	Object*  arg;
 	IntDeciUnion  startValue;
 	if ( ffi.hasMoreArgs() ) {
@@ -353,7 +345,6 @@ IsLessThanOrEqual::call(
 ) {
 	// All same as GreaterThan::call code but with the comparison and warning message changed
 	bool  result = false;
-	Object*  out;
 	Object*  arg;
 	IntDeciUnion  startValue;
 	if ( ffi.hasMoreArgs() ) {
@@ -634,7 +625,6 @@ bool
 Modulus::call(
 	FFIServices& ffi
 ) {
-	Object*  obj;
 	Integer  total = 0;
 	Integer  nextValue = 0;
 
@@ -657,7 +647,6 @@ bool
 Power::call(
 	FFIServices& ffi
 ) {
-	Object*  obj;
 	Decimal  base;
 
 	if ( ffi.hasMoreArgs() ) {

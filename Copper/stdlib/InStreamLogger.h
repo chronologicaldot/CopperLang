@@ -144,6 +144,13 @@ protected:
 			std::fprintf(outFile, " C++ Error  (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
 	}
 
+	void printDebug(const char* msg) {
+		if ( outFile == stdout )
+			std::printf("\033[45m Debug \033[44m (%lu:%lu) \033[0m\033[35m%s\033[0m\n", prev_lines, prev_columns, msg);
+		else
+			std::fprintf(outFile, " Debug  (%lu:%lu): %s\n", prev_lines, prev_columns, msg);
+	}
+
 public:
 	virtual void print(const LogLevel::Value logLevel, const char* msg) {
 		if ( !enabled || !willShow(logLevel) ) return;
@@ -173,6 +180,10 @@ public:
 
 				default: break;
 			}
+			break;
+
+		case LogLevel::debug:
+			printDebug(msg);
 			break;
 
 		default: break;

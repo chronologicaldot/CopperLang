@@ -45,7 +45,7 @@ struct LoneDecimalFunc : public ForeignFunc {
 	}
 
 	virtual ObjectType::Value
-	getParameterType( UInteger  index ) const {
+	getParameterType( UInteger  CU_UNUSED_ARG(index) ) const {
 		return ObjectType::Decimal;
 	}
 };
