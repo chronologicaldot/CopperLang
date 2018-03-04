@@ -1,5 +1,5 @@
 ====================
-2018/3/3
+2018/3/3 - 2018/3/4
 v 5-0.4
 
 - Added #define COPPER_DEBUG_ADDRESS.
@@ -14,6 +14,7 @@ v 5-0.4
 - Added static FunctionContainer* createInitializedNoCopy(Object* pData).
 - Fixed bug in Variable::setFuncReturn(). When the function existed, a copy of the data was being set to the result, but this should have been setWithoutRef.
 - Changed Engine::setVariableByAddress() to use pPerformCopy flag when the reference count is 1 (from the lastObject), thereby optimizing copies.
+- Added string match function for comparing string equality.
 
 
 ====================

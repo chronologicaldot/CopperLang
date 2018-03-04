@@ -147,7 +147,6 @@ class RandomNullByteInStream {};
 // ******* System includes *******
 
 #include "utilList.h"
-#include "utilPile.h"
 #include "RHHash.h"
 #include "Strings.h"
 
@@ -156,8 +155,6 @@ namespace Cu {
 // ******* External Classes in Use ********
 
 using util::List;
-using util::Pile;
-using util::PileSize_t;
 using util::CharList;
 using util::String;
 using util::RobinHoodHash;
@@ -605,6 +602,10 @@ struct EngineMessage {
 	// List function missing an argument
 	ListReplaceFunctionMissingArg,
 
+	// WARNING
+	// An argument passed to the string match function was not a string. It is ignored.
+	StringMatchGivenNonStringArg,
+
 	// Total number of engine messages
 	COUNT
 
@@ -826,6 +827,8 @@ struct SystemFunction {
 	_list_clear, 	// "dump"
 	_list_swap,		// "swap"
 	_list_replace,	// "replace"
+
+	_string_match,	// "matching"
 	};
 };
 
@@ -3428,11 +3431,13 @@ protected:
 	FuncExecReturn::Value	process_sys_list_append(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_prepend(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_insert(	FuncFoundTask& task );
-	FuncExecReturn::Value	process_sys_list_get_item(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_get_item(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_remove(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_clear(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_swap(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_replace(	FuncFoundTask& task );
+
+	FuncExecReturn::Value	process_sys_string_match(	FuncFoundTask& task );
 
 #ifdef COPPER_SPEED_PROFILE
 	timeval sp_startTime, sp_endTime;

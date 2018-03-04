@@ -2565,6 +2565,8 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("dump"), SystemFunction::_list_clear);
 	builtinFunctions.insert(String("swap"), SystemFunction::_list_swap);
 	builtinFunctions.insert(String("replace"), SystemFunction::_list_replace);
+
+	builtinFunctions.insert(String("matching"), SystemFunction::_string_match);
 }
 
 //-------------------------------------
@@ -5048,6 +5050,9 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_list_replace:
 		return process_sys_list_replace(task);
 
+	case SystemFunction::_string_match:
+		return process_sys_string_match(task);
+
 	default:
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupBuiltinFunctionExecution could not match function");
@@ -5879,7 +5884,7 @@ Engine::process_sys_are_bool(
 	FuncFoundTask& task
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
-	print(LogLevel::debug, "[DEBUG: Engine::process_sys_bool");
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_bool");
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
@@ -6280,6 +6285,33 @@ Engine::process_sys_list_replace(
 	}
 
 	listPtr->replace(index, *argsIter);
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_string_match(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_string_match");
+#endif
+	ArgsIter argsIter = task.args.start();
+	bool matches = true;
+	String* base_string = REAL_NULL;
+	if ( argsIter.has() ) {
+		do {
+			if ( isObjectString( **argsIter ) ) {
+				if ( isNull(base_string) ) {
+					base_string = &(((ObjectString*)(*argsIter))->getString());
+				} else {
+					matches &= base_string->equals( ((ObjectString*)(*argsIter))->getString() );
+				}
+			} else {
+				print(LogLevel::warning, EngineMessage::StringMatchGivenNonStringArg);
+			}
+		} while ( argsIter.next() && matches );
+	}
+	lastObject.setWithoutRef( new ObjectBool(matches) );
 	return FuncExecReturn::Ran;
 }
 
