@@ -6,6 +6,14 @@ v 5-0.4
 - Fixed bug (from as early as Cheetah) that incorrectly added to the address name when parsing had to resume. (a.b became a.b.b and then a.b.b.b with every cycle).
 -- Fix entails Engine::interpretToken, case TT_Name now ALWAYS committing the token usage.
 -- Fix entails Engine::parseFuncFoundTask() now no longer skipping a token but instead committing usage after each part of a name is collected.
+- Fixed bug in ObjectList::gotoIndex() that compared incorrect distances when determining if the selector should go to the tail.
+- Fixed bugs in ObjectList::NodePtr::append() and prepend() that failed to set the post and prior nodes for both the new node and the original.
+- Fixed part of a memory leak resulting from having no ObjectList destructor.
+- Modified ObjectList::copy() to create copies of functions only if they are not pointers. Added ObjectList::Node::isPointer() to aid.
+- Added parameter bool pPerformCopy to Variable::setFuncReturn() for optimizing copying data. Default is true (this is also backwards-compatible).
+- Added static FunctionContainer* createInitializedNoCopy(Object* pData).
+- Fixed bug in Variable::setFuncReturn(). When the function existed, a copy of the data was being set to the result, but this should have been setWithoutRef.
+- Changed Engine::setVariableByAddress() to use pPerformCopy flag when the reference count is 1 (from the lastObject), thereby optimizing copies.
 
 
 ====================

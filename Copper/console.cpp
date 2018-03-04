@@ -49,7 +49,7 @@ int main() {
 	}
 	catch( Cu::BadReferenceCountingException& brce ) {
 		if ( brce.object ) {
-			std::printf("\nBad Reference Counting Exception: [%p], refs = %li\n", brce.object, brce.refs);
+			std::printf("\nBad Reference Counting Exception: [%p], refs = %i\n", brce.object, brce.refs);
 			err = 1;
 		} else {
 			std::printf("\nBad Reference Counting Exception. Object deleted.\n\n");

@@ -563,6 +563,9 @@ struct EngineMessage {
 	UserFunctionBodyError,
 
 	// ERROR
+	ListSizeFunctionGivenNonList,
+
+	// ERROR
 	// List function began with non-list.
 	ListAppendFunctionGivenNonList,
 
@@ -814,6 +817,7 @@ struct SystemFunction {
 	_assert,
 
 	_make_list,		// "list"
+	_list_size,		// "length"
 	_list_append,	// "append"
 	_list_prepend,	// "prepend"
 	_list_insert,	// "insert"
@@ -870,7 +874,7 @@ struct Logger {
 class Ref;
 
 struct BadReferenceCountingException {
-	Integer refs;
+	int refs;
 	const Ref* object;
 
 	BadReferenceCountingException(Integer pCount, const Ref* pObject)
@@ -882,7 +886,7 @@ struct BadReferenceCountingException {
 // Class Ref
 // Used for tracking reference counting for certain types of C++ objects
 class Ref {
-	Integer refs;
+	int refs;
 #ifdef COPPER_REF_LEVEL_MESSAGES
 	bool isStackBased;
 #endif
@@ -930,7 +934,7 @@ public:
 	}
 
 	// Should be a DEBUG-only thing
-	Integer getRefCount() {
+	int getRefCount() {
 		return refs;
 	}
 
@@ -1659,13 +1663,25 @@ public:
 	// FunctionContainer* copy()
 	virtual Object* copy();
 
-	// Create a function container initialized to the given data
+	// Create a function container initialized to a copy of the given data
 	static FunctionContainer* createInitialized(Object* pData) {
 		FunctionContainer* fc = new FunctionContainer();
 		Function* f;
 		fc->getFunction(f);
 		if ( notNull(pData) ) {
 			f->result.setWithoutRef(pData->copy());
+			f->constantReturn = true;
+		}
+		return fc;
+	}
+
+	// Create a function container initialized to the given data
+	static FunctionContainer* createInitializedNoCopy(Object* pData) {
+		FunctionContainer* fc = new FunctionContainer();
+		Function* f;
+		fc->getFunction(f);
+		if ( notNull(pData) ) {
+			f->result.set(pData);
 			f->constantReturn = true;
 		}
 		return fc;
@@ -1734,7 +1750,7 @@ public:
 	void setFunc( FunctionContainer* pContainer, bool pReuseStorage );
 
 	// Used only for data
-	void setFuncReturn( Object* pData );
+	void setFuncReturn( Object* pData, bool pPerformCopy=true );
 
 	// Used for FuncFound_processRunVariable
 	Function* getFunction(Logger* logger);
@@ -2085,8 +2101,9 @@ class ObjectList : public Object, public AppendObjectInterface {
 
 		void
 		destroy() {
-			if ( item->getType() == ObjectType::Function )
+			if ( item->getType() == ObjectType::Function ) {
 				((FunctionContainer*)item)->disown(this);
+			}
 			item->deref();
 			if ( prior )
 				prior->post = post;
@@ -2119,6 +2136,14 @@ class ObjectList : public Object, public AppendObjectInterface {
 					((FunctionContainer*)item)->own(this);
 				item->ref();
 			}
+		}
+
+		bool
+		isPointer() const {
+			if ( item->getType() != ObjectType::Function )
+				return false;
+
+			return ! ((FunctionContainer*)item)->isOwner(this);
 		}
 	};
 
@@ -2161,6 +2186,7 @@ class ObjectList : public Object, public AppendObjectInterface {
 			// Should throw if no node. Should also check if node->post exists.
 			// Limit usage to contexts where node exists and node->post does not.
 			node->post = new Node(pItem);
+			node->post->prior = node;
 			node = node->post;
 		}
 
@@ -2169,6 +2195,7 @@ class ObjectList : public Object, public AppendObjectInterface {
 			// Should throw if no node. Should also check if node->prior exists.
 			// Limit usage to contexts where node exists and node->prior does not.
 			node->prior = new Node(pItem);
+			node->prior->post = node;
 			node = node->prior;
 		}
 
@@ -2196,6 +2223,8 @@ class ObjectList : public Object, public AppendObjectInterface {
 public:
 
 	ObjectList();
+
+	~ObjectList();
 
 	virtual Object*
 	copy();
@@ -3395,6 +3424,7 @@ protected:
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
 
 	FuncExecReturn::Value	process_sys_make_list(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_size(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_append(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_prepend(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_insert(	FuncFoundTask& task );

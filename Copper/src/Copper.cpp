@@ -409,7 +409,7 @@ Function::set( Function& other ) {
 	body.set( other.body.raw() );
 	params = other.params; // If params is changed to a pointer, this has to be changed to a copy
 	*persistentScope = *(other.persistentScope);
-	result.set( other.result.raw() ); // Should this be copied?
+	result.set( other.result.raw() ); // NOT A COPY
 }
 
 void
@@ -635,7 +635,7 @@ Variable::setFunc( FunctionContainer* pContainer, bool pReuseStorage ) {
 
 // Used only for data
 void
-Variable::setFuncReturn( Object* pData ) {
+Variable::setFuncReturn( Object* pData, bool pPerformCopy ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Variable::setFuncReturn [%p]\n", (void*)this);
 #endif
@@ -647,13 +647,21 @@ Variable::setFuncReturn( Object* pData ) {
 	Function* f = REAL_NULL;
 	if ( box->getFunction(f) ) {
 //std::printf("[DEBUG: Variable::setFuncReturn: using current function\n");
-		f->result.set(pData->copy());
+		if ( pPerformCopy ) {
+			f->result.setWithoutRef(pData->copy());
+		} else {
+			f->result.set(pData);
+		}
 		f->constantReturn = true;
 	} else {
 //std::printf("[DEBUG: Variable::setFuncReturn: creating new container\n");
 		box->disown(this);
 		box->deref();
-		box = FunctionContainer::createInitialized(pData);
+		if ( pPerformCopy ) {
+			box = FunctionContainer::createInitialized(pData);
+		} else {
+			box = FunctionContainer::createInitializedNoCopy(pData);
+		}
 		box->own(this);
 	}
 }
@@ -760,12 +768,21 @@ ObjectList::ObjectList( const ObjectList&  pOther )
 }
 */
 
+ObjectList::~ObjectList() {
+	clear();
+}
+
 Object*
 ObjectList::copy() {
 	ObjectList*  outList = new ObjectList();
 	Node* n = head.node;
 	while( n ) {
-		outList->push_back( n->item->copy() );
+		if ( n->isPointer() ) {
+			// Retain pointers
+			outList->push_back( n->item );
+		} else {
+			outList->push_back( n->item->copy() );
+		}
 		n = n->post;
 	}
 	return outList;
@@ -787,7 +804,7 @@ ObjectList::gotoIndex( Integer  index ) {
 		selectorIndex = 0;
 		selector.node = head.node;
 	}
-	else if ( nodeCount - index < nodeCount - selectorIndex ) {
+	else if ( nodeCount - index < index - selectorIndex ) {
 		selectorIndex = nodeCount - 1;
 		selector.node = tail.node;
 	}
@@ -867,11 +884,13 @@ ObjectList::remove( Integer  index ) {
 	head.moveOff(n);
 	tail.moveOff(n);
 	if ( selector.moveOff(n) ) {
-		if ( selector.node == n->post )
+		if ( selector.node == n->post ) {
 			++selectorIndex;
-		else
-			if ( notNull(selector.node) )
+		} else {
+			if ( notNull(selector.node) ) {
 				--selectorIndex;
+			}
+		}
 	}
 	n->destroy();
 	--nodeCount;
@@ -892,6 +911,7 @@ ObjectList::insert( Integer  index, Object*  pItem ) {
 	}
 	gotoIndex(index);
 	selector.insert(pItem);
+	++nodeCount;
 }
 
 void
@@ -939,8 +959,7 @@ RefVariableStorage::RefVariableStorage(Variable& refedVariable)
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: RefVariableStorage cstor 2 (Variable&) [%p]\n", (void*)this);
 #endif
-	// Note: Remove this line if there are copy problems.
-	// Copying should be the default, but it is expensive.
+	// Copy required in order to keep scopes independent.
 	variable = refedVariable.getCopy();
 }
 
@@ -950,8 +969,7 @@ RefVariableStorage::RefVariableStorage(const RefVariableStorage& pOther)
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: RefVariableStorage cstor 3 (const RefVariableStorage&) [%p]\n", (void*)this);
 #endif
-	// Note: Remove this line if there are copy problems.
-	// Copying should be the default, but it is expensive.
+	// Copy required in order to keep scopes independent.
 	variable = pOther.variable->getCopy();
 }
 
@@ -2173,7 +2191,8 @@ Engine::setVariableByAddress(
 			break;
 		//case ObjectType::Data:
 		default:
-			var->setFuncReturn( obj );
+			// Use pPerformCopy (default) if this object is held by anything other than the lastObject.
+			var->setFuncReturn( obj, (obj->getRefCount() != 1) );
 			lastObject.set(var->getRawContainer());
 			break;
 		}
@@ -2537,6 +2556,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
 
 	builtinFunctions.insert(String("list"), SystemFunction::_make_list);
+	builtinFunctions.insert(String("length"), SystemFunction::_list_size);
 	builtinFunctions.insert(String("append"), SystemFunction::_list_append);
 	builtinFunctions.insert(String("prepend"), SystemFunction::_list_prepend);
 	builtinFunctions.insert(String("insert"), SystemFunction::_list_insert);
@@ -5001,6 +5021,9 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_make_list:
 		return process_sys_make_list(task);
 
+	case SystemFunction::_list_size:
+		return process_sys_list_size(task);
+
 	case SystemFunction::_list_append:
 		return process_sys_list_append(task);
 
@@ -6025,6 +6048,29 @@ Engine::process_sys_make_list(
 			out->push_back(*argsIter);
 		} while ( argsIter.next() );
 	}
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_list_size(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_size");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListSizeFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	ObjectList* listPtr = (ObjectList*)*argsIter;
+
+	lastObject.setWithoutRef(
+		new ObjectInteger( listPtr->size() )
+	);
 	return FuncExecReturn::Ran;
 }
 
