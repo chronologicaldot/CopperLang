@@ -349,9 +349,6 @@ Three of the virtual functions of <code>Cu::Object</code> need to be implemented
 <grey>// Creates an independent copy of the object (except in the case of monads).</grey>
 <green>virtual</green> Object* copy<red>()</red>;
 
-<grey>// Implementing is optional. Defaults to "{object}".</grey>
-<green>virtual void</green> writeToString<red>(</red>String&amp out<red>)</red> <green>const</green>;
-
 <grey>// Returns the name used for identifying what type this object is.</grey>
 <green>virtual const char*</green> typeName<red>()</red> <green>const</green> =0;
 </code></pre>
@@ -359,8 +356,22 @@ Three of the virtual functions of <code>Cu::Object</code> need to be implemented
 The engine currently uses the <code>typeName()</code> method when it needs to check if two types are the same via <code>are_same_type()</code>. It is also used for printing. Therefore, the return from <code>typeName()</code> <b>should be unique</b>, but it can optionally be left blank.
 </p>
 <p>
-The object type (not the type-name) is stored in the protected variable <code>type</code>. This value must be set, and you are to do so by passing in a unique value casted to <code>ObjectType::Value</code>.
+The object type (not the type-name) is stored in the protected variable <code>type</code>. <b>This value must be set</b>, and you are to do so by passing in a unique value casted to <code>ObjectType::Value</code> to the constructor of Cu::Object within the constructor of your object.
 </p>
+<p>
+Optionally, the following functions can be implemented. Each of these is considered a data-returning function. They can allow for printing or conversion of data.
+</p>
+<pre><code>
+<grey>// Defaults to "{object}".</grey>
+<green>virtual void</green> writeToString<red>(</red>String&amp out<red>)</red> <green>const</green>;
+
+<grey>// Defaults to 0.</grey>
+<green>virtual Integer</green> getIntegerValue<red>()</red> <green>const</green>;
+
+<grey>// Defaults to 0.</grey>
+<green>virtual Decimal</green> getDecimalValue<red>()</red> <green>const</green>;
+</code></pre>
+
 <h4>
 Example:
 </h4>
@@ -486,34 +497,97 @@ The following is a list of objects in the interpreter. These can be passed to <c
 </div>
 
 <div class="func">
-<h4><code>ObjectNumber</code></h4>
+<h4><code>ObjectInteger</code></h4>
 <p>
-	Container for an ASCII-numeric string representation of a number.
+	Container for an integer representation of a number.
 </p>
 <table cellpadding="5">
 	<tr>
-		<th>Typename</th><td>number</td>
+		<th>Typename</th><td>int</td>
 	</tr>
 	<tr>
 		<th>Constructor</th>
 		<td>
-		<code>ObjectNumber()</code><br>
-		<code>ObjectNumber(const unsigned long pValue)</code><br>
-		<code>explicit ObjectNumber(const String&amp pValue)</code></td>
+		<code>ObjectInteger()</code><br>
+		<code>ObjectInteger( Integer newValue )</code><br>
 		</tr>
 	<tr>
 		<th>Copy Constructor</th><td>Allowed. Can also use <code>Object::copy()</code>.</td>
 	</tr>
 	<tr>
-		<th>Data-access Method</th>
+		<th>Data Methods</th>
 		<td>
-		<code>String&amp getRawValue()</code><br>
-		<code>virtual unsigned long getAsUnsignedLong() const</code>
+		<code>void setValue( Integer pValue )</code><br>
+		<code>virtual Integer getIntegerValue() const</code><br>
+		<code>virtual Decimal getDecimalValue() const</code>
 		</td>
 	</tr>
 </table>
 </div>
 
+<div class="func">
+<h4><code>ObjectDecimal</code></h4>
+<p>
+	Container for a decimal representation of a number.
+</p>
+<table cellpadding="5">
+	<tr>
+		<th>Typename</th><td>dcml</td>
+	</tr>
+	<tr>
+		<th>Constructor</th>
+		<td>
+		<code>ObjectDecimal()</code><br>
+		<code>ObjectDecimal( Integer newValue )</code><br>
+		</tr>
+	<tr>
+		<th>Copy Constructor</th><td>Allowed. Can also use <code>Object::copy()</code>.</td>
+	</tr>
+	<tr>
+		<th>Data Methods</th>
+		<td>
+		<code>void setValue( Integer pValue )</code><br>
+		<code>virtual Integer getIntegerValue() const</code><br>
+		<code>virtual Decimal getDecimalValue() const</code>
+		</td>
+	</tr>
+</table>
+</div>
+
+<div class="func">
+<h4><code>ObjectList</code></h4>
+<p>
+	A dynamically-sized doubly-linked list.
+</p>
+<table cellpadding="5">
+	<tr>
+		<th>Typename</th><td>list</td>
+	</tr>
+	<tr>
+		<th>Constructor</th>
+		<td>
+		<code>ObjectDecimal()</code><br>
+		<code>ObjectDecimal( Integer newValue )</code><br>
+		</tr>
+	<tr>
+		<th>Copy Constructor</th><td>Allowed. Can also use <code>Object::copy()</code>.</td>
+	</tr>
+	<tr>
+		<th>Data Methods</th>
+		<td>
+		<code>Integer size() const</code><br>
+		<code>virtual void append( Object* pItem )</code><br>
+		<code>void push_back( Object* pItem )</code><br>
+		<code>void push_front( Object* pItem )</code><br>
+		<code>bool remove( Integer index )</code><br>
+		<code>bool insert( Integer index,  Object* pItem )</code><br>
+		<code>bool swap( Integer index1, Integer index2 )</code><br>
+		<code>bool replace( Integer index, Object* pItem )</code><br>
+		<code>Object* getItem( Integer index )</code><br>
+		</td>
+	</tr>
+</table>
+</div>
 
 <h2 id="call">Callbacks</h2>
 <p>

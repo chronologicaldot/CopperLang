@@ -9,17 +9,17 @@ v 5-0.4
 - Fixed bug in ObjectList::gotoIndex() that compared incorrect distances when determining if the selector should go to the tail.
 - Fixed bugs in ObjectList::NodePtr::append() and prepend() that failed to set the post and prior nodes for both the new node and the original.
 - Fixed part of a memory leak resulting from having no ObjectList destructor.
-- Modified ObjectList::copy() to create copies of functions only if they are not pointers. Added ObjectList::Node::isPointer() to aid. -> FIX UNDONE (See below)
+- Modified ObjectList::copy() to create copies of functions only if they are not pointers. Added ObjectList::Node::isPointer() to aid. -> UNDONE (See below)
 - Added parameter bool pPerformCopy to Variable::setFuncReturn() for optimizing copying data. Default is true (this is also backwards-compatible).
 - Added static FunctionContainer* createInitializedNoCopy(Object* pData).
 - Fixed bug in Variable::setFuncReturn(). When the function existed, a copy of the data was being set to the result, but this should have been setWithoutRef.
 - Changed Engine::setVariableByAddress() to use pPerformCopy flag when the reference count is 1 (from the lastObject), thereby optimizing copies.
-- Added string match function ("matching") for comparing string equality.
+- Added string match function ("matching") for comparing string equality. (Engine::process_sys_string_match())
 - Changed list item built-in function from "item" to "item_at".
-- Added built-in function "copy_of".
-- Added build-in function "sublist".
-- Added build-in function "are_list".
-- Added built-in function string_concat "concat".
+- Added built-in function "copy_of". (Engine::process_sys_copy())
+- Added build-in function "sublist". (Engine::process_sys_list_sublist())
+- Added build-in function "are_list". (Engine::process_sys_are_list())
+- Added built-in function string_concat "concat". (Engine::process_sys_string_concat())
 - Changed Engine::resolveVariableByAddress to no longer attempt extra function access when unnecessary, removing false alarms about missing functions.
 - Updated EngineMessage enum.
 - Fixed bug in ObjectList::remove() that set the pointers to null when not necessary.
@@ -28,6 +28,7 @@ v 5-0.4
 - Removed useless #define COPPER_ENABLE_CALLBACK_THIS_POINTER. It was rendered useless with the change in the callback system.
 - Removed pointer-preservation in ObjectList::copy() and fixed bug that lead to memory leak from excess reference-counting due to object copy + push_back.
 - Fixed assignment bug by changed default Function::set() activity to create a copy of the data instead of sharing the pointer. This enables complete copying and avoids all sorts of linked data bugs.
+- Fixed bug in process_sys_string_concat() that failed to set the lastObject.
 
 CopperLangGuide.html
 - Updated to include info on copy_of, are_list, list, length, append, prepend, insert, item_at, erase, swap, replace, sublist.

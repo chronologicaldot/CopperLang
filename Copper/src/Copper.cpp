@@ -876,10 +876,10 @@ ObjectList::push_front( Object* pItem ) {
 	++nodeCount;
 }
 
-void
+bool
 ObjectList::remove( Integer  index ) {
 	if ( ! gotoIndex(index) )
-		return;
+		return false;
 
 	Node* n = selector.node;
 	if ( nodeCount == 1 ) {
@@ -895,46 +895,54 @@ ObjectList::remove( Integer  index ) {
 	}
 	n->destroy();
 	--nodeCount;
+	return true;
 }
 
-void
+bool
 ObjectList::insert( Integer  index, Object*  pItem ) {
-	if ( isNull(pItem) )
-		return;
+	if ( isNull(pItem) ) {
+		return false;
+	}
 	if ( index >= nodeCount ) {
 		tail.append(pItem);
 		++nodeCount;
-		return;
+		return true;
 	}
 	if ( index <= 0 ) {
 		head.prepend(pItem);
 		++selectorIndex;
 		++nodeCount;
-		return;
+		return true;
 	}
 	gotoIndex(index);
 	selector.insert(pItem);
 	++nodeCount;
+	return true;
 }
 
-void
+bool
 ObjectList::swap( Integer  index1, Integer  index2 ) {
 	Node* n;
 	if ( gotoIndex(index1) ) {
 		n = selector.node;
 		if ( gotoIndex(index2) ) {
 			selector.node->swapItem(*n);
+			return true;
 		}
 	}
+	return false;
 }
 
-void
+bool
 ObjectList::replace( Integer  index, Object*  pNewItem ) {
-	if ( isNull(pNewItem) )
-		return;
+	if ( isNull(pNewItem) ) {
+		return false;
+	}
 	if ( gotoIndex(index) ) {
 		selector.node->replace(pNewItem);
+		return true;
 	}
+	return false;
 }
 
 Object*
@@ -6407,7 +6415,7 @@ Engine::process_sys_string_concat(
 			}
 		} while ( argsIter.next() );
 	}
-	ObjectString* out = new ObjectString( String(builder) ); // implicit cast to const String here
+	lastObject.setWithoutRef( new ObjectString( String(builder) ) ); // implicit cast to const String here
 	return FuncExecReturn::Ran;
 }
 

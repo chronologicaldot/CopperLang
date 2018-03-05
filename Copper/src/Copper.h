@@ -2241,18 +2241,23 @@ public:
 	void
 	push_front( Object* pItem );
 
-	void
+	// Removes an object. Returns true upon success.
+	bool
 	remove( Integer  index );
 
-	void
+	// Inserts an object. Returns true upon success.
+	bool
 	insert( Integer  index, Object*  pItem );
 
-	void
+	// Swaps two objects. Returns true upon success.
+	bool
 	swap( Integer  index1, Integer  index2 );
 
-	void
+	// Replaces an object. Returns true upon success.
+	bool
 	replace( Integer  index, Object*  pNewItem );
 
+	// Gets an object. Returns REAL_NULL upon failure.
 	Object*
 	getItem( Integer  index );
 
