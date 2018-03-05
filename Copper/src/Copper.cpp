@@ -2555,18 +2555,22 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("are_dcml"), SystemFunction::_are_decimal);
 	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
 
+	builtinFunctions.insert(String("copy"), SystemFunction::_copy);
+
 	builtinFunctions.insert(String("list"), SystemFunction::_make_list);
 	builtinFunctions.insert(String("length"), SystemFunction::_list_size);
 	builtinFunctions.insert(String("append"), SystemFunction::_list_append);
 	builtinFunctions.insert(String("prepend"), SystemFunction::_list_prepend);
 	builtinFunctions.insert(String("insert"), SystemFunction::_list_insert);
-	builtinFunctions.insert(String("item"), SystemFunction::_list_get_item);
+	builtinFunctions.insert(String("item_at"), SystemFunction::_list_get_item);
 	builtinFunctions.insert(String("erase"), SystemFunction::_list_remove);
 	builtinFunctions.insert(String("dump"), SystemFunction::_list_clear);
 	builtinFunctions.insert(String("swap"), SystemFunction::_list_swap);
 	builtinFunctions.insert(String("replace"), SystemFunction::_list_replace);
+	builtinFunctions.insert(String("sublist"), SystemFunction::_list_sublist);
 
 	builtinFunctions.insert(String("matching"), SystemFunction::_string_match);
+	builtinFunctions.insert(String("concat"), SystemFunction::_string_concat);
 }
 
 //-------------------------------------
@@ -5020,6 +5024,9 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_assert:
 		return process_sys_assert(task);
 
+	case SystemFunction::_copy:
+		return process_sys_copy(task);
+
 	case SystemFunction::_make_list:
 		return process_sys_make_list(task);
 
@@ -5050,8 +5057,14 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_list_replace:
 		return process_sys_list_replace(task);
 
+	case SystemFunction::_list_sublist:
+		return process_sys_list_sublist(task);
+
 	case SystemFunction::_string_match:
 		return process_sys_string_match(task);
+
+	case SystemFunction::_string_concat:
+		return process_sys_string_concat(task);
 
 	default:
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
@@ -5357,37 +5370,38 @@ Engine::resolveVariableAddress(
 	Variable* var = REAL_NULL;
 	Function* func = REAL_NULL;
 	VarAddress::Iterator ai = address.iterator();
-	do {
-		if ( scope->findVariable(ai.get(), var) ) {
-			func = var->getFunction(logger);
-			scope = &(func->getPersistentScope());
-		} else {
-			goto resolve_addr_search_globals;
-		}
-	} while ( ai.next() );
-	return var;
 
-resolve_addr_search_globals:
-	scope = &getGlobalScope();
-	ai.reset();
-	do {
-		if ( scope->findVariable(ai.get(), var) ) {
-			func = var->getFunction(logger);
-			scope = &(func->getPersistentScope());
-		} else {
-			goto resolve_addr_search_locals;
+	// Search locals
+	while( scope->findVariable(ai.get(), var) ) {
+		if ( ! ai.next() ) { // Last part of name?
+			return var;
 		}
-	} while ( ai.next() );
-	return var;
-
-resolve_addr_search_locals:
-	scope = &getCurrentTopScope();
-	ai.reset();
-	do {
-		scope->getVariable(ai.get(), var);
 		func = var->getFunction(logger);
 		scope = &(func->getPersistentScope());
-	} while ( ai.next() );
+	}
+
+	// Search globals
+	scope = &getGlobalScope();
+	ai.reset();
+	while( scope->findVariable(ai.get(), var) ) {
+		if ( !ai.next() ) {
+			return var;
+		}
+		func = var->getFunction(logger);
+		scope = &(func->getPersistentScope());
+	}
+
+	// Search locals again, but this time, create the variables if necessary
+	scope = &getCurrentTopScope();
+	ai.reset();
+	while(true) {
+		scope->getVariable(ai.get(), var);
+		if ( !ai.next() ) {
+			break;
+		}
+		func = var->getFunction(logger);
+		scope = &(func->getPersistentScope());
+	}
 	return var;
 }
 
@@ -6039,6 +6053,20 @@ Engine::process_sys_assert(
 }
 
 FuncExecReturn::Value
+Engine::process_sys_copy(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_copy");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( argsIter.has() ) {
+		lastObject.setWithoutRef( (*argsIter)->copy() );
+	}
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
 Engine::process_sys_make_list(
 	FuncFoundTask& task
 ) {
@@ -6289,6 +6317,59 @@ Engine::process_sys_list_replace(
 }
 
 FuncExecReturn::Value
+Engine::process_sys_list_sublist(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_sublist");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() )
+		return FuncExecReturn::Ran;
+
+	if ( ! isObjectList(**argsIter) ) {
+		print(LogLevel::error, EngineMessage::ListSublistFunctionGivenNonList);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	ObjectList* listPtr = (ObjectList*)*argsIter;
+
+	if ( ! argsIter.next() ) {
+		lastObject.setWithoutRef(listPtr->copy());
+		return FuncExecReturn::Ran;
+	}
+
+	Integer startIndex = (*argsIter)->getIntegerValue();
+
+	ObjectList* newList = new ObjectList();
+	Object* item = REAL_NULL;
+
+	if ( ! argsIter.next() ) {
+		// Copy items from starting index to end of list
+		for (; startIndex < listPtr->size(); ++startIndex) {
+			item = listPtr->getItem(startIndex)->copy();
+			newList->push_back( item );
+			item->deref(); // After copy, refs==1. After push_back, refs==2. Only 1 is desired.
+		}
+		lastObject.setWithoutRef(newList);
+		return FuncExecReturn::Ran;
+	}
+
+	Integer endIndex = (*argsIter)->getIntegerValue();
+
+	// TODO Should show a warning when the index size is greater than the list size.
+	if ( endIndex > listPtr->size() )
+		endIndex = listPtr->size();
+
+	for (; startIndex < endIndex; ++startIndex) {
+		item = listPtr->getItem(startIndex)->copy();
+		newList->push_back( item );
+		item->deref(); // After copy, refs==1. After push_back, refs==2. Only 1 is desired.
+	}
+	lastObject.setWithoutRef(newList);
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
 Engine::process_sys_string_match(
 	FuncFoundTask& task
 ) {
@@ -6312,6 +6393,31 @@ Engine::process_sys_string_match(
 		} while ( argsIter.next() && matches );
 	}
 	lastObject.setWithoutRef( new ObjectBool(matches) );
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_string_concat(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_string_concat");
+#endif
+	ArgsIter argsIter = task.args.start();
+	CharList builder;
+	String part_str;
+	if ( argsIter.has() ) {
+		do {
+			if ( isObjectString( **argsIter ) ) {
+				builder.append( ((ObjectString*)(*argsIter))->getString() );
+			} else {
+				(*argsIter)->writeToString(part_str);
+				builder.append(part_str);
+				part_str = String();
+			}
+		} while ( argsIter.next() );
+	}
+	ObjectString* out = new ObjectString( String(builder) ); // implicit cast to const String here
 	return FuncExecReturn::Ran;
 }
 

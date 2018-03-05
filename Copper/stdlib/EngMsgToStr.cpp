@@ -477,6 +477,83 @@ getStringFromEngineMessage(
 		errLevel = EngineErrorLevel::error;
 		return "Function body contains errors.";
 
+	// ERROR
+	case EngineMessage::ListSizeFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List size function given non-list argument.";
+
+	// ERROR
+	// List function began with non-list.
+	case EngineMessage::ListAppendFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List append function given non-list argument.";
+
+	// ERROR
+	// List function began with non-list.
+	case EngineMessage::ListPrependFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List prepend function given non-list argument.";
+
+	// ERROR
+	// List function began with non-list.
+	case EngineMessage::ListInsertFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List insert function given non-list argument.";
+
+	// ERROR
+	// List function began with non-list.
+	case EngineMessage::ListGetItemFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List get-item function given non-list argument.";
+
+	// ERROR
+	// List function began with non-list.
+	case EngineMessage::ListRemoveFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List remove function given non-list argument.";
+
+	// ERROR
+	// List function began with non-list.
+	case EngineMessage::ListClearFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List clear function given non-list argument.";
+
+	// ERROR
+	// List function began with non-list.
+	case EngineMessage::ListSwapFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List swap function given non-list argument.";
+
+	// ERROR
+	// List function missing an argument.
+	case EngineMessage::ListSwapFunctionMissingArg:
+		errLevel = EngineErrorLevel::error;
+		return "List swap function is missing an argument.";
+
+	// ERROR
+	// List function began with non-list.
+	case EngineMessage::ListReplaceFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List replace function given non-list argument.";
+
+	// ERROR
+	// List function missing an argument.
+	case EngineMessage::ListReplaceFunctionMissingArg:
+		errLevel = EngineErrorLevel::error;
+		return "List replace function is missing an argument.";
+
+	// ERROR
+	// List function began with non-list.
+	case EngineMessage::ListSublistFunctionGivenNonList:
+		errLevel = EngineErrorLevel::error;
+		return "List sub-list function is missing an argument.";
+
+	// WARNING
+	// An argument passed to the string match function was not a string. It is ignored.
+	case EngineMessage::StringMatchGivenNonStringArg:
+		errLevel = EngineErrorLevel::error;
+		return "String match function given non-string argument.";
+
 	case EngineMessage::COUNT:
 		return "INFO: tick.";
 		break;

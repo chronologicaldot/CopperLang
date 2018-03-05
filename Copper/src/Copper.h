@@ -591,7 +591,7 @@ struct EngineMessage {
 	ListSwapFunctionGivenNonList,
 
 	// ERROR
-	// List function missing an argument
+	// List function missing an argument.
 	ListSwapFunctionMissingArg,
 
 	// ERROR
@@ -599,8 +599,12 @@ struct EngineMessage {
 	ListReplaceFunctionGivenNonList,
 
 	// ERROR
-	// List function missing an argument
+	// List function missing an argument.
 	ListReplaceFunctionMissingArg,
+
+	// ERROR
+	// List function began with non-list.
+	ListSublistFunctionGivenNonList,
 
 	// WARNING
 	// An argument passed to the string match function was not a string. It is ignored.
@@ -816,19 +820,22 @@ struct SystemFunction {
 	_are_integer,
 	_are_decimal,
 	_assert,
+	_copy,
 
 	_make_list,		// "list"
 	_list_size,		// "length"
 	_list_append,	// "append"
 	_list_prepend,	// "prepend"
 	_list_insert,	// "insert"
-	_list_get_item,	// "item"
+	_list_get_item,	// "item_at"
 	_list_remove,	// "erase"
 	_list_clear, 	// "dump"
 	_list_swap,		// "swap"
 	_list_replace,	// "replace"
+	_list_sublist,	// "sublist"
 
 	_string_match,	// "matching"
+	_string_concat,	// "concat"
 	};
 };
 
@@ -3425,7 +3432,9 @@ protected:
 	FuncExecReturn::Value	process_sys_are_integer(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_decimal(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_copy(			FuncFoundTask& task );
 
+	// List functions
 	FuncExecReturn::Value	process_sys_make_list(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_size(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_append(	FuncFoundTask& task );
@@ -3436,8 +3445,11 @@ protected:
 	FuncExecReturn::Value	process_sys_list_clear(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_swap(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_list_replace(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_list_sublist(	FuncFoundTask& task );
 
+	// String functions
 	FuncExecReturn::Value	process_sys_string_match(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_string_concat(	FuncFoundTask& task );
 
 #ifdef COPPER_SPEED_PROFILE
 	timeval sp_startTime, sp_endTime;

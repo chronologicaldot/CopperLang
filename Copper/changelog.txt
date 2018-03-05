@@ -1,5 +1,5 @@
 ====================
-2018/3/3 - 2018/3/4
+2018/3/3 - 2018/3/5
 v 5-0.4
 
 - Added #define COPPER_DEBUG_ADDRESS.
@@ -15,6 +15,12 @@ v 5-0.4
 - Fixed bug in Variable::setFuncReturn(). When the function existed, a copy of the data was being set to the result, but this should have been setWithoutRef.
 - Changed Engine::setVariableByAddress() to use pPerformCopy flag when the reference count is 1 (from the lastObject), thereby optimizing copies.
 - Added string match function for comparing string equality.
+- Changed list item built-in function from "item" to "item_at".
+- Added built-in function "copy".
+- Added build-in function "sublist".
+- Added built-in function string_concat "concat".
+- Changed Engine::resolveVariableByAddress to no longer attempt extra function access when unnecessary, removing false alarms about missing functions.
+- Updated EngineMessage enum.
 
 
 ====================
