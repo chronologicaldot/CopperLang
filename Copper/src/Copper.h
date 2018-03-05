@@ -103,13 +103,6 @@
 // Uncomment to prevent the creation of non-ASCII strings
 //#define COPPER_PURGE_NON_PRINTABLE_ASCII_INPUT_STRINGS
 
-// Uncomment to allow callback functions to have their own persistent scope.
-// Enabling this feature means you must save each callback FunctionContainer to a variable
-// so that its Function is not destroyed with "this" when the scope is cleared from the stack.
-// Example: [code]
-// Variable var; var.setFunc( callbackFunctionContainer );
-//#define COPPER_ENABLE_CALLBACK_THIS_POINTER
-
 // Uncomment to allow names to contain the following special characters:
 // + - * / % ! ?
 #define COPPER_ENABLE_EXTENDED_NAME_SET
@@ -2164,31 +2157,19 @@ class ObjectList : public Object, public AppendObjectInterface {
 			: node (REAL_NULL)
 		{}
 
-		void
-		moveToPost() {
-			if ( node )
-				node = node->post;
-			else
-				node = REAL_NULL;
-		}
-
-		void
-		moveToPrior() {
-			if ( node )
+		Integer
+		moveOff() {
+			if ( !node )
+				return 0;
+			if ( node->prior ) {
 				node = node->prior;
-			else
-				node = REAL_NULL;
-		}
-
-		bool
-		moveOff( Node* n ) {
-			if ( !node || node != n )
-				return false;
+				return -1;
+			}
 			if ( node->post ) {
 				node = node->post;
+				return 1;
 			}
-			node = node->prior; // Move even if null
-			return true;
+			return 0;
 		}
 
 		void

@@ -179,7 +179,7 @@ b = []
 c = <red>{}</red>
 </code></pre>
 <p>
-In function creation, the object section has two types of parameters: (1) names that will act as names for the parameters passed into the function during calls and (2) names that are assigned objects and saved in the persistent scope. In the latter case, a name must be followed by an assignment symbol (or pointer assignment symbol), which in turn is followed by some data or a variable.
+In function creation, the object section has two types of parameters: (1) names that will act as names for the arguments passed into the function during calls and (2) names that are assigned objects and saved in the persistent scope. In the latter case, a name must be followed by an assignment symbol (or pointer assignment symbol), which in turn is followed by some data or a variable.
 </p>
 <pre><code>
 a = [temp, persistent="Some data"] <red>{}</red>
@@ -213,7 +213,7 @@ a.b<red>()</red>
 print<red>(a.c<orange>()</orange>)</red> # Prints 5 #
 </code></pre>
 <p>
-A shorthand for calling functions without passing them any parameters is done by using the immediate-run token - a colon (:) - instead of parentheses.
+A shorthand for calling functions without passing them any arguments is done by using the immediate-run token - a colon (:) - instead of parentheses.
 </p>
 <pre><code>
 a:
@@ -310,10 +310,10 @@ While the following are syntactically similar to functions, they are structures 
 Accepts a variable and converts it from a pointer (if it is one) to the owner of the function it points to.
 </p>
 <p>
-Disabled by default. Must be enabled via C++ macro.
+Disabled by default. Must be enabled with Engine::setOwnershipChangingEnabled().
 </p>
 <p>
-WARNING: Misuse can cause cross-references of variables and create memory leaks. This function is not an essential feature but provided as a convenience.
+<b>WARNING:</b> Misuse can cause cross-references of variables and create memory leaks. This function is not an essential feature but provided as a convenience.
 </p>
 </div>
 
@@ -348,7 +348,7 @@ Accepts any number of arguments and returns true if all of them point to the sam
 Accepts two arguments - a function and a string. It attempts to find and return a persistent scope member (of the function) whose name matches the given string. If either argument is incorrect, it prints a warning and returns an empty function.
 </p>
 <p>
-WARNING: This automatically creates a variable if it does not exist. You should purge strings of any characters that you do not wish to permit in names.
+<b>WARNING:</b> This automatically creates a variable if it does not exist. You should purge strings of any characters that you do not wish to permit in names.
 </p>
 <p>
 NOTE: This function returns only a function, not the return value of the function. To get the return value, save the returned function to a pointer and call it.
@@ -369,7 +369,7 @@ Accepts a single function as an argument and returns how many member variables a
 <div class="func">
 <h4>is_member()</h4>
 <p>
-Accepts two arguments - a function and a string. It checks if the string matches the name of a member in the persistent scope of the given function. If a parameter is incorrect, it prints a warning and returns false.
+Accepts two arguments - a function and a string. It checks if the string matches the name of a member in the persistent scope of the given function. If an argument is incorrect, it prints a warning and returns false.
 </p>
 </div>
 
@@ -404,42 +404,63 @@ Accepts any number of functions and copies their persistent scopes into the pers
 <div class="func">
 <h4>type_of()</h4>
 <p>
-Accepts a single parameter and returns the type name of the object as a string.
+Accepts a single arguments and returns the type name of the object as a string.
 </p>
 </div>
 
 <div class="func">
 <h4>are_same_type()</h4>
 <p>
-Accepts any number of parameters and returns true if all of them are the same type.
+Accepts any number of arguments and returns true if all of them are the same type.
 </p>
 </div>
 
 <div class="func">
 <h4>are_fn()</h4>
 <p>
-Accepts any number of parameters and returns true if all of them are functions.
+Accepts any number of arguments and returns true if all of them are functions.
 </p>
 </div>
 
 <div class="func">
 <h4>are_bool()</h4>
 <p>
-Accepts any number of parameters and returns true if all of them are boolean values.
+Accepts any number of arguments and returns true if all of them are boolean values.
 </p>
 </div>
 
 <div class="func">
 <h4>are_string()</h4>
 <p>
-Accepts any number of parameters and returns true if all of them are strings.
+Accepts any number of arguments and returns true if all of them are strings.
+</p>
+</div>
+
+<div class="func">
+<h4>are_list()</h4>
+<p>
+Accepts any number of arguments and returns true if all of them are lists.
 </p>
 </div>
 
 <div class="func">
 <h4>are_number()</h4>
 <p>
-Accepts any number of parameters and returns true if all of them are numbers.
+Accepts any number of arguments and returns true if all of them are numbers.
+</p>
+</div>
+
+<div class="func">
+<h4>are_int()</h4>
+<p>
+Accepts any number of arguments and returns true if all of them are of the built-in integer class.
+</p>
+</div>
+
+<div class="func">
+<h4>are_dcml()</h4>
+<p>
+Accepts any number of arguments and returns true if all of them are of the built-in decimal class.
 </p>
 </div>
 
@@ -447,14 +468,24 @@ Accepts any number of parameters and returns true if all of them are numbers.
 <div class="func">
 <h4>are_empty()</h4>
 <p>
-Accepts any number of parameters and returns true if all of them are empty functions.
+Accepts any number of arguments and returns true if all of them are empty functions.
 </p>
 </div>
 
 <div class="func">
 <h4>assert()</h4>
 <p>
-Accepts any number of parameters and creates an error if any parameter is not true.
+Accepts any number of arguments and creates an error if any argument is not true.
+</p>
+</div>
+
+<div class="func">
+<h4>copy_of()</h4>
+<p>
+Accepts a single argument and returns an independent copy of it.
+</p>
+<p>
+For classes inheriting Cu::Object that return their own address (e.g. the "this" pointer) from their copy() method, this function will not create an independent copy.
 </p>
 </div>
 
@@ -499,6 +530,123 @@ Acts as the "nor" operator. It accepts any number of objects and returns true if
 <p>
 It is equivalent to:
 <pre><code>not(any(x))</code></pre>
+</p>
+</div>
+
+<h3>List Operations</h3>
+<div class="func">
+<h4>list()</h4>
+<p>
+Creates a list from the given arguments.
+</p>
+<p>
+When passed an function that is created in-line, the function is owned by the list and will only be destroyed with the list. For example:
+<pre><code>list( {} )</code></pre>
+</p>
+<p>
+However, when the function is from a variable, the list will contain only a pointer to that function.
+<pre><code>a = {}, list(a)</code></pre>
+</p>
+<p>
+To delink the list function from the variable, the function needs to be copied.
+<pre><code>a = {}, list(copy_of(a))</code></pre>
+</p>
+</div>
+
+<div class="func">
+<h4>length()</h4>
+<p>
+Accepts a list as an argument and returns the size of that list.
+</p>
+</div>
+
+<div class="func">
+<h4>append()</h4>
+<p>
+Accepts a list and an object. It appends the object to the end of the list.
+</p>
+</div>
+
+<div class="func">
+<h4>prepend()</h4>
+<p>
+Accepts a list and an object. It prepends the object to the beginning of the list.
+</p>
+</div>
+
+<div class="func">
+<h4>insert()</h4>
+<p>
+Accepts a list, an index, and an object. It inserts the object at the given index. Decimal indexes will be converted to integers.
+</p>
+</div>
+
+<div class="func">
+<h4>item_at()</h4>
+<p>
+Accepts a list and an index. It attempts to return the item in the list at the given index. In case the item does not exist, an empty function is returned.
+</p>
+</div>
+
+<div class="func">
+<h4>erase()</h4>
+<p>
+Accepts a list and an index. It attempts to delete the item in the list at the given index. If the item is a pointer, the original will still be preserved. No warning is given if the index is out of bounds.
+</p>
+</div>
+
+<div class="func">
+<h4>dump()</h4>
+<p>
+Accepts a single list and attempts to delete all of its contents. If there are pointers in the list, the originals will still be preserved.
+</p>
+</div>
+
+<div class="func">
+<h4>swap()</h4>
+<p>
+Accepts a single list and two index values. It attempts to swap the positions of items in the list at those index values.
+</p>
+<p>
+No warning is given if the indexes are out of range.
+</p>
+</div>
+
+<div class="func">
+<h4>replace()</h4>
+<p>
+Accepts a single list, an index, and an object. It attempts to replace the item in the given list at the given index with the given object.
+<p>
+No warning is given if the index is out of range.
+</p>
+</p>
+</div>
+
+<div class="func">
+<h4>sublist()</h4>
+<p>
+Accepts a single list and two index values that can be mapped to the range 0 to list length. It creates a list containing shared links to the items in the given list.
+</p>
+<p>
+NOTE: 
+</p>
+</div>
+
+<h3>String Operations</h3>
+<div class="func">
+<h4>matching()</h4>
+<p>
+Accepts any number string arguments. Returns true if all of them are identical as strings. Returns false in all other cases, including when non-strings are passed. The return is always a string.
+</p>
+</div>
+
+<div class="func">
+<h4>concat()</h4>
+<p>
+Accepts any number of arguments. Attempts to concatenate them into a single string, which is returned. Non-strings are ignored. The return is always a string.
+</p>
+<p>
+<b>WARNING:</b> This function uses Cu::Object::writeToString, also used for printing. Therefore, implementations of writeToString should only be conversions of data, not string versions of types.
 </p>
 </div>
 

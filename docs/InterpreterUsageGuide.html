@@ -198,7 +198,11 @@ By default, the engine filters out all non-ASCII names, but you can change this 
 The engine can be extended with functions in by implementations of the class <code>Cu::ForeignFunc</code>, passed into <code>Engine::addForeignFunction()</code>.
 </p>
 <p>
-ForeignFunc classes can be added to the engine via the template function: <code>Cu::addForeignFuncInstance&lt<i>my_foreign_func</i>&gt(Engine* engine, const String&amp pName)</code>
+A single-call method for adding ForeignFunc classes to the engine is the template function: <code>Cu::addForeignFuncInstance&lt<i>my_foreign_func</i>&gt(Engine* engine, const String&amp pName)</code>
+However, this can bloat code.
+</p>
+<p>
+ForeignFunc classes can also be added using <code>Cu::addNewForeignFunc(Engine&amp pEngine, const String&amp pName, ForeignFunc* pFunction)</code>, however, this function will dereference the instance because it is expected that you create a new heap object inline with the function call.
 </p>
 <p>
 The interface for foreign functions is as follows:
@@ -227,6 +231,24 @@ Functions can be made to accept any number of functions. These are called "varia
 </p>
 <p>
 Functions can be designed to accept a limited number of parameters by implementing <code>getParameterType()</code> and <code>getParameterCount()</code>. When a function call is made from within the Copper language, the engine will check to make sure the arguments match the results of <code>getParameterType()</code> up to the number of parameters given by <code>getParameterCount()</code>. With this handled, the user does not need to check the types of the objects being passed.
+</p>
+<h4>Using Standard C++ Functions</h4>
+<p>
+Standard C++ functions with the function prototype <code>bool [name] (FFIServices&amp)</code> can be added to the engine using
+<code>void addForeignFuncInstance(
+	Engine&amp pEngine,
+	const String&amp pName,
+	bool (*pFunction)( FFIServices&amp )
+</code>.
+</p>
+<p>
+Class methods with the function prototype <code>bool [name] (FFIServices&amp)</code> can be added to the engine using
+<code>void addForeignMethodInstance(
+	Engine&amp pEngine,
+	const String&amp pName,
+	BaseClass* pBase,
+	bool (BaseClass::*pMethod)( FFIServices&amp )
+</code>.
 </p>
 
 <h3 id="ext-use">Using the Foreign Function Interface</h3>
@@ -275,12 +297,15 @@ The following demonstrates a normal function. Note that in a normal function, th
 <green>struct</green> DrawImage : <blue>public</blue> Cu::ForeignFunc <red>{</red>
 	<green>virtual bool</green> call<red>(</red> Cu::FFIServices&amp ffi <red>)</red>;
 
-	<green>virtual ObjectType::Value</green> getParameterType<red>(</red> <green>unsigned int</green> index <red>)</red> <green>const</green> <red>{</red>
+	<green>virtual ObjectType::Value</green> getParameterType<red>(</red> <green>Cu::UInteger</green> index <red>)</red> <green>const</green> <red>{</red>
+		if <red>(</red> index == 0 <red>) {</red>
+			<blue>return</blue> ObjectType::UnknownData + 101; <grey>// Assuming this is the image type.</grey>
+		<red>}</red>
 		<blue>return</blue> ObjectType::UnknownData + 100;
 	<red>}</red>
 
-	<green>virtual unsigned int</green> getParameterCount<red>()</red> <green>const</green> <red>{</red>
-		<blue>return</blue> 2;
+	<green>virtual Cu::UInteger</green> getParameterCount<red>()</red> <green>const</green> <red>{</red>
+		<blue>return</blue> 3;
 	<red>}</red>
 <red>}</red>;
 
@@ -292,14 +317,14 @@ The following demonstrates a normal function. Note that in a normal function, th
 	<green><b>if</b></green>  <red>(</red> image-&gtisCorrupt<red>() ) {</red>
 		ffi.printError<red>(</red><orange>"Image passed to drawImage is corrupt."</orange><red>)</red>;
 		<blue>return</blue> <green>false</green>;
-	}
+	<red>}</red>
 	draw<red>(</red> image, startX, startY <red>)</red>;
 	<blue>return</blue> <green>true</green>;
 }
 </code></pre>
 
 <p>
-<b>All parameters from <code>getNextParam()</code> are passed as <code>Cu::Object*</code></b> - basic objects used in the interpreter. The lifetime of such objects is only as long as the function call, so to keep them, you will need to call <code>Object::ref()</code> on the object. It is expected that you will cast the object to the datatype whose type is returned by <code>getParameterType()</code>.
+<b>All parameters from <code>getNextParam()</code> are passed as <code>Cu::Object*</code></b> (basic objects used in the interpreter). The lifetime of such objects may only be as long as the function call, so to keep them, you will need to call <code>Object::ref()</code> on the object. It is expected that you will cast the each argument to the datatype whose type is returned by <code>getParameterType()</code>.
 </p>
 
 <h3 id="ext-newdt">Creating New Datatypes</h3>
@@ -546,6 +571,23 @@ Allows the engine to ignore errors produced by foreign functions and continue pr
 </div>
 
 <div class="func">
+<h4><code><b>void</b> setOwnershipChangingEnabled( bool )</code></h4>
+<p>
+Allows the usage of the "own" system function. The "own" function allows for changing the ownership of a function from one variable to another variable that points to it.
+</p>
+<p>
+<b>WARNING:</b> Ownership-changing can cause cyclic references in memory, thereby created memory leaks. The engine does not have a garbage collector, so these leaks cannot be fixed and the lost memory cannot be recovered until program termination.
+</p>
+</div>
+
+<div class="func">
+<h4><code><b>void</b> setStackTracePrintingEnabled</code></h4>
+<p>
+Turns on the stack-trace printing.
+</p>
+</div>
+
+<div class="func">
 <h4><code><b>void</b> setNameFilter( bool(*filter)(const String&amp) )</code></h4>
 <p>
 Sets the function used by the engine for filtering names. This function should return "true" only if the string given to it is a valid name.
@@ -566,6 +608,16 @@ Accepts a name for a foreign function and the class function whose call() method
 <h4><code><b>EngineResult::Value</b> run( ByteStream&amp )</code></h4>
 <p>
 Runs the Copper interpreter, extracting bytes from the given ByteStream and interpreting them as Copper code.
+</p>
+</div>
+
+<div class="func">
+<h4><code><b>EngineResult::Value</b> runFunctionObject( FunctionContainer* )</code></h4>
+<p>
+Runs the body of the given function-object.
+</p>
+<p>
+NOTE: This is meant to be used for callback functions, so it should only be run after other engine processing has completed.
 </p>
 </div>
 

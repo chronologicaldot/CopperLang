@@ -409,7 +409,10 @@ Function::set( Function& other ) {
 	body.set( other.body.raw() );
 	params = other.params; // If params is changed to a pointer, this has to be changed to a copy
 	*persistentScope = *(other.persistentScope);
-	result.set( other.result.raw() ); // NOT A COPY
+	Object* rs;
+	if ( other.result.obtain(rs) ) {
+		result.setWithoutRef( rs->copy() );
+	}
 }
 
 void
@@ -776,13 +779,11 @@ Object*
 ObjectList::copy() {
 	ObjectList*  outList = new ObjectList();
 	Node* n = head.node;
+	Object* item;
 	while( n ) {
-		if ( n->isPointer() ) {
-			// Retain pointers
-			outList->push_back( n->item );
-		} else {
-			outList->push_back( n->item->copy() );
-		}
+		item = n->item->copy();
+		outList->push_back( item );
+		item->deref(); // After copy, refs==1. After push_back, refs==2. Only 1 is needed.
 		n = n->post;
 	}
 	return outList;
@@ -832,7 +833,7 @@ ObjectList::clear() {
 	selector.node = REAL_NULL;
 	while ( tail.node ){
 		n = tail.node;
-		tail.moveToPrior();
+		tail.node = tail.node->prior;
 		n->destroy();
 	}
 	selectorIndex = 0;
@@ -881,16 +882,16 @@ ObjectList::remove( Integer  index ) {
 		return;
 
 	Node* n = selector.node;
-	head.moveOff(n);
-	tail.moveOff(n);
-	if ( selector.moveOff(n) ) {
-		if ( selector.node == n->post ) {
-			++selectorIndex;
-		} else {
-			if ( notNull(selector.node) ) {
-				--selectorIndex;
-			}
-		}
+	if ( nodeCount == 1 ) {
+		head.node = REAL_NULL;
+		tail.node = REAL_NULL;
+		selector.node = REAL_NULL;
+	} else {
+		if ( head.node == n )
+			head.node = head.node->post; // May become null
+		if ( tail.node == n )
+			tail.node = tail.node->prior; // May become null
+		selectorIndex += selector.moveOff();
 	}
 	n->destroy();
 	--nodeCount;
@@ -902,11 +903,13 @@ ObjectList::insert( Integer  index, Object*  pItem ) {
 		return;
 	if ( index >= nodeCount ) {
 		tail.append(pItem);
+		++nodeCount;
 		return;
 	}
 	if ( index <= 0 ) {
 		head.prepend(pItem);
 		++selectorIndex;
+		++nodeCount;
 		return;
 	}
 	gotoIndex(index);
@@ -2555,7 +2558,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("are_dcml"), SystemFunction::_are_decimal);
 	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
 
-	builtinFunctions.insert(String("copy"), SystemFunction::_copy);
+	builtinFunctions.insert(String("copy_of"), SystemFunction::_copy);
 
 	builtinFunctions.insert(String("list"), SystemFunction::_make_list);
 	builtinFunctions.insert(String("length"), SystemFunction::_list_size);
@@ -6332,38 +6335,25 @@ Engine::process_sys_list_sublist(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ObjectList* listPtr = (ObjectList*)*argsIter;
-
-	if ( ! argsIter.next() ) {
-		lastObject.setWithoutRef(listPtr->copy());
-		return FuncExecReturn::Ran;
-	}
-
-	Integer startIndex = (*argsIter)->getIntegerValue();
-
+	Integer startIndex = 0;
+	Integer endIndex = listPtr->size();
 	ObjectList* newList = new ObjectList();
-	Object* item = REAL_NULL;
 
-	if ( ! argsIter.next() ) {
-		// Copy items from starting index to end of list
-		for (; startIndex < listPtr->size(); ++startIndex) {
-			item = listPtr->getItem(startIndex)->copy();
-			newList->push_back( item );
-			item->deref(); // After copy, refs==1. After push_back, refs==2. Only 1 is desired.
-		}
-		lastObject.setWithoutRef(newList);
-		return FuncExecReturn::Ran;
+	if ( argsIter.next() ) {
+		startIndex = (*argsIter)->getIntegerValue();
 	}
 
-	Integer endIndex = (*argsIter)->getIntegerValue();
+	if ( argsIter.next() ) {
+		endIndex = (*argsIter)->getIntegerValue();
+	}
 
 	// TODO Should show a warning when the index size is greater than the list size.
 	if ( endIndex > listPtr->size() )
 		endIndex = listPtr->size();
 
+	// Copy items from starting index to end of list
 	for (; startIndex < endIndex; ++startIndex) {
-		item = listPtr->getItem(startIndex)->copy();
-		newList->push_back( item );
-		item->deref(); // After copy, refs==1. After push_back, refs==2. Only 1 is desired.
+		newList->push_back( listPtr->getItem(startIndex) );
 	}
 	lastObject.setWithoutRef(newList);
 	return FuncExecReturn::Ran;

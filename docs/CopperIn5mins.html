@@ -194,8 +194,48 @@ print<red>(j.kid:)</red> <grey># Prints 2 #</grey>
 <grey># Combine object member sets with union #</grey>
 k = union<red>(h j <orange>[b=1]</orange>)</red>
 print<red>( k.a:, " ", k.kid:, " ", k.b:)</red> <grey># Prints "3 2 1" #</grey>
-</code></pre>
 
+<grey># Creating and accessing lists... #</grey>
+l = list<red>(1 2 <orange>[p]{ print<green>("p == " p:)</green> }</orange>)</red>
+append<red>(l: 4)</red>
+prepend<red>(l: 0)</red>
+insert<red>(l: 2 "arf")</red>
+m ~ item_at<red>(l: 4)</red>
+m<red>("hi")</red>
+erase<red>(l: 0)</red>
+swap<red>(l: 1 2)</red>
+replace<red>(l: 0 "front")</red>
+
+<grey># Function pointers are saved in lists... #</grey>
+n = <red>{ print<orange>("hey")</orange> }</red>
+o = list<red>(n)</red>
+p ~ item_at<red>(o: 0)</red>
+p: <grey># Prints "hey" #</grey>
+n = <red>{}</red>
+p: <grey># Prints warning of empty function container #</grey>
+
+<grey># ... unless copied #</grey>
+n = <red>{ print<orange>("hey")</orange> }</red>
+o = list<red>( copy_of<orange>(n)</orange> )</red>
+p ~ item_at<red>(o: 0)</red>
+n = <red>{}</red>
+p: <grey># Prints "hey" #</grey>
+
+<grey># Sub-lists have be made from valid indexes that map to the range 0 to list size. #</grey>
+q = sublist<red>(o: 0 length<orange>(o:)</orange>)</red>
+
+<grey># Sub-lists are linked to the items in the original object. #</grey>
+r ~ item_at<red>(q: 0)</red>
+r: <grey># Prints "hey" #</grey>
+o = <red>{}</red>
+r: <grey># Prints warning of empty function container #</grey>
+
+<grey># Strings can be checked for matching value and concatenated #</grey>
+if <red>( matches<orange>("fn" type_of<green>(s:)</green>)</orange> ) {
+	print<orange>( concat<green>( "some " "string " )</green> )</orange>
+}</red>
+
+</code></pre>
 </div>
 </body>
 </html>
