@@ -74,11 +74,15 @@ You are free to use, modify and redistribute this code to your heart's content, 
     <keyword>type_of</keyword>
     <keyword>are_same_type</keyword>
     <keyword>are_fn</keyword>
+    <keyword>are_empty</keyword>
     <keyword>are_bool</keyword>
     <keyword>are_string</keyword>
+    <keyword>are_list</keyword>
     <keyword>are_number</keyword>
-    <keyword>are_empty</keyword>
+    <keyword>are_int</keyword>
+    <keyword>are_dcml</keyword>
     <keyword>assert</keyword>
+    <keyword>copy_of</keyword>
 
     <keyword>not</keyword>
     <keyword>all</keyword>
@@ -88,6 +92,21 @@ You are free to use, modify and redistribute this code to your heart's content, 
 
     <keyword>true</keyword>
     <keyword>false</keyword>
+
+    <keyword>list</keyword>
+    <keyword>length</keyword>
+    <keyword>append</keyword>
+    <keyword>prepend</keyword>
+    <keyword>insert</keyword>
+    <keyword>item_at</keyword>
+    <keyword>erase</keyword>
+    <keyword>dump</keyword>
+    <keyword>swap</keyword>
+    <keyword>replace</keyword>
+    <keyword>sublist</keyword>
+
+    <keyword>matching</keyword>
+    <keyword>concat</keyword>
   </context>
 
   <!-- Level 8 -->

@@ -1,9 +1,36 @@
 CopperLang and the associated project files are Copyright 2016-2018 Nicolaus Anderson.
 
+Paragraph 1: Terms
+
+You means any person who comes into possession of this software, be that come about through physical or digital means.
+
+The Authors means the creators and all contributors to this software whose contributions have been accepted by the original authors and maintainers of this software.
+
+Contributions means any physical or digital content, media file, source file, image file, suggestion or recommendation, code, text, or otherwise copyrightable or patentable material voluntarily transmitted to the Authors or posted on public channels with clear intention for inclusion in this software.
+
+Other Obtainer means any person who has obtained a copy of this software, in physical or digital form, in binary or in source code, encrypted or unencrypted.
+
+Paragraph 2: Limited Liability
+
 THIS SOFTWARE IS PROVIDED AS-IS WITHOUT ANY EXPRESSED GUARANTEE OF MERCHANTABILITY OR FITNESS.
 IN NO WAY WILL THE AUTHORS OF THIS SOFTWARE BE LIABLE FOR ANY DAMAGES OR LOSS, WHOLE OR IN PART, RESULTING FROM THE USE OF THIS SOFTWARE.
-THIS SOFTWARE MAY BE USED, REDISTRIBUTED, AND INCORPORATED INTO OTHER WORKS FREELY, PROVIDED THAT:
+
+Paragraph 3: Rights and Limitations
+
+THIS SOFTWARE MAY BE USED, MODIFIED, REDISTRIBUTED, DECOMPILED, DISASSEMBLED, REVERSE-ENGINEERED AND INCORPORATED INTO OTHER WORKS FREELY, PROVIDED THAT:
 1) This license remains unmodified and accompanies this software.
 2) The original copyright notices remain completely intact in each and every file.
 3) The authorship of this software is not misrepresented.
-4) Works that incorporate this software do not inhibit, modify, or conflict with anything in this license.
+4) Works that incorporate or use this software do not inhibit, modify, or conflict with anything in this license.
+5) You do not prohibit, prevent, or threaten with legal action any attempts by Other Obtainers to exercise the rights given in this license.
+
+YOU ARE NOT GRANTED LEGAL AUTHORITY OVER THE USAGE, PROTECTION, AND DISTRIBUTION OF THIS SOFTWARE.
+
+Paragraph 4: Submissions
+
+1) All contributors submitting content for inclusion in the software must possess the full rights over the content they submit.
+2) All contributors making one or more contributions to this software agree to bind their contributions to this license.
+
+Paragraph 5: License Term
+
+AT THE DECRETION OF THE AUTHORS, THIS LICENSE MAY BE MODIFIED AND UPDATED TO REFLECT CHANGES IN THE LEGAL ENVIRONMENT. THE AUTHORS ARE NOT REQUIRED TO NOTIFY YOU OF ANY CHANGES TO THIS LICENSE.
