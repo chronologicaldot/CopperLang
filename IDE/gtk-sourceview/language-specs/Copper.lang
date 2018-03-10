@@ -19,6 +19,7 @@ You are free to use, modify and redistribute this code to your heart's content, 
   <property name="block-comment-end">\#</property>
 </metadata>
 <styles>
+  <style id="escape" _name="Escape" map-to="def:special-char" />
   <style id="comment" _name="Comment" map-to="def:comment" />
   <style id="keyword" _name="Keyword" map-to="def:keyword" />
 
@@ -42,14 +43,24 @@ You are free to use, modify and redistribute this code to your heart's content, 
 </styles>
 <definitions>
 
+  <context id="escape-character" style-ref="escape">
+    <match>\\\S</match>
+  </context>
+
   <context id="comment-multiline" end-at-line-end="false" style-ref="comment">
 	<start>\#</start>
 	<end>\#</end>
+    <include>
+      <context ref="escape-character" />
+    </include>
   </context>
 
-  <context id="string" end-at-line-end="true" style-ref="comment">
+  <context id="string" end-at-line-end="false" style-ref="comment">
     <start>"</start>
 	<end>"</end>
+    <include>
+      <context ref="escape-character" />
+    </include>
   </context>
 
   <context id="keywords" style-ref="keyword">

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language id="copper2" _name="Copper2" version="2.0" _section="Scripts">
+<!--
+Copyright 2018 Nic Anderson
+
+Description:
+Copper basic syntax highlighter language for Gtk sourceview 2.0.
+
+License:
+This software is provided AS-IS without any expressed guarantee of merchantability or fitness. In no way shall the authors or contributors be liable for any damages or loss of any kind - tangible or intangible - arising from the possession or use of this software.
+You are free to use, modify and redistribute this code to your heart's content, provided the above license and copyright notices are maintained.
+-->
+
+<metadata>
+  <!--<property name="mimetypes">text/x-c;text/x-csrc</property>-->
+  <property name="globs">*.cu</property>
+  <property name="block-comment-start">\#</property>
+  <property name="block-comment-end">\#</property>
+</metadata>
+<styles>
+  <style id="comment"		_name="Comment"				map-to="def:comment" />
+  <style id="keyword"		_name="Keyword"				map-to="def:keyword" />
+  <style id="operator"		_name="Operator"			map-to="def:operator" />
+  <style id="clarity-token"	_name="Clarifier"			map-to="def:operator" />
+  <style id="object-token"	_name="Object Body"			map-to="def:operator" />
+  <style id="ebody-token"	_name="Execution Body"		map-to="def:identifier" />
+  <style id="escape"		_name="Escape Character"	map-to="def:special-constant" />
+  <style id="sysfunc"		_name="Builtin Function"	map-to="def:builtin" />
+  <style id="boolean"		_name="Bool Value"			map-to="def:boolean" />
+  <style id="string"		_name="String Value"		map-to="def:string" />
+  <style id="integer"		_name="Integer"				map-to="def:integer" />
+  <style id="decimal"		_name="Decimal Number"		map-to="def:decimal" />
+</styles>
+<definitions>
+
+  <context id="escape-character" style-ref="escape">
+    <match>\\\S</match>
+  </context>
+
+  <context id="comment-multiline" end-at-line-end="false" style-ref="comment">
+	<start>\#</start>
+	<end>\#</end>
+    <include>
+      <context ref="escape-character" />
+    </include>
+  </context>
+
+  <context id="booleans" style-ref="boolean">
+    <keyword>true</keyword>
+    <keyword>false</keyword>
+  </context>
+
+  <context id="strings" end-at-line-end="false" style-ref="string">
+    <start>"</start>
+	<end>"</end>
+    <include>
+      <context ref="escape-character" />
+    </include>
+  </context>
+
+  <context id="integers" style-ref="integer">
+    <match extended="true">
+      [0-9]+
+    </match>
+  </context>
+
+  <context id="decimal-numbers" style-ref="decimal">
+    <match extended="true">
+      <!--(?&lt;![\w\.])
+      [0-9]+
+      (?![\w\.])-->
+      [0-9]+(\.?[0-9])
+    </match>
+  </context>
+
+  <context id="object-body" style-ref="object-token">
+    <match>[\[\]]</match>
+  </context>
+
+  <context id="execution-body" style-ref="ebody-token">
+    <match>[{}]</match>
+  </context>
+
+  <context id="operators" style-ref="operator">
+    <match>[=~.:()]</match>
+  </context>
+
+  <context id="named-operators" style-ref="operator">
+    <keyword>own</keyword>
+    <keyword>is_ptr</keyword>
+    <keyword>is_owner</keyword>
+  </context>
+
+  <context id="clarifiers" style-ref="clarity-token">
+    <match>\,</match>
+  </context>
+
+  <context id="keywords" style-ref="keyword">
+    <keyword>if</keyword>
+    <keyword>elif</keyword>
+    <keyword>else</keyword>
+    <keyword>loop</keyword>
+    <keyword>stop</keyword>
+    <keyword>skip</keyword>
+    <keyword>this</keyword>
+    <keyword>super</keyword>
+  </context>
+
+  <context id="sysfuncs" style-ref="sysfunc">
+    <keyword>ret</keyword>
+    <keyword>are_same</keyword>
+    <keyword>member</keyword>
+    <keyword>member_count</keyword>
+    <keyword>is_member</keyword>
+    <keyword>set_member</keyword>
+    <keyword>union</keyword>
+    <keyword>type_of</keyword>
+    <keyword>are_same_type</keyword>
+    <keyword>are_fn</keyword>
+    <keyword>are_empty</keyword>
+    <keyword>are_bool</keyword>
+    <keyword>are_string</keyword>
+    <keyword>are_list</keyword>
+    <keyword>are_number</keyword>
+    <keyword>are_int</keyword>
+    <keyword>are_dcml</keyword>
+    <keyword>assert</keyword>
+    <keyword>copy_of</keyword>
+
+    <keyword>not</keyword>
+    <keyword>all</keyword>
+    <keyword>any</keyword>
+    <keyword>nall</keyword>
+    <keyword>none</keyword>
+
+    <keyword>list</keyword>
+    <keyword>length</keyword>
+    <keyword>append</keyword>
+    <keyword>prepend</keyword>
+    <keyword>insert</keyword>
+    <keyword>item_at</keyword>
+    <keyword>erase</keyword>
+    <keyword>dump</keyword>
+    <keyword>swap</keyword>
+    <keyword>replace</keyword>
+    <keyword>sublist</keyword>
+
+    <keyword>matching</keyword>
+    <keyword>concat</keyword>
+  </context>
+
+  <context id="copper2">
+    <include>
+      <context ref="comment-multiline" />
+      <context ref="booleans" />
+      <context ref="strings" />
+      <context ref="integers" />
+      <context ref="decimal-numbers" />
+      <context ref="object-body" />
+      <context ref="execution-body" />
+      <context ref="operators" />
+      <context ref="named-operators" />
+      <context ref="clarifiers" />
+      <context ref="keywords"/>
+      <context ref="sysfuncs"/>
+    </include>
+  </context>
+</definitions>
+</language>
