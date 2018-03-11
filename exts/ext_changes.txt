@@ -1,4 +1,10 @@
 ===========
+2018/3/10
+
+Deleted Time/clocktime.h and Time/clocktime.cpp. These used outdated approaches and would not compile anyways.
+
+
+===========
 2018/3/3
 
 basicmath

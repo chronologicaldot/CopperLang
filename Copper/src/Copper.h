@@ -91,12 +91,12 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.4
+#define COPPER_INTERPRETER_VERSION 0.401
 #define COPPER_INTERPRETER_BRANCH 5
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 2.01
+#define COPPER_LANG_VERSION 2.1
 
 // ******* Language modifications *******
 
@@ -3022,10 +3022,12 @@ public:
 	// WARNING: Logger is never referenced or dropped, so don't delete the logger before the Engine!
 	void setLogger( Logger* pLogger );
 
+private:
 	// Print functions. Both of these call the logger (if it exists) or print to stdout (if enabled).
 	void print( const LogLevel::Value logLevel, const char* msg ) const;
 	void print( const LogLevel::Value logLevel, const EngineMessage::Value msg ) const;
 
+public:
 	// WARNING: endMainCallback is never referenced or dropped, so don't delete it before the Engine!
 	void setEndofProcessingCallback( EngineEndProcCallback* callback ) {
 		endMainCallback = callback;

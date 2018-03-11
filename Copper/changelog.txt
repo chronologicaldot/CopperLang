@@ -1,4 +1,12 @@
 ====================
+2018/3/10
+v 5-0.401
+
+- Made the Engine::print functions private. (These may change or be replaced.)
+- Bumped up COPPER_LANG_VERSION to 2.1 to reflect the addition of lists and string functions.
+
+
+====================
 2018/3/3 - 2018/3/5
 v 5-0.4
 
