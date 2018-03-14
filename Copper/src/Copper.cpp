@@ -5216,42 +5216,43 @@ Engine::setupUserFunctionExecution(
 	bool foundVar = false;
 
 	VarAddress::Iterator ai = task.getAddress().iterator();
-	do {
-		super = callVariable;
-		if ( scope->findVariable(ai.get(), callVariable) ) {
+	if ( scope->findVariable(ai.get(), callVariable) ) {
+		foundVar = true;
+		while ( ai.next() ) {
+			super = callVariable;
 			func = callVariable->getFunction(logger);
 			scope = &(func->getPersistentScope());
-			foundVar = true;
-		} else {
-			break;
+			scope->getVariable(ai.get(), callVariable);
 		}
-	} while ( ai.next() );
+		func = callVariable->getFunction(logger);
+	}
 
 	if ( !foundVar ) {
 		ai.reset();
 		scope = &getGlobalScope();
-		do {
-			super = callVariable;
-			if ( scope->findVariable(ai.get(), callVariable) ) {
+		if ( scope->findVariable(ai.get(), callVariable) ) {
+			foundVar = true;
+			while( ai.next() ) {
+				super = callVariable;
 				func = callVariable->getFunction(logger);
 				scope = &(func->getPersistentScope());
-				foundVar = true;
-			} else {
-				break;
+				scope->getVariable(ai.get(), callVariable);
 			}
-		} while ( ai.next() );
+			func = callVariable->getFunction(logger);
+		}
 	}
 
 	if ( !foundVar ) {
 		ai.reset();
 		scope = &getCurrentTopScope();
-		do {
+		scope->getVariable(ai.get(), callVariable); // Create the base variable since it does not exist
+		while ( ai.next() ) {
 			super = callVariable;
-			// Create the variable if it doesn't exist
-			scope->getVariable(ai.get(), callVariable);
 			func = callVariable->getFunction(logger);
 			scope = &(func->getPersistentScope());
-		} while ( ai.next() );
+			scope->getVariable(ai.get(), callVariable);
+		}
+		func = callVariable->getFunction(logger);
 	}
 
 	// Short form (but re-checks globals and foreigns)
@@ -5383,26 +5384,28 @@ Engine::resolveVariableAddress(
 	VarAddress::Iterator ai = address.iterator();
 
 	// Search locals
-	while( scope->findVariable(ai.get(), var) ) {
-		if ( ! ai.next() ) { // Last part of name?
-			return var;
+	if ( scope->findVariable(ai.get(), var) ) {
+		while( ai.next() ) {
+			func = var->getFunction(logger);
+			scope = &(func->getPersistentScope());		
+			scope->getVariable(ai.get(), var);	
 		}
-		func = var->getFunction(logger);
-		scope = &(func->getPersistentScope());
+		return var;
 	}
 
 	// Search globals
 	scope = &getGlobalScope();
 	ai.reset();
-	while( scope->findVariable(ai.get(), var) ) {
-		if ( !ai.next() ) {
-			return var;
+	if ( scope->findVariable(ai.get(), var) ) {
+		while( ai.next() ) {
+			func = var->getFunction(logger);
+			scope = &(func->getPersistentScope());		
+			scope->getVariable(ai.get(), var);	
 		}
-		func = var->getFunction(logger);
-		scope = &(func->getPersistentScope());
+		return var;
 	}
 
-	// Search locals again, but this time, create the variables if necessary
+	// No base variable found, so just create it as a local
 	scope = &getCurrentTopScope();
 	ai.reset();
 	while(true) {

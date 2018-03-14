@@ -364,18 +364,6 @@ public:
 		, count(0)
 	{}
 
-	// May not be needed
-/*
-	List( List& pOther )
-	{
-		Iter other( pOther );
-		if ( other.has() )
-		do {
-			push_back( *other );
-		} while ( other.next() );
-	}
-*/
-
 	List( const List& pOther )
 		: head(0)
 		, tail(0)
@@ -417,33 +405,6 @@ public:
 		}
 		return n->getItem();
 	}
-
-	// Should be reduced to merely operator() (uint) and always go from the back.
-	// This function may be removed soon.
-/*
-	T& operator() ( uint pIndex, bool pFromBack )
-	{
-		// should throw exceptions when no items
-		Node* n;
-		uint i=0;
-		if ( pFromBack )
-		{
-			n = tail;
-			i = count - 1;
-			for ( ; i > pIndex && i > 0; i-- )
-			{
-				n = n->prev;
-			}
-		} else {
-			n = head;
-			for ( ; i < pIndex && i < count; i++ )
-			{
-				n = n->next;
-			}
-		}
-		return n->getItem();
-	}
-*/
 
 	T& getFromBack( uint pReverseIndex )
 	{
@@ -541,59 +502,7 @@ public:
 		n->destroy();
 		count--;
 	}
-/*
-	// QUARANTINED
-	// If you use this function via the old removeUpTo() code
-	// to remove all of the nodes, it eventually hits the NullListNodeException.
-	void remove( Iter& pIter )
-	{
-		if ( pIter.node == head )
-		{
-			if ( head != tail )
-			{
-				head = head->next;
-			} else {
-				head = 0;
-				tail = 0;
-			}
-		} else if ( pIter.node == tail )
-		{
-			if ( head != tail )
-			{
-				tail = tail->prev;
-			} else {
-				head = 0;
-				tail = 0;
-			}
-		}
-		if ( ! pIter.node )
-			throw NullListNodeException();
-		pIter.node->destroy();
-		pIter.node = 0;
-		count--;
-	}
-*/
-/*
-	// This ends up removing all copies of the same item (because the iterator resets),
-	// which may or may not be desired activity.
-	// Besides, this may not even be needed.
-	void remove( const List<T>& pOther )
-	{
-		Iter me(*this);
-		ConstIter other(pOther);
-		if ( other.has() )
-		do {
-			if ( !me.has() ) break;
-			me.reset();
-			do {
-				if ( *me == *other )
-				{
-					remove(me); break;
-				}
-			} while ( me.next() );
-		} while ( other.next() );
-	}
-*/
+
 	// Removes all nodes PRIOR to the given iterator
 	void removeUpTo( const Iter& stopIter )
 	{
@@ -603,18 +512,6 @@ public:
 		while ( stopIter.node != head )
 			pop_front();
 	}
-
-/*	// FAILS! (see note above remove( Iter& )
-	void removeUpTo( const Iter& stopIter )
-		Iter i(*this);
-		if ( count > 0 ) {
-			while ( ! (i == stopIter) ) {
-				remove(i);
-				i.reset();
-			}
-		}
-	}
-*/
 
 	void push_back( const T& pItem )
 	{
@@ -629,21 +526,6 @@ public:
 			tail = tail->next;
 		}
 		count++;
-
-/*
-		if ( !head )
-		{
-			head = new Node( pItem );
-			tail = head;
-		} else {
-			if ( !tail )
-				throw NullListNodeException();
-
-			tail->insertAfter( pItem );
-			tail = tail->next;
-		}
-		count++;
-*/
 	}
 
 	void push_front( const T& pItem )
@@ -761,35 +643,6 @@ public:
 		}
 	}
 
-/*
-	bool validate( Iter& pIter ) {
-		uint pIdx = indexOf(pIter);
-		Iter follower = pIter;
-		if ( follower.next() ) {
-			if ( follower.node->prev != pIter.node || pIter.node->next != follower.node )
-				throw 1;
-			if ( indexOf(follower) != pIdx + 1 )
-				throw 2;
-			return true;
-		} else {
-			throw 0;
-		}
-	}
-*/
-/*
-	// This method is a useful walkaround for copy-construction of a list on the
-	// heap to a list on the stack and vice versa.
-	// You will need to delete any iterators you have to a class after this.
-	void stealFrom(List& pOther) {
-		clear();
-		head = pOther.head;
-		tail = pOther.tail;
-		count = pOther.count;
-		pOther.head = 0;
-		pOther.tail = 0;
-		pOther.count = 0;
-	}
-*/
 };
 
 }

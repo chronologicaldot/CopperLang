@@ -1,4 +1,12 @@
 ====================
+2018/3/13
+v 5-0.41
+
+- Cleaned up utilList.h.
+- Fixed identical bug in Engine::resolveVariableAddress() and Engine::setupUserFunctionExecution() that failed to create member variables when the base was found in the global scope but not the full address.
+
+
+====================
 2018/3/10
 v 5-0.401
 
