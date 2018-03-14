@@ -1,146 +1,2125 @@
-<!DOCTYPE html>
 
+<!doctype html>
 <html>
-<head>
-<style type="text/css">
-body {
-	background-color:#111111;
-	color:#dca;
-}
-.centering {
-	max-width: 900px;
-	margin:0 auto;
-}
-#main-menu {
-	position: relative;
-	left: 0;
-	width: 200px;
-	display: inline-block;
-}
-#main-menu > a, #main-menu > div {
-	position: relative;
-	min-width: 20%;
-	/*height: 20px;*/
-	display:block;
-	padding: 5%;
-	margin-bottom: 5%;
-	border-radius: 5px;
-	border: 1px solid #a97;
-	background-color: #864;
-	color: #eda;
-	text-decoration:none;
-}
-.toc {
-	background-color:#222200;
-	padding:20px 0px 20px 50px;
-	border-radius:5px;
-	border-top: 1px solid #838363;
-	border-bottom: 1px solid #000;
-	list-style-type:katakana-iroha; /*upper-roman;*/
-}
-.toc > a {
-	font-size:14pt;
-	color: #dd9;
-	/*text-decoration:none;*/
-}
-h1 {
-	background-color:#212120;
-	color:#e0e0e0;
-	padding:20px;
-	border-radius:5px;
-	border-top: 1px solid #838363;
-	border-bottom: 1px solid #000;
-}
-p {
-	/*color:#333;*/
-}
-h2 {
-	background-color:#212120;
-	padding:10px;
-	border-radius:5px;
-	border-top: 1px solid #838363;
-	border-bottom: 1px solid #000;
-}
-h3 {
-	background-color:#313130;
-	padding:5px;
-	border-radius:5px;
-	border-top: 1px solid #838363;
-	border-bottom: 1px solid #000;
-}
-h4 {
-	background-color:#414140;
-	padding:5px;
-	border-radius:5px;
-	border-top: 1px solid #838363;
-	border-bottom: 1px solid #000;
-}
+  <head>
+    <meta charset="utf-8">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Copper Language Documentation</title>
 
-.func {
-	background-color:#212111;
-	margin-top:10px;
-	padding:10px;
-	border: 1px solid #606000;
-	border-radius:5px;
+    <style>
+      .highlight table td { padding: 5px; }
+.highlight table pre { margin: 0; }
+.highlight .c, .highlight .cd, .highlight .cm, .highlight .c1 {
+  color: #5c4f49;
 }
-.func > h4 {
-	background-color:#414100;
-	border-radius:5px;
-	border-top: 1px solid #838363;
-	border-bottom: 1px solid #000;
+.highlight .cp {
+  color: #4a4c56;
 }
-
-pre {
-	padding:10px;
-	background-color:#414111;
-	border-radius:5px;
+.highlight .cs {
+  color: #5c4f49;
+  background-color: #040835;
+  font-weight: bold;
 }
-code {
-	font-size: 1.1em;
+.highlight .err {
+  color: #d2ff00;
 }
-red { color:#e99; }
-orange { color:#fb0; }
-grey { color:#888; }
-green { color:#af4; }
-blue { color:#4af; }
-
-#intro {
-	position:relative;
-	right: 0;
-	top: 0;
-	min-width: 200px;
-	max-width: 75%;
-	padding: 1%;
-	background-color:#414111;
-	border-radius: 5px;
-	border: 1px solid #515120;
-	display:inline-block;
+.highlight .gr {
+  color: #d2ff00;
 }
+.highlight .gh {
+  color: #ff0000;
+}
+.highlight .gu {
+  color: #c3746a;
+}
+.highlight .gd {
+  color: #000000;
+  background-color: #69ca74;
+}
+.highlight .gi {
+  color: #000000;
+  background-color: #9f9055;
+}
+.highlight .ge {
+  font-style: italic;
+}
+.highlight .gs {
+  font-weight: bold;
+}
+.highlight .gl {
+  color: #2e7b37;
+}
+.highlight .go {
+  color: #69ca74;
+}
+.highlight .gp {
+  color: #69ca74;
+}
+.highlight .gt {
+  color: #ff6000;
+}
+.highlight .k, .highlight .kc, .highlight .kd, .highlight .kn, .highlight .kv {
+  color: #ffbb45;
+  font-weight: bold;
+}
+.highlight .kp {
+  color: #ffbb45;
+}
+.highlight .kt {
+  color: #0f6a90;
+  font-weight: bold;
+}
+.highlight .kr {
+  color: #b42710;
+  font-weight: bold;
+}
+.highlight .na {
+  color: #6d071d;
+}
+.highlight .nb, .highlight .bp {
+  color: #ad7458;
+}
+.highlight .nc {
+  color: #a60505;
+  font-weight: bold;
+}
+.highlight .no {
+  color: #644508;
+  font-weight: bold;
+}
+.highlight .ne {
+  color: #ff33fd;
+  font-weight: bold;
+}
+.highlight .nf {
+  color: #eae0c5;
+  font-weight: bold;
+}
+.highlight .nl {
+  color: #ff828e;
+}
+.highlight .nn {
+  color: #937566;
+}
+.highlight .py {
+  color: #937566;
+  font-style: italic;
+}
+.highlight .nt {
+  color: #937566;
+  font-weight: bold;
+  font-style: italic;
+}
+.highlight .nv, .highlight .vc {
+  color: #ff8f4b;
+}
+.highlight .vg {
+  color: #d66730;
+}
+.highlight .vi {
+  color: #ff8f4b;
+  font-style: italic;
+}
+.highlight .m, .highlight .mh, .highlight .mo, .highlight .mb, .highlight .mx {
+  color: #1ec2cc;
+}
+.highlight .mi, .highlight .il {
+  color: #1ec2cc;
+}
+.highlight .mf {
+  color: #8358ff;
+}
+.highlight .s, .highlight .sb, .highlight .sc, .highlight .sd, .highlight .s2, .highlight .sh, .highlight .si, .highlight .sx, .highlight .sr, .highlight .s1, .highlight .ss {
+  color: #c48c44;
+}
+.highlight .se {
+  color: #c48c44;
+  background-color: #040835;
+}
+.highlight .o, .highlight .ow {
+  color: #8b2121;
+  font-weight: bold;
+}
+.highlight .p, .highlight .pi {
+  color: #ca0000;
+  font-weight: bold;
+}
+.highlight {
+  color: #e4cbbf;
+}
+.highlight .w {
+  color: #bfc4cb;
+}
+    </style>
+    <link href="stylesheets/screen.css" rel="stylesheet" media="screen" />
+    <link href="stylesheets/print.css" rel="stylesheet" media="print" />
+      <script src="javascripts/all.js"></script>
+  </head>
 
-</style>
-</head>
+  <body class="index" data-languages="[&quot;copper&quot;,&quot;cpp&quot;]">
+    <a href="#" id="nav-button">
+      <span>
+        NAV
+        <img src="images/navbar.png" alt="Navbar" />
+      </span>
+    </a>
+    <div class="toc-wrapper">
+      <img src="images/logo.png" class="logo" alt="Logo" />
+        <div class="lang-selector">
+              <a href="#" data-language-name="copper">copper</a>
+              <a href="#" data-language-name="cpp">cpp</a>
+        </div>
+        <div class="search">
+          <input type="text" class="search" id="input-search" placeholder="Search">
+        </div>
+        <ul class="search-results"></ul>
+      <div id="toc" class="toc-list-h1">
+          <li>
+            <a href="#introduction" class="toc-h1 toc-link" data-title="introduction">Introduction</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#overview" class="toc-h2 toc-link" data-title="overview">Overview</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#the-language-of-copper" class="toc-h1 toc-link" data-title="the-language-of-copper">The Language of Copper</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#fundamental-rules" class="toc-h2 toc-link" data-title="fundamental-rules">Fundamental Rules</a>
+                  </li>
+                  <li>
+                    <a href="#object-functions" class="toc-h2 toc-link" data-title="object-functions">Object-functions</a>
+                  </li>
+                  <li>
+                    <a href="#variables-and-members" class="toc-h2 toc-link" data-title="variables-and-members">Variables and Members</a>
+                  </li>
+                  <li>
+                    <a href="#data" class="toc-h2 toc-link" data-title="data">Data</a>
+                  </li>
+                  <li>
+                    <a href="#program-termination" class="toc-h2 toc-link" data-title="program-termination">Program Termination</a>
+                  </li>
+                  <li>
+                    <a href="#control-structures" class="toc-h2 toc-link" data-title="control-structures">Control Structures</a>
+                  </li>
+                  <li>
+                    <a href="#copper-language-api" class="toc-h2 toc-link" data-title="copper-language-api">Copper Language API</a>
+                  </li>
+                  <li>
+                    <a href="#debugging-copper" class="toc-h2 toc-link" data-title="debugging-copper">Debugging Copper</a>
+                  </li>
+                  <li>
+                    <a href="#copper-in-5-minutes" class="toc-h2 toc-link" data-title="copper-in-5-minutes">Copper in 5 Minutes</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#the-virtual-machine" class="toc-h1 toc-link" data-title="the-virtual-machine">The Virtual Machine</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#getting-setup" class="toc-h2 toc-link" data-title="getting-setup">Getting Setup</a>
+                  </li>
+                  <li>
+                    <a href="#compiling-the-virtual-machine" class="toc-h2 toc-link" data-title="compiling-the-virtual-machine">Compiling the Virtual Machine</a>
+                  </li>
+                  <li>
+                    <a href="#messages-info-warnings-errors" class="toc-h2 toc-link" data-title="messages-info-warnings-errors">Messages: Info, Warnings, Errors</a>
+                  </li>
+                  <li>
+                    <a href="#foreign-functions" class="toc-h2 toc-link" data-title="foreign-functions">Foreign Functions</a>
+                  </li>
+                  <li>
+                    <a href="#callbacks" class="toc-h2 toc-link" data-title="callbacks">Callbacks</a>
+                  </li>
+                  <li>
+                    <a href="#foreign-objects" class="toc-h2 toc-link" data-title="foreign-objects">Foreign Objects</a>
+                  </li>
+                  <li>
+                    <a href="#provided-extensions" class="toc-h2 toc-link" data-title="provided-extensions">Provided Extensions</a>
+                  </li>
+                  <li>
+                    <a href="#api" class="toc-h2 toc-link" data-title="api">API</a>
+                  </li>
+                  <li>
+                    <a href="#how-the-virtual-machine-works" class="toc-h2 toc-link" data-title="how-the-virtual-machine-works">How the Virtual Machine Works</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#faq" class="toc-h1 toc-link" data-title="faq">FAQ</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#what-is-the-parse-tree" class="toc-h2 toc-link" data-title="what-is-the-parse-tree">What is the parse tree?</a>
+                  </li>
+                  <li>
+                    <a href="#why-not-provide-numeric-operations" class="toc-h2 toc-link" data-title="why-not-provide-numeric-operations">Why not provide numeric operations?</a>
+                  </li>
+                  <li>
+                    <a href="#why-is-there-no-privacy-model" class="toc-h2 toc-link" data-title="why-is-there-no-privacy-model">Why is there no privacy model?</a>
+                  </li>
+                  <li>
+                    <a href="#why-is-there-no-exceptions-system" class="toc-h2 toc-link" data-title="why-is-there-no-exceptions-system">Why is there no exceptions system?</a>
+                  </li>
+                  <li>
+                    <a href="#why-have-own-if-it-39-s-unsafe" class="toc-h2 toc-link" data-title="why-have-code-own-code-if-it-s-unsafe">Why have <code>own</code> if it's unsafe?</a>
+                  </li>
+                  <li>
+                    <a href="#benchmarks-how-fast-is-copper" class="toc-h2 toc-link" data-title="benchmarks-how-fast-is-copper">Benchmarks? How fast is Copper?</a>
+                  </li>
+                  <li>
+                    <a href="#can-i-do-builder-notation" class="toc-h2 toc-link" data-title="can-i-do-builder-notation">Can I do builder notation?</a>
+                  </li>
+                  <li>
+                    <a href="#can-i-use-it-with-c" class="toc-h2 toc-link" data-title="can-i-use-it-with-c">Can I use it with C?</a>
+                  </li>
+                  <li>
+                    <a href="#comparison-to-angelscript" class="toc-h2 toc-link" data-title="comparison-to-angelscript">Comparison to AngelScript?</a>
+                  </li>
+                  <li>
+                    <a href="#comparison-to-chaiscript" class="toc-h2 toc-link" data-title="comparison-to-chaiscript">Comparison to ChaiScript?</a>
+                  </li>
+                  <li>
+                    <a href="#comparison-to-lua" class="toc-h2 toc-link" data-title="comparison-to-lua">Comparison to Lua?</a>
+                  </li>
+                  <li>
+                    <a href="#is-copper-thread-safe" class="toc-h2 toc-link" data-title="is-copper-thread-safe">Is Copper Thread-Safe?</a>
+                  </li>
+              </ul>
+          </li>
+      </div>
+        <ul class="toc-footer">
+            <li><a href='https://githum.com/chronologicaldot/copperlang'>Github Codebase</a></li>
+            <li><a href='https://copperlang.wordpress.com'>Official Blog</a></li>
+            <li><a href='https://github.com/lord/slate'>Documentation Powered by Slate</a></li>
+        </ul>
+    </div>
+    <div class="page-wrapper">
+      <div class="dark-box"></div>
+      <div class="content">
+        <h1 id='introduction'>Introduction</h1><pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_guest_name</span><span class="o">:</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="s">"Welcome, "</span><span class="w"> </span><span class="n">a</span><span class="o">:</span><span class="w"> </span><span class="s">"!"</span><span class="p">)</span><span class="w">
+</span></code></pre>
+<p>Welcome to the (NEW) documentation of the Copper interpreted programming language!</p>
 
-<body>
-<div class="centering">
+<p>Copper Lang is a statically-typed language that revolves around the concept of object-functions. It emphasizes stack-based paradigms and memory safety, eliminating the problems of memory-leaks and null pointers.</p>
 
-<h1>Copper Documentation</h1>
+<p>The virtual machine is designed to be a stand-alone engine for easily embedding into other applications and is written in portable, version agnostic C++ (tested with both C++98 and C++11 settings on GCC).</p>
 
-<div id="main-menu">
-	<a href="CopperLangGuide.html"><div>Language Guide</div></a>
-	<a href="InterpreterUsageGuide.html"><div>Interpreter Guide</div></a>
-	<a href="CopperIn5mins.html"><div>Syntax in 5mins</div></a>
-	<a href="https://github.com/chronologicaldot/CopperLang"><div>Code on Github</div></a>
-</div>
-<!--
-<div id="intro">
-	<p>
-Welcome to the Copper interpreted language and interpreter documentation!
-	</p>
-	<p>
-Language specifications and exact symantics are given in the <i>Language Guide</i>. Interpreter APIs can be found in the <i>Interpreter Guide</i>. For a quick overview of the language, please see <i>Syntax in 5mins</i>.
-	</p>
-</div>
--->
-</div>
-</body>
+<p>To jump in and start using it right away, read:</p>
+
+<ul>
+<li><a href="#getting-setup">Getting Setup</a></li>
+<li><a href="#copper-in-5-mins">Copper in 5 minutes</a></li>
+<li><a href="#ffi">Foreign Functions</a></li>
+</ul>
+<h2 id='overview'>Overview</h2>
+<p>Copper as a language is like a cross between Javascript, Rust, and Lisp. Every object is a function and vice versa. Object-functions are created in a manner similar (but not the same) as Javascript. Members are created like Python. And in order to do just about anything (including access data), you have to run a function. Whitespace is almost completely irrelevant other than that it must exist between names.</p>
+
+<p>To guarantee memory safety, variables only store and handle functions and function pointers (which are safetly converted to normal functions upon access failure). There is no null! Furthermore, variables are all tied to the virtual stack in some way, thereby preventing memory leaks.</p>
+
+<p>The Copper virtual machine is a set of files containing all of the basic necessities to process the language. The main entry point is via the Copper Engine, which requires an input feed of characters and performs all of the parsing and operations. Some basic extensions have been provided for reading and printing to the terminal/console as well as performing basic mathematical operations.</p>
+
+<p>Built-in data-types include integers, numbers with decimals, and lists, but there are only built-in functions for manipulating lists.</p>
+<h3 id='attractive-features'>Attractive Features</h3>
+<ul>
+<li>Powerful object-oriented programming!</li>
+<li>Easy to Learn - Very simple syntax! (See <a href="#copper-in-5-mins">Copper in 5 minutes</a>.)</li>
+<li>Lightweight! (Core code is only 290kb!)</li>
+<li>No external dependencies!</li>
+<li>Highly compressable!</li>
+<li>IDE support!</li>
+</ul>
+
+<p>(Current IDE support is gtksourceview2 syntax highlighters.)</p>
+<h3 id='reasons-to-not-use-copper'>Reasons to NOT Use Copper</h3>
+<ul>
+<li>Not Battle-Hardened (Tested, but not on a business level.)</li>
+<li>No automated testing (YET)</li>
+<li>Lacking Basic Features (See <a href="#ffi">Foreign Function Interface</a>.)</li>
+<li>Slow (Perhaps... Compared to Lua.)</li>
+</ul>
+<p><br id="basics"></p>
+<h1 id='the-language-of-copper'>The Language of Copper</h1>
+<p>Copper revolves around the concept of the object-function (or &quot;function-object&quot; if you prefer). Variables in Copper only store object-functions or pointers to them, nothing else. Operators are used only for manipulating function objects. Data manipulation is only done by functions (especially foreign functions).</p>
+
+<p>Copper has a strict set of rules regarding its interpretation. (See <a href="#fundamental-syntax-rules">Fundamental Rules</a>.) As a small set of rules, it reeduces the mental focus needed to read the code.</p>
+
+<p>Comments are created by sandwiching the comment with two pound signs, &quot;#&quot;, one on each side.</p>
+
+<p><br id="fundamental-syntax-rules"></p>
+<h2 id='fundamental-rules'>Fundamental Rules</h2>
+<p>There are three very important rules that govern the language:</p>
+
+<ul>
+<li><em>Data end an expression.</em> - That means all numbers, strings, and anything else that does not perform processing will automatically cause the termination of an expression (statement of processing).</li>
+<li><em>A function call ends an expression.</em> - That implies you can&#39;t perform actions such as scope-opening on the return of a function.</li>
+<li><em>A variable, not followed by the appropriate tokens, ends the expression.</em> - That means if you don&#39;t try to call the function, assign to it, or access a member variable, the function will simply return itself to end the expression.</li>
+</ul>
+
+<p>Consequently, there is no need for end-of-statement terminators, but the comma (,) is allowed if you want to make code more readable.</p>
+
+<p>Function calls end expressions because they return data.</p>
+
+<aside class="notice">
+As a general rule of thumb, any word or symbol that is not a reserved keyword, operator, body-enclosing token, or data (booleans, integers, numbers with decimal, and strings) is considered a variable name. By default, only basic alphanumeric letters and certain symbols (such as underscore, plus, dash, and question mark) are permitted in names, but a filter can be added to permit more names.
+</aside>
+<h2 id='object-functions'>Object-functions</h2>
+<p>The object-function is a data type that has both a table of persistent, publically-accessible members and a body of code that can be executed. The members are stored in a &quot;persistent scope&quot; - a hash-mapped table of variables that belong to only <em>one</em> object-function. The body of code (called the &quot;execution body&quot;) is also unique to the object-function (however, because it is constant, it might be shared with multiple objects to save space).</p>
+<pre class="highlight copper tab-copper"><code><span class="cm"># Construction 1 #</span><span class="w"> </span><span class="p">[]</span><span class="w">
+</span><span class="cm"># Construction 2 #</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span><span class="cm"># Construction 3 #</span><span class="w"> </span><span class="p">[]{}</span><span class="w">
+
+</span><span class="p">[</span><span class="w"> </span><span class="cm"># object component #</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm"># execution body #</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span></code></pre>
+<p>An object-function can be created directly in three ways:</p>
+
+<ul>
+<li>Using the object-body tokens, &quot;[&quot; and &quot;]&quot;</li>
+<li>Using the execution-body tokens, &quot;{&quot; and &quot;}&quot;</li>
+<li>Using the object-body tokens followed by the execution-body tokens</li>
+</ul>
+<pre class="highlight copper tab-copper"><code><span class="cm"># Creating an object-function with a member, parameter, and body #</span><span class="w">
+</span><span class="n">some_object_function</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="nb">member</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"has data"</span><span class="w">
+    </span><span class="n">parameter</span><span class="w">
+</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">print</span><span class="p">(</span><span class="s">"In the body is a "</span><span class="w"> </span><span class="n">parameter</span><span class="o">:</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre><pre class="highlight cpp tab-cpp"><code><span class="c1">// Analogous C++ object
+</span><span class="k">class</span> <span class="nc">Object</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="o">~</span><span class="n">Object</span><span class="p">()</span> <span class="p">{}</span>
+    <span class="k">virtual</span> <span class="n">Object</span><span class="o">*</span> <span class="k">operator</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre>
+<p>The object component plays a dual role in the grammar. Within the object-body tokens there are two types of parameters: function parameters and persistent-scope parameters. Any parameter that is assigned with the assignment operator or pointer operator becomes a member of the object-function, stored away in the persistent scope of the function. (See <a href="#variables-and-members">Variables and Members</a> for more about assignment.) Any unassigned parameter becomes a regular parameter and is assigned whatever the function is passed via the argument tokens.</p>
+
+<p><em>Optional</em>: The arguments can be separated with a comma.</p>
+
+<aside class="notice">
+Order of the unassigned parameters matters, but placement does not. Unassigned parameters can be mixed in with the assigned parameters with no adverse effects other than readability.
+</aside>
+<pre class="highlight copper tab-copper"><code><span class="n">some_func</span><span class="o">:</span><span class="w">
+</span><span class="n">some_func</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span><span class="w">
+</span></code></pre>
+<p>To call a function, it must first reside within a variable. Appending the direct-call operator &quot;:&quot; or the argument-wrapping tokens &quot;(&quot; and &quot;)&quot; (parentheses) to the function will call it. The direct-call operator is faster, but only the arguments operator can take the accepted arguments and map them to the object-function parameters.</p>
+
+<p>Arguments are always passed by reference. Raw data passed as an argument is stored in a new function assigned to the function parameter at its argument index.</p>
+
+<p>Function calls can accept any number of arguments. However, there will only be as many arguments mapped as there are parameters. When not enough arguments are given to a function, the parameter is set to an empty function.</p>
+<pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="cm"># "this" points to "a", super points to nothing #</span><span class="w">
+    </span><span class="kr">this</span><span class="o">.</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="cm"># "this" points to "b", super points to "a" #</span><span class="w">
+    </span><span class="kr">super</span><span class="o">.</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">c</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="cm"># prints 5 #</span><span class="w">
+</span></code></pre>
+<p>When a function is called, a function is given a member variable named <code>this</code> or that member is updated. The <code>this</code> member is a pointer to the wrapping object-function itself to allow you to access its members. If the function is stored in a variable that is a member of another object-function, it is given a member named <code>super</code> that points to that parent object-function.</p>
+
+<aside class="notice">
+<code>this</code> is always updated every function call, but <code>super</code> is only overwritten when the variable (whose function is the one being called) is the member of another variable.
+</aside>
+
+<p>Function return is done by calling the built-in return function, &quot;ret&quot;. Only one argument will be returned. All others are ignored. Arguments are returned by reference. Data is stored in a new function when returned.</p>
+
+<p><br id="variables-and-members"></p>
+<h2 id='variables-and-members'>Variables and Members</h2><pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="w"> </span><span class="cm"># valid Copper #</span><span class="w">
+</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="cm"># accesing a global variable #</span><span class="w">
+    </span><span class="n">a</span><span class="p">()</span><span class="w">
+
+    </span><span class="cm"># accessing a member variable #</span><span class="w">
+    </span><span class="kr">this</span><span class="o">.</span><span class="nb">member</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">
+
+    </span><span class="cm"># local variable #</span><span class="w">
+    </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="w">
+    </span><span class="nb">ret</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<p>A variable can be created by simply stating its name. If the variable was created at the local scope level of a function body, it will be destroyed when the function terminates. However, global variables cannot be deleted by other Copper code.</p>
+
+<p>All variables can trace their ancestry to either the global or local scope, thereby limiting all of them to stack-based lifetimes.</p>
+
+<p>A variable can either own a function or be a pointer to it. When a pointer, a variable shares the function with another variable that <em>does</em> own the function. If the original function is destroyed, then the pointer variable is given its own new function the next time it is accessed, and that way, there is no segmentation fault.</p>
+
+<aside class="notice">
+A variable will always own or point to a function, even a newly-created variable that has not been assigned. The default function assigned to a variable is an empty function (one containing no members nor body), which, when run, simply returns another empty function.
+</aside>
+
+<p>The members of a function assigned to a variable can be accessed using the member-access operator &quot;.&quot; (period) appended to the end of a variable (such as &quot;this&quot;). A member can be created simply declaring it following the member-access operator. This allows chaining members and member-access operators to create variables.</p>
+
+<aside class="notice">
+Members of an object in Copper cannot be deleted. However, their contents can be changed.
+</aside>
+
+<blockquote>
+<p>Assignment</p>
+</blockquote>
+<pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">
+</span></code></pre>
+<p>An assignment to a variable occurs via the assignment operator, &quot;=&quot;. The variable to the left receives the data from the right. Both raw data (such as integers) and functions can be assigned to a variable, but data is saved as the return of the function that already exists in the variable. All assignments from one variable to another are copy actions, whereby the object-function and all of its members are copied from the giving variable into the receiving variable. The same action takes place when an object-function or data is returned from a function call.</p>
+
+<p>Assigning data directly to a variable results in the function body being given a direct-return value. Whenever the function is called, this value is returned immediately. Consequently, it is faster than the equivalent function body.</p>
+
+<blockquote>
+<p>Pointer Assignment and Usage</p>
+</blockquote>
+<pre class="highlight copper tab-copper"><code><span class="n">b</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">a</span><span class="w">
+</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">12</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">a</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints 12 #</span><span class="w">
+</span></code></pre>
+<p>Pointer assignment occurs via the pointer-assignment operator, &quot;~&quot;. The variable to the left points to the data on the right. However, if the pointer assignment is to data, that data is stashed into a new, ownerless function which is then owned by the variable it is assigned to.</p>
+
+<blockquote>
+<p>Member Creation</p>
+</blockquote>
+<pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></code></pre>
+<p>When a function is pointed to by a variable, the members of that function can all be accessed via the member-access operator. Members can also be created this way. The function&#39;s direct return can also be set this way.</p>
+
+<blockquote>
+<p>Replacement vs Retaining</p>
+</blockquote>
+<pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="cm"># Returns 10. Replaces original function in "a". #</span><span class="w">
+</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="cm"># Returns 10. Retains original function in "a". #</span><span class="w">
+</span></code></pre>
+<aside class="notice">
+When assigning a new function to a variable or creating a pointer to a function, the current function of the variable is simply dropped (not overwritten) in favor of the new one.
+</aside>
+<h2 id='data'>Data</h2><pre class="highlight copper tab-copper"><code><span class="cm"># boolean #</span><span class="w">
+</span><span class="k">true</span><span class="w">
+
+</span><span class="cm"># integer #</span><span class="w">
+</span><span class="mi">10</span><span class="w">
+
+</span><span class="cm"># number with decimal #</span><span class="w">
+</span><span class="mf">0.981</span><span class="w">
+
+</span><span class="cm"># string #</span><span class="w">
+</span><span class="s">"string blarg"</span><span class="w">
+
+</span><span class="cm"># list #</span><span class="w">
+</span><span class="nb">list</span><span class="p">(</span><span class="k">false</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="mf">6.5</span><span class="w"> </span><span class="s">"4"</span><span class="w"> </span><span class="n">some_func</span><span class="p">)</span><span class="w">
+</span></code></pre>
+<p>There are five basic data types in Copper apart from object-functions:</p>
+
+<ul>
+<li>boolean</li>
+<li>integer</li>
+<li>numbers with decimal points</li>
+<li>byte strings</li>
+<li>lists</li>
+</ul>
+
+<p>Booleans are represented with <code>true</code> and <code>false</code>.</p>
+
+<p>Integers are created by writing any number without a decimal. Negative are allowed but cannot be created this way.</p>
+
+<p>Numbers with decimal are created by writing any number with a decimal. However, the decimal must not be the first character in the number. (A zero can be used first.) Negative values are allowed but cannot be created this way.</p>
+
+<p>Byte strings are created by using double-quotes around text. Escape characters are permitted and can be created using the usual slash. Permitted escape character sequences include:
+- \n
+- \r
+- \t</p>
+
+<p>Lists are created using the built-in <code>list</code> function. (See the <a href="#copper-lang-api">Copper Lang API</a> for details.) They can contain both object-functions and data. The list implementation in the virtual machine is a doubly-linked list.</p>
+<h2 id='program-termination'>Program Termination</h2>
+<p>The program exits when the virtual machine encounters <code>exit</code>.</p>
+
+<p>Global variables are not cleared upon program exit in order that they can still be used for callbacks.</p>
+<h2 id='control-structures'>Control Structures</h2>
+<p>The Copper language provides a couple basic control structures - <code>if</code> and <code>loop</code> - as well as a set of special ownership operators: <code>own</code>, <code>is_ptr</code>, and <code>is_owner</code>.</p>
+<h3 id='if-structures'>If-structures</h3><pre class="highlight copper tab-copper"><code><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="k">false</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="s">"False"</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w"> </span><span class="kr">elif</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="k">true</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="s">"True"</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w"> </span><span class="kr">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="s">"What?"</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<p>If-structures in Copper require their conditionals wrapped in the argument-wrapping tokens (parentheses), and the bodies of code that are executed upon true conditions must be wrapped in the execution-body tokens (curly braces).</p>
+
+<p>Technically, any code can be run inside of the if-structure conditionals, but the last result must be a boolean value in type.</p>
+
+<p>If structures can have optional <code>elif</code> and <code>else</code> components. The <code>elif</code> component must obviously have a conditional.</p>
+<h3 id='loop-structures'>Loop-structures</h3><pre class="highlight copper tab-copper"><code><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="w">
+</span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">s</span><span class="o">:</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">false</span><span class="w">
+        </span><span class="k">skip</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+    </span><span class="k">stop</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre><pre class="highlight cpp tab-cpp"><code><span class="c1">// Analogous C++
+</span><span class="kt">bool</span> <span class="n">s</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+<span class="k">while</span><span class="p">(</span> <span class="nb">true</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span> <span class="n">s</span> <span class="p">)</span> <span class="p">{</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+        <span class="k">continue</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">break</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+<p>Copper has no for-loops or while-loops. Instead, it has a single, infinitely-looping structure whose body of code is contained within the execution body tokens (curly braces).</p>
+
+<p>The loop is terminated whenever the &quot;stop&quot; token is found.</p>
+
+<p>The loop is restarted whenever the &quot;skip&quot; token is found.</p>
+<h3 id='ownership-structures'>Ownership structures</h3><pre class="highlight copper tab-copper"><code><span class="n">b</span><span class="o">.</span><span class="n">c</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">a</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">is_ptr</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints true #</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">is_owner</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints true #</span><span class="w">
+</span><span class="n">own</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="cm"># Steal ownership #</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">is_owner</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints true #</span><span class="w">
+</span></code></pre>
+<p>The ownership structures are special operators that are called like functions but can each only receive a variable (not data). They are used to provide information about the variable itself or to modify ownership.</p>
+
+<p>The <code>is_owner</code> operator indicates if the given variable is the owner of the object-function it points to, whereas the <code>is_ptr</code> operator indicates if a variable is merely a pointer.</p>
+
+<p>The <code>own</code> operator changes the ownership of the function pointed to by the variable to that variable itself, regardless of the stack lifetime of that variable. It is used primary for changing pointer ownership.</p>
+
+<p>By default, this feature is disabled and can only be enabled by passing <code>true</code> to <code>Engine::setOwnershipChangingEnabled()</code>.</p>
+
+<aside class="warning">
+HEADS UP! It is possible to violate the principle of stack-based ancestry by creating cyclic loops of memory using the built-in operator <code>own</code>. This operation, when used appropriately, can still create safe code, but to avoid accidental misuse, it has been disabled by default and cautioned against. See <a href="#faq-why-have-own">Why have <code>own</code> if it's unsafe?</a> for more info.
+</aside>
+
+<p><br id="copper-lang-api"></p>
+<h2 id='copper-language-api'>Copper Language API</h2>
+<p>The following is a list of functions built into the virtual machine.</p>
+
+<p>Where &quot;...&quot; appears, these functions can accept any number of arguments.</p>
+<h3 id='ret-function_return_value'>ret( <em>function_return_value</em> )</h3>
+<p>Terminates the current function, popping it from the stack and returing the <em>function_return_value</em>.</p>
+
+<aside class="notice">
+Though not part of the language specifications, it is possible to leave out <code>ret</code> if the function is at its end. This results in an implicit return of the last-encountered object in the function code-body processing.
+</aside>
+<h3 id='are_same'>are_same( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments point to the same function.</p>
+<h3 id='member-object-member_name'>member( <em>object</em>, <em>member_name</em> )</h3><pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">
+</span><span class="n">c</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="nb">member</span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="s">"b"</span><span class="p">)</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">c</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints 10 #</span><span class="w">
+</span></code></pre>
+<p>Returns a pointer to the member of the object-function <em>object</em> whose name is <em>member_name</em>. If the member does not exist, it will be created.</p>
+<h3 id='member_count-object'>member_count( <em>object</em> )</h3>
+<p>Returns the number of members in the object function <em>object</em>.</p>
+<h3 id='is_member-object-member_name'>is_member( <em>object</em>, <em>member_name</em> )</h3>
+<p>Returns <code>true</code> if <em>member_name</em> is the name of a member in the object-function <em>object</em>.</p>
+<h3 id='set_member-object-member_name-value'>set_member( <em>object</em>, <em>member_name</em>, <em>value</em> )</h3>
+<p>Sets the member of object-function <em>object</em> named <em>member_name</em> to <em>value</em>.</p>
+<h3 id='member_list-object'>member_list( <em>object</em> ... )</h3>
+<p>Returns as a list the names of all of the members of the given object-functions.</p>
+<h3 id='union'>union( ... )</h3>
+<p>Returns a new object-function whose persistent scope is populated by copies of the persistent scopes off all of the given object-functions.</p>
+<h3 id='type_of-arg'>type_of( <em>arg</em> )</h3>
+<p>Returns the name of the type of <em>arg</em>.</p>
+<h3 id='are_same_type'>are_same_type( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments have the same type.</p>
+
+<aside class="notice">
+In the virtual machine, the types are compared based on their returns from Cu::Object::typeName().
+</aside>
+<h3 id='are_fn'>are_fn( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are of type object-function.</p>
+<h3 id='are_empty'>are_empty( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are both of type object-function and have neither members in their persistent scope nor execution bodies.</p>
+<h3 id='are_bool'>are_bool( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are of type boolean.</p>
+<h3 id='are_string'>are_string( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are of type string.</p>
+<h3 id='are_list'>are_list( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are of type list.</p>
+<h3 id='are_number'>are_number( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are of a numeric type (integer or number with decimal).</p>
+<h3 id='are_int'>are_int( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are of type integer.</p>
+<h3 id='are_dcml'>are_dcml( ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are of type number with decimal.</p>
+<h3 id='assert-condition'>assert( <em>condition</em> )</h3>
+<p>Throws an error if <em>condition</em> does not resolve to <code>true</code>.</p>
+<h3 id='copy_of-arg'>copy_of( <em>arg</em> )</h3><h3 id='not-boolean_arg'>not( <em>boolean_arg</em> )</h3>
+<p>Returns the opposite boolean value of <em>boolean_arg</em>.</p>
+<h3 id='all-boolean_arg'>all( <em>boolean_arg</em> ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are boolean <code>true</code>.</p>
+<h3 id='any-boolean_arg'>any( <em>boolean_arg</em> ... )</h3>
+<p>Returns <code>true</code> if any of the given arguments are boolean <code>true</code>.</p>
+<h3 id='nall-boolean_arg'>nall( <em>boolean_arg</em> ... )</h3>
+<p>Returns <code>true</code> if any of the given arguments are boolean <code>true</code>.</p>
+<h3 id='none-boolean_arg'>none( <em>boolean_arg</em> ... )</h3>
+<p>Returns <code>true</code> if none of the given arguments are boolean <code>true</code>.</p>
+<h3 id='list'>list( ... )</h3>
+<p>Creates and returns a list object made from the given arguments.</p>
+<h3 id='length-list_object'>length( <em>list_object</em> )</h3>
+<p>Returns the length of the list <em>list_object</em>.</p>
+<h3 id='append-list_object-item'>append( <em>list_object</em>, <em>item</em> )</h3>
+<p>Appends <em>item</em> to the list <em>list_object</em>.</p>
+<h3 id='prepend-list_object-item'>prepend( <em>list_object</em>, <em>item</em> )</h3>
+<p>Prepends <em>item</em> to the list <em>list_object</em>.</p>
+<h3 id='insert-list_object-index-item'>insert( <em>list_object</em>, <em>index</em>, <em>item</em> )</h3>
+<p>Inserts <em>item</em> into the list <em>list_object</em> at the index <em>index</em>. Both integers and numbers with decimal are accepted as indexes.</p>
+<h3 id='item_at-list_object-index'>item_at( <em>list_object</em>, <em>index</em> )</h3>
+<p>Returns a pointer to the object in list <em>list_object</em> at the index <em>index</em>. Element indexes start at zero.</p>
+<h3 id='erase-list_object-index'>erase( <em>list_object</em>, <em>index</em> )</h3>
+<p>Removes a element from the list <em>list_object</em> at the index <em>index</em>.</p>
+<h3 id='dump-list_object'>dump( <em>list_object</em> )</h3>
+<p>Removes all of the elements in the list <em>list_object</em>.</p>
+<h3 id='swap-list_object-index_1-index_2'>swap( <em>list_object</em>, <em>index_1</em>, <em>index_2</em> )</h3>
+<p>Swaps the locations of two elements in the list <em>list_object</em> at the indexes <em>index_1</em> and <em>index_2</em>.</p>
+<h3 id='replace-list_object-index-value'>replace( <em>list_object</em>, <em>index</em>, <em>value</em> )</h3>
+<p>Replaces the element at the index <em>index</em> in the list <em>list_object</em> with <em>value</em>.</p>
+<h3 id='sublist-list_object-start_index-end_index'>sublist( <em>list_object</em> [, <em>start_index</em> [, <em>end_index</em>]] )</h3>
+<p>Returns the sub-list of the list <em>list_object</em>. Optionally, <em>start_index</em> can be given. If given, optionally <em>end_index</em> can be given, where <em>end_index</em> is the last <em>excluded</em> index.</p>
+
+<aside class="notice">
+Index ranges can be any value that maps to the list. See <code>item_at()</code> for range information.
+</aside>
+<h3 id='matching-string_arg'>matching( <em>string_arg</em> ... )</h3>
+<p>Returns <code>true</code> if all of the given arguments are matching strings.</p>
+<h3 id='concat'>concat( ... )</h3>
+<p>Returns a string resulting from the concetenation of the given arguments. The <code>Cu::Object::writeToString()</code> method is employed for obtaining a string value from every argument.</p>
+<h2 id='debugging-copper'>Debugging Copper</h2>
+<p>The engine comes built-in with a number of error messages for debugging Copper code. When stack-trace printing is enabled, both the current stack and the queued operations (&quot;Task Stack&quot;) are printed. Unfortunately, because object-functions are nameless, it can be difficult to figure out exactly what caused the problem, so you will need to examine both the stack trace and the printing of the queue operations.</p>
+
+<aside class="warning">
+HEADS UP! The Copper Engine will not notify you of invalid code in a function's execution body until that body of code is run.
+</aside>
+<p><br id="copper-in-5-mins"></p>
+<h2 id='copper-in-5-minutes'>Copper in 5 Minutes</h2><pre class="highlight copper tab-copper"><code><span class="cm"># Comments are between </span><span class="se">\#</span><span class="cm">'s and are multiline</span><span class="err">
+</span><span class="cm">but a slash escapes characters. #</span><span class="w">
+
+</span><span class="cm"># Variables have stack-based lifetimes and only one type: object-function.</span><span class="err">
+</span><span class="cm">Declaring a name makes a variable. #</span><span class="w">
+</span><span class="n">a</span><span class="w">
+
+</span><span class="cm"># Assignment (copies data and members) #</span><span class="w">
+</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">
+
+</span><span class="cm"># Getting what's stored is done by calling the function in the variable. #</span><span class="w">
+</span><span class="n">a</span><span class="p">()</span><span class="w">
+
+</span><span class="cm"># Pointers (left hand side becomes pointer to right hand side) #</span><span class="w">
+</span><span class="n">b</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">a</span><span class="w">
+
+</span><span class="cm"># The included standard library has a print() function. Sorry, no built-in. #</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">b</span><span class="p">()</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints 5 #</span><span class="w">
+
+</span><span class="cm"># Lost pointers cause no memory errors or leaks. #</span><span class="w">
+</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">b</span><span class="p">()</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints "{fn}". #</span><span class="w">
+
+</span><span class="cm"># Strings are between double-quotes only. #</span><span class="w">
+</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"hello world"</span><span class="w">
+
+</span><span class="cm"># Members are auto-created #</span><span class="w">
+</span><span class="n">a</span><span class="o">.</span><span class="n">child</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"woot"</span><span class="w">
+
+</span><span class="cm"># Shortcut parameterless function calls using ":" #</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">a</span><span class="o">.</span><span class="n">child</span><span class="o">:</span><span class="w"> </span><span class="p">)</span><span class="w">
+
+</span><span class="cm"># Getting and setting members can be done using their names. #</span><span class="w">
+</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"five"</span><span class="w"> </span><span class="nb">set_member</span><span class="p">(</span><span class="n">d</span><span class="w"> </span><span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="nb">type_of</span><span class="p">(</span><span class="w"> </span><span class="nb">member</span><span class="p">(</span><span class="n">d</span><span class="w"> </span><span class="n">name</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints "number" #</span><span class="w">
+
+</span><span class="cm"># Creating objects with members... #</span><span class="w">
+</span><span class="n">e</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="n">my_member</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">other_member</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">]</span><span class="w">
+
+</span><span class="cm"># Create functions using {} #</span><span class="w">
+</span><span class="n">f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">false</span><span class="w">
+    </span><span class="cm"># if's and loop's require brackets #</span><span class="w">
+    </span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="cm"># not() takes only 1 parameter,</span><span class="err">
+</span><span class="cm">        but all(), any(), nall(), and none()</span><span class="err">
+</span><span class="cm">        can take any number of parameters. #</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="nb">not</span><span class="p">(</span><span class="n">x</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="w">
+            </span><span class="k">skip</span><span class="w">    </span><span class="cm"># Restart the loop #</span><span class="w">
+
+        </span><span class="cm"># An elif could go here too #</span><span class="w">
+        </span><span class="p">}</span><span class="w"> </span><span class="kr">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="k">stop</span><span class="w">    </span><span class="cm"># Escape the loop #</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="cm"># Object-funtions have members and a body of executable code. #</span><span class="w">
+</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">b</span><span class="o">=</span><span class="mi">2</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="cm"># Access members inside a function via "this" pointer #</span><span class="w">
+    </span><span class="nb">ret</span><span class="p">(</span><span class="w"> </span><span class="p">[</span><span class="n">a</span><span class="o">=</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="o">=</span><span class="kr">this</span><span class="o">.</span><span class="n">b</span><span class="p">]</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="cm"># Commas are optional for separating expressions,</span><span class="err">
+</span><span class="cm">parameters, or arguments. #</span><span class="w">
+</span><span class="n">h</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">g</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span><span class="w"> </span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">h</span><span class="o">.</span><span class="n">a</span><span class="o">:</span><span class="p">,</span><span class="w"> </span><span class="s">" "</span><span class="p">,</span><span class="w"> </span><span class="n">h</span><span class="o">.</span><span class="n">b</span><span class="o">:</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints "3 2" #</span><span class="w">
+
+</span><span class="cm"># The parent of the variable whose function is called</span><span class="err">
+</span><span class="cm">can be accessed with "super" #</span><span class="w">
+</span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="kr">super</span><span class="o">.</span><span class="n">kid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span><span class="cm"># ... and it doesn't matter who that parent is... #</span><span class="w">
+</span><span class="n">j</span><span class="o">.</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w">
+</span><span class="n">j</span><span class="o">.</span><span class="n">a</span><span class="o">:</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">j</span><span class="o">.</span><span class="n">kid</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints 2 #</span><span class="w">
+
+</span><span class="cm"># Combine object member sets with union #</span><span class="w">
+</span><span class="n">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">union</span><span class="p">(</span><span class="n">h</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="p">[</span><span class="n">b</span><span class="o">=</span><span class="mi">1</span><span class="p">])</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">k</span><span class="o">.</span><span class="n">a</span><span class="o">:</span><span class="p">,</span><span class="w"> </span><span class="s">" "</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="o">.</span><span class="n">kid</span><span class="o">:</span><span class="p">,</span><span class="w"> </span><span class="s">" "</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="o">.</span><span class="n">b</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints "3 2 1" #</span><span class="w">
+
+</span><span class="cm"># Creating and accessing lists... #</span><span class="w">
+</span><span class="n">l</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">list</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">[</span><span class="n">p</span><span class="p">]{</span><span class="w"> </span><span class="n">print</span><span class="p">(</span><span class="s">"p == "</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">})</span><span class="w">
+</span><span class="nb">append</span><span class="p">(</span><span class="n">l</span><span class="o">:</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="w">
+</span><span class="nb">prepend</span><span class="p">(</span><span class="n">l</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span><span class="nb">insert</span><span class="p">(</span><span class="n">l</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="s">"arf"</span><span class="p">)</span><span class="w">
+</span><span class="n">m</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="nb">item_at</span><span class="p">(</span><span class="n">l</span><span class="o">:</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="w">
+</span><span class="n">m</span><span class="p">(</span><span class="s">"hi"</span><span class="p">)</span><span class="w">
+</span><span class="nb">erase</span><span class="p">(</span><span class="n">l</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span><span class="nb">swap</span><span class="p">(</span><span class="n">l</span><span class="o">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w">
+</span><span class="nb">replace</span><span class="p">(</span><span class="n">l</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="s">"front"</span><span class="p">)</span><span class="w">
+
+</span><span class="cm"># Function pointers are saved in lists... #</span><span class="w">
+</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">print</span><span class="p">(</span><span class="s">"hey"</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="n">o</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">list</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="w">
+</span><span class="n">p</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="nb">item_at</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span><span class="n">p</span><span class="o">:</span><span class="w"> </span><span class="cm"># Prints "hey" #</span><span class="w">
+</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span><span class="n">p</span><span class="o">:</span><span class="w"> </span><span class="cm"># Prints warning of empty function container #</span><span class="w">
+
+</span><span class="cm"># ... unless copied #</span><span class="w">
+</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">print</span><span class="p">(</span><span class="s">"hey"</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="n">o</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">list</span><span class="p">(</span><span class="w"> </span><span class="nb">copy_of</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span><span class="n">p</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="nb">item_at</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span><span class="n">p</span><span class="o">:</span><span class="w"> </span><span class="cm"># Prints "hey" #</span><span class="w">
+
+</span><span class="cm"># Sub-lists have be made from valid indexes</span><span class="err">
+</span><span class="cm">that map to the range 0 to list size. #</span><span class="w">
+</span><span class="n">q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">sublist</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">length</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="p">))</span><span class="w">
+
+</span><span class="cm"># Sub-lists are linked to the items in the original object. #</span><span class="w">
+</span><span class="n">r</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="nb">item_at</span><span class="p">(</span><span class="n">q</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span><span class="n">r</span><span class="o">:</span><span class="w"> </span><span class="cm"># Prints "hey" #</span><span class="w">
+</span><span class="n">o</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span><span class="n">r</span><span class="o">:</span><span class="w"> </span><span class="cm"># Prints warning of empty function container #</span><span class="w">
+
+</span><span class="cm"># Strings can be checked for matching value and concatenated #</span><span class="w">
+</span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="nb">matching</span><span class="p">(</span><span class="s">"fn"</span><span class="p">,</span><span class="w"> </span><span class="nb">type_of</span><span class="p">(</span><span class="n">s</span><span class="o">:</span><span class="p">))</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="nb">concat</span><span class="p">(</span><span class="w"> </span><span class="s">"some "</span><span class="p">,</span><span class="w"> </span><span class="s">"string "</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<p>See the side bar. Make sure to have the &quot;copper&quot; tab active.</p>
+
+<p>Note: A centered-text version is available in <a href="CopperIn5Mins.html">the old documentation</a>.</p>
+<p><br id="engine"></p>
+<h1 id='the-virtual-machine'>The Virtual Machine</h1>
+<p>For information about how to incorporate the virtual machine in a project, see the next section.</p>
+
+<p>If you wish to modify the virtual machine, you will want to read about <a href="#virtual%20machine-internals">how it works</a>.</p>
+
+<p><br id="getting-setup"></p>
+<h2 id='getting-setup'>Getting Setup</h2>
+<p>The virtual machine is composed of a few files located in the Copper/src directory. These files can be dropped right into your project. They are:</p>
+
+<ul>
+<li>Copper.h</li>
+<li>Copper.cpp</li>
+<li>RHHash.h</li>
+<li>Strings.h</li>
+<li>Strings.cpp</li>
+<li>utilList.h</li>
+</ul>
+
+<p>To use the virtual machine, include Copper.h in the C++ file where you with to use Copper.</p>
+
+<p>The main components of the virtual machine are in the namespace <code>Cu</code>. The string, list, and robin-hood hash table classes are in the namespace <code>util</code>.</p>
+<pre class="highlight cpp tab-cpp"><code><span class="cp">#include &lt;Copper/src/Copper.h&gt;
+#include &lt;Copper/stdlib/Printer.h&gt;
+#include &lt;Copper/stdlib/InStreamLogger.h&gt;
+#include &lt;exts/Math/basicmath.h&gt;
+#include &lt;exts/Time/systime.h&gt;
+</span>
+<span class="kt">int</span> <span class="n">main</span><span class="p">()</span>
+    <span class="n">Cu</span><span class="o">::</span><span class="n">Engine</span> <span class="n">engine</span><span class="p">;</span>
+
+    <span class="c1">// Example incorporation of extras
+</span>    <span class="n">CuStd</span><span class="o">::</span><span class="n">Printer</span> <span class="n">printer</span><span class="p">;</span>
+    <span class="n">CuStd</span><span class="o">::</span><span class="n">InStreamLogger</span> <span class="n">streamLogger</span><span class="p">;</span> <span class="c1">// dual-role class
+</span>    <span class="n">engine</span><span class="p">.</span><span class="n">setLogger</span><span class="p">(</span><span class="o">&amp;</span><span class="n">streamLogger</span><span class="p">);</span>
+    <span class="n">engine</span><span class="p">.</span><span class="n">addForeignFunction</span><span class="p">(</span><span class="n">util</span><span class="o">::</span><span class="n">String</span><span class="p">(</span><span class="s">"print"</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">printer</span><span class="p">);</span>
+
+    <span class="c1">// Example of setting engine feature
+</span>    <span class="n">engine</span><span class="p">.</span><span class="n">setStackTracePrintingEnabled</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+
+    <span class="c1">// Quick incorporation of offered extensions
+</span>    <span class="n">Cu</span><span class="o">::</span><span class="n">Numeric</span><span class="o">::</span><span class="n">addFunctionsToEngine</span><span class="p">(</span><span class="n">engine</span><span class="p">);</span>
+    <span class="n">Cu</span><span class="o">::</span><span class="n">Time</span><span class="o">::</span><span class="n">addFunctionsToEngine</span><span class="p">(</span><span class="n">engine</span><span class="p">);</span>
+
+    <span class="c1">// Running the engine
+</span>    <span class="n">Cu</span><span class="o">::</span><span class="n">EngineResult</span><span class="o">::</span><span class="n">Value</span>  <span class="n">result</span><span class="p">;</span>
+    <span class="k">do</span> <span class="p">{</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="p">.</span><span class="n">run</span><span class="p">(</span> <span class="n">streamLogger</span> <span class="p">);</span> 
+    <span class="p">}</span> <span class="k">while</span> <span class="p">(</span> <span class="n">result</span> <span class="o">==</span> <span class="n">Cu</span><span class="o">::</span><span class="n">EngineResult</span><span class="o">::</span><span class="n">Ok</span> <span class="p">);</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+<p>Within your code, create an instance of the Engine. The Engine is the main component of the virtual machine. It performs all of the parsing and execution of operations. The Engine can be started with the function <code>run()</code>, which returns a value of the enum Cu::EngineResult::Value. A return value of Cu::EngineResult::Ok means processing is proceeding normally and more input can be given. A return value of Cu::Engine::Done means that the engine is finished (either because it encountered the end of the input stream or an exit token) and all but the global stack has been deleted. A return value of Cu::Engine::Error means an error occured and all but the global stack has been deleted.</p>
+
+<p>The Engine <code>run</code> function must be provided with an input source of bytes. All input sources must inherit from Cu::ByteStream - an interface with two virtual methods that must be implemented. These are:</p>
+
+<ul>
+<li><code>char getNextByte()</code> - Returns the next byte in the stream of bytes provided by this class. Any and every byte is accepted.</li>
+<li><code>bool atEOS()</code> - Returns true if the end of the stream of bytes has been reached.</li>
+</ul>
+
+<p>The Engine has a built-in filter for determining if certain sets of bytes compose valid names, but a custom filter can be added using the Engine method <code>setNameFilter</code>. See the <a href="#api">API</a> for more information.</p>
+
+<p>An instance of an engine isn&#39;t useful on its own. You will need to add <a href="#foreign-functions">foreign functions</a> to it. Some have been provided. See the <a href="#provided-extensions">provided extensions section</a> for more information.</p>
+<h2 id='compiling-the-virtual-machine'>Compiling the Virtual Machine</h2>
+<p>If you wish to test the virtual machine, a premake5 project file has been provided. Premake can generate both GCC make files and Visual Studio project files. For example,</p>
+
+<p>Premake can be downloaded from <a href="http://premake.github.io/download.html">here</a>.</p>
+
+<aside class="notice">
+Some Linux distro repositories have a version of premake, but be sure to check its version.
+</aside>
+<h2 id='messages-info-warnings-errors'>Messages: Info, Warnings, Errors</h2>
+<p>The virtual machine produces four types of messages: Info, Warning, Error, and Debug.</p>
+
+<p>Information messages provide general information about the state of the virtual machine.</p>
+
+<p>Warning messages indicate abnormal activity found in the code. Such activity can result in unintended consequences, and thus warnings should never be ignored. However, the virtual machine will proceed to run and not crash.</p>
+
+<p>Error messages indicate a corrupted and possibly fatal state of the engine. Syntax errors are considered fatal. For why Copper has no exceptions system, see the <a href="#faq-why-no-exceptions-system">FAQ</a>.</p>
+
+<p>The virtual machine may also throw errors identified as &quot;system errors&quot;, in which case the virtual machine code has a bug. If you encounter this, please report it by opening a ticket on the project&#39;s Github bug page and providing the necessary info to reproduce the bug.</p>
+
+<p>Debug messages are those that provide information useful for debugging the engine itself. They can only be enabled with certain compiler flags near the top of Copper.h.</p>
+
+<p><br id="ffi"></p>
+<h2 id='foreign-functions'>Foreign Functions</h2>
+<p>Adding foreign functions to the virtual machine requires creating or using some class that descends from <code>class Cu::ForeignFunc</code> and implements the method <code>virtual bool call( FFIServices&amp; )</code>. The method <code>call()</code> must return true if there is no error; otherwise, false. <code>FFIServices</code> is an interface providing useful methods for interacting with the engine. These methods can be found in the <a href="#api-ffi">API</a>.</p>
+
+<p>Once given to the engine, the ForeignFunc classes will have their reference-counts incremented until the destruction of the engine.</p>
+
+<p>A number of helper classes have been provided for both adding foreign functions (both standard functions and class methods) without the need to create the wrapper yourself. These are given in the following table.</p>
+<pre class="highlight cpp tab-cpp"><code><span class="k">class</span> <span class="nc">MyFF</span> <span class="o">:</span> <span class="k">public</span> <span class="n">Cu</span><span class="o">::</span><span class="n">ForeignFunc</span> <span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="k">virtual</span> <span class="kt">bool</span> <span class="n">call</span><span class="p">(</span> <span class="n">FFIServices</span><span class="o">*</span> <span class="n">ffi</span> <span class="p">)</span> <span class="p">{</span>
+        <span class="n">ffi</span><span class="p">.</span><span class="n">setNewResult</span><span class="p">(</span> <span class="k">new</span> <span class="n">ObjectBool</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">);</span>
+        <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="c1">// Ways of adding it to an instance of Engine.
+</span><span class="n">Engine</span> <span class="n">engine</span><span class="p">;</span>
+<span class="c1">// Option 1:
+</span><span class="n">addForeignFuncInstance</span><span class="err">\</span><span class="o">&lt;</span><span class="n">MyFF</span><span class="err">\</span><span class="o">&gt;</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="s">"myff"</span><span class="p">));</span>
+<span class="c1">// Option 2:
+</span><span class="n">addNewForeignFunc</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="s">"myff"</span><span class="p">),</span> <span class="k">new</span> <span class="n">MyFF</span><span class="p">());</span>
+<span class="c1">// Option 3:
+</span><span class="n">MyFF</span><span class="o">*</span> <span class="n">myff</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MyFF</span><span class="p">();</span>
+<span class="n">addForeignMethodInstance</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="s">"myff"</span><span class="p">),</span> <span class="n">myff</span><span class="p">,</span> <span class="n">myff</span><span class="o">::</span><span class="n">call</span><span class="p">);</span>
+</code></pre>
+<table><thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>addForeignFuncInstance&lt;T&gt;( Engine&amp;, const String&amp; ): void</td>
+<td>Adds a ForeignFunc descendent instance to the engine using the given string as its address/name.</td>
+</tr>
+<tr>
+<td>addNewForeignFunc( Engine&amp;, pName: String&amp;, ForeignFunc* ): void</td>
+<td>Adds a ForeignFunc descendent to the engine and dereferences it. It assumes you are passing it a new object allocated on the heap.</td>
+</tr>
+<tr>
+<td>addForeignFuncInstance( Engine&amp;, pName: const String&amp;, bool (*pFunction)( FFIServices&amp; ) ): void</td>
+<td>Adds a function with the <code>call(FFIServices&amp;)</code> prototype to the engine as a foreign function.</td>
+</tr>
+<tr>
+<td>addForeignMethodInstance( pEngine: Engine&amp;, pName: const String&amp;, pBase: BaseClass*, bool (BaseClass::*pMethod)( FFIServices&amp; ) ): void</td>
+<td>Adds a method from an instance of BaseClass to the engine as a foreign function.</td>
+</tr>
+</tbody></table>
+
+<p>ForeignFunc descendents can also implement the virtual methods <code>getParameterCount()</code> and <code>getParameterType()</code>. These functions are called by the virtual machine to check what object types the function allows.</p>
+<h2 id='callbacks'>Callbacks</h2>
+<p>Copper allows for callbacks that can be run after the engine finishes normal execution. Functions will be inside of FunctionContainers when passed to foreign functions. There is no need to extract the function. However, since objects in Copper have limited lifetimes, you will need to either copy the function to a new FunctionContainer or call the method <code>FunctionContainer::changeOwnerTo()</code> and provide a new owner (whose lifetime you control). Copying is simpler.</p>
+<h2 id='foreign-objects'>Foreign Objects</h2>
+<p>In implementation, all objects in the Copper language are C++ objects that extend the class Cu::Object. Anything extending this class can be used as an object. However, a few things are required.</p>
+
+<ol>
+<li>All objects must set their object type upon instantiation by passing it to the parent Cu::Object constructor. This type is of the enumeration ObjectType::Value. You may cast other values to this enumeration and make your own extended enum starting with the value <code>Cu::ObjectType::UnknownData + 1</code>.</li>
+<li>All objects must implement the following functions:
+
+<ul>
+<li>copy(): Object*</li>
+<li>typeName() const: const char*</li>
+</ul></li>
+</ol>
+
+<p>Optionally, functions may implement <code>virtual void writeToString(String&amp; out)</code> to set the data to be returned when the object appears in string-requiring contexts.</p>
+
+<p><br id="provided-extensions"></p>
+<h2 id='provided-extensions'>Provided Extensions</h2>
+<p>There are two sets of extensions. The first set is in the Copper/stdlib directory. This set contains files whose primary purpose is basic input and printing to allow for debugging of the engine. The second set is in the exts directory. It contains all other extensions, especially those for time and math operations.</p>
+<h3 id='stdlib-directory-extensions'>stdlib Directory Extensions</h3>
+<table><thead>
+<tr>
+<th>Class</th>
+<th>Header File</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>InStreamLogger</td>
+<td>InStreamLogger.h</td>
+<td>Class for using a File object (defaulted to stdin) as the input for an instance of the engine. It requires EngMsgToStr.</td>
+</tr>
+<tr>
+<td>EngMsgToStr</td>
+<td>EngMsgToStr.h</td>
+<td>Class for converting engine error flags to English messages.</td>
+</tr>
+<tr>
+<td>Printer</td>
+<td>Printer.h</td>
+<td>Class for printing the writeToString values of Cu::Object descendents to string.</td>
+</tr>
+</tbody></table>
+
+<aside class="notice">
+HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used. Submitting code is done by the "Enter" key. If the object-body tokens are in one submission but their following execution-body tokens are in a second submission, they will be treated as separate object-functions.
+</aside>
+<h3 id='exts-directory-extensions'>exts Directory Extensions</h3>
+<p>Some extensions have an <code>addFunctionsToEngine(Cu::Engine&amp;amp)</code>. This function will add all of the foreign functions associated with the extension to the given Cu::Engine instance using default names. Currently, the extensions with this feature are:</p>
+
+<ul>
+<li>Math/basicmath</li>
+<li>Time/systime</li>
+</ul>
+
+<p>The default names of functions provided by these extensions are given in the following table.</p>
+
+<table><thead>
+<tr>
+<th>Extension</th>
+<th>Default Function Names</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>basicmath</td>
+<td>equal lt lte gt gte + - * / % pow floor ceil sin cos tan</td>
+</tr>
+<tr>
+<td>systime</td>
+<td>get_time get_seconds get_milliseconds get_nanoseconds</td>
+</tr>
+</tbody></table>
+<pre class="highlight copper tab-copper"><code><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_time</span><span class="o">:</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="s">"nanoseconds = "</span><span class="p">,</span><span class="w"> </span><span class="n">get_nanoseconds</span><span class="p">(</span><span class="n">t</span><span class="o">:</span><span class="p">)</span><span class="w">
+</span></code></pre>
+<p>With the exception of <code>get_time</code>, the systime functions are designed to extract information from the data returned from <code>get_time</code>. Internally, <code>get_time</code> uses <code>clock_gettime</code>.</p>
+
+<p><br id="api"></p>
+<h2 id='api'>API</h2><h3 id='types'>Types</h3>
+<table><thead>
+<tr>
+<th>Alias</th>
+<th>Type</th>
+<th>File</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Cu::UInteger</td>
+<td>typedef unsigned int</td>
+<td>Copper.h</td>
+</tr>
+<tr>
+<td>Cu::Integer</td>
+<td>typedef long int</td>
+<td>Copper.h</td>
+</tr>
+<tr>
+<td>Cu::Decimal</td>
+<td>typedef double</td>
+<td>Copper.h</td>
+</tr>
+<tr>
+<td>uint</td>
+<td>define unsigned int</td>
+<td>RHHash.h</td>
+</tr>
+</tbody></table>
+<h3 id='util-list'>util::List</h3>
+<p>File: <em>utilList.h</em></p>
+
+<p>Basic doubly-linked list used internally by the virtual machine.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>List()</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>List( const List&amp; )</td>
+<td>Copy Constructor</td>
+</tr>
+<tr>
+<td>~List()</td>
+<td>Deconstructor</td>
+</tr>
+<tr>
+<td>operator<a href="pIndex:%20uint"></a>: T&amp;</td>
+<td>Access element by index.</td>
+</tr>
+<tr>
+<td>getFromBack( pReverseIndex: uint ): T&amp;</td>
+<td>Access element by reverse index.</td>
+</tr>
+<tr>
+<td>getFirst(): T&amp;</td>
+<td>Returns the first element.</td>
+</tr>
+<tr>
+<td>getLast(): T&amp;</td>
+<td>Returns the last element.</td>
+</tr>
+<tr>
+<td>getConstFirst(): const T&amp;</td>
+<td>Returns the first address as immutable.</td>
+</tr>
+<tr>
+<td>operator= ( const List&amp; ): List&amp;</td>
+<td>Assignment</td>
+</tr>
+<tr>
+<td>size(): uint</td>
+<td>Returns the number of nodes in the list.</td>
+</tr>
+<tr>
+<td>has(): bool</td>
+<td>Returns true if the list has at least one node.</td>
+</tr>
+<tr>
+<td>clear(): void</td>
+<td>Removes all of the elements in the list.</td>
+</tr>
+<tr>
+<td>remove( pIndex: const uint ): void</td>
+<td>Removes the element at the given index.</td>
+</tr>
+<tr>
+<td>removeUpTo( stopIter: const Iter&amp; ): void</td>
+<td>Removes all of the elements up to the given iterator.</td>
+</tr>
+<tr>
+<td>push_back( pItem: const T&amp; ): void</td>
+<td>Appends an item to the back of the list.</td>
+</tr>
+<tr>
+<td>push_front( pItem: const T&amp; ): void</td>
+<td>Appends an item to the front of the list.</td>
+</tr>
+<tr>
+<td>pop(): void</td>
+<td>Removes the last element in the list.</td>
+</tr>
+<tr>
+<td>pop_front(): void</td>
+<td>Removes the first element in the list.</td>
+</tr>
+<tr>
+<td>append( const List&amp; ): void</td>
+<td>Copies the given list to the end of this one.</td>
+</tr>
+<tr>
+<td>start(): Iter</td>
+<td>Returns an iterator at the start of the list.</td>
+</tr>
+<tr>
+<td>constStart(): ConstIter</td>
+<td>Returns an iterator at the start of the list.</td>
+</tr>
+<tr>
+<td>end(): Iter</td>
+<td>Returns an iterator at the end of the list.</td>
+</tr>
+<tr>
+<td>indexOf( const Iter&amp; ): uint</td>
+<td>Returns the index of the given operator.</td>
+</tr>
+<tr>
+<td>validate(): void</td>
+<td>Verifies that this list is internally correct.</td>
+</tr>
+</tbody></table>
+<h3 id='util-list-iter'>util::List::Iter</h3>
+<p>Iterator class for the utility list.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Iter( List&amp; )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>Iter( const Iter&amp; )</td>
+<td>Copy Constructor</td>
+</tr>
+<tr>
+<td>operator*(): T&amp;</td>
+<td>Returns the address of the data.</td>
+</tr>
+<tr>
+<td>getItem(): T&amp;</td>
+<td>Returns the address of the data.</td>
+</tr>
+<tr>
+<td>operator-&gt;(): T*</td>
+<td>Returns a pointer to the data.</td>
+</tr>
+<tr>
+<td>setItem( pItem: T ): void</td>
+<td>Sets the data.</td>
+</tr>
+<tr>
+<td>operator==( const Iter&amp; ): bool</td>
+<td>Checks to see if the given iterators point to the same node.</td>
+</tr>
+<tr>
+<td>operator=( Iter ): Iter&amp;</td>
+<td>Shared assignment. This and given iterator now point to the same node.</td>
+</tr>
+<tr>
+<td>set( Iter ): void</td>
+<td>Shared assignment. This and given iterator now point to the same node.</td>
+</tr>
+<tr>
+<td>prev(): bool</td>
+<td>Moves iterator to the previous node, returning true if the move was made.</td>
+</tr>
+<tr>
+<td>next(): bool</td>
+<td>Moves iterator to the following node, returning true if the move was made.</td>
+</tr>
+<tr>
+<td>peek(): T&amp;</td>
+<td>Returns the address of the node following the node where this iterator is located. (UNSAFE)</td>
+</tr>
+<tr>
+<td>reset(): void</td>
+<td>Sets this iterator to the first node in the list.</td>
+</tr>
+<tr>
+<td>makeLast(): void</td>
+<td>Sets this iterator to the last node in the list.</td>
+</tr>
+<tr>
+<td>atStart(): bool</td>
+<td>Returns true if this iterator is at the first node in the list.</td>
+</tr>
+<tr>
+<td>atEnd(): bool</td>
+<td>Returns true if this iterator is at the last node in the list.</td>
+</tr>
+<tr>
+<td>has(): bool</td>
+<td>Returns true if there is at least one element in the list this iterator uses.</td>
+</tr>
+<tr>
+<td>insertBefore( pItem: const T&amp; ): void</td>
+<td>Inserts the given item into a new node prior to the one pointed to by this iterator.</td>
+</tr>
+<tr>
+<td>insertAfter( pItem: const T&amp; ): void</td>
+<td>Inserts the given item into a new node following the one pointed to by this iterator.</td>
+</tr>
+<tr>
+<td>destroy(): void</td>
+<td>Deletes the node pointed to by this iterator. Iterated is invalidated.</td>
+</tr>
+</tbody></table>
+<h3 id='util-list-constiter'>util::List::ConstIter</h3>
+<p>Const version of Iter for situations where the data in the list must be immutable. All methods are the same with the exception of Iter::destroy(), for which there is no replicate in this class.</p>
+<h3 id='util-charlist'>util::CharList</h3>
+<p>File: <em>Strings.h</em></p>
+
+<p>String-builder class used internally by the virtual machine.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>CharList()</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>explicit CharList( const char* )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>CharList( pString: const char*, pLength: uint )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>CharList( pString: const String&amp; )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>~CharList()</td>
+<td>Deconstructor</td>
+</tr>
+<tr>
+<td>operator= ( const CharList&amp; ): CharList&amp;</td>
+<td>Assignment</td>
+</tr>
+<tr>
+<td>append( const CharList&amp; ): CharList&amp;</td>
+<td>Appends the given list onto this one.</td>
+</tr>
+<tr>
+<td>append( const String&amp; ): CharList&amp;</td>
+<td>Appends the given string onto this one.</td>
+</tr>
+<tr>
+<td>equals( const char* pString ): bool</td>
+<td>Checks to see if the list and C-style string contain exactly the same characters.</td>
+</tr>
+<tr>
+<td>equals( const CharList&amp; pOther ): bool</td>
+<td>Checks to see if the two lists contain exactly the same characters.</td>
+</tr>
+<tr>
+<td>equalsIgnoreCase( const CharList&amp; pOther ): bool</td>
+<td>Checks to see if the two lists contain the same letters.</td>
+</tr>
+<tr>
+<td>appendULong( const unsigned long pValue ): void</td>
+<td>Converts the unsigned long value to characters and appends it to the list.</td>
+</tr>
+</tbody></table>
+<h3 id='util-string'>util::String</h3>
+<p>File: <em>Strings.h</em></p>
+
+<p>Basic string class used internally by the virtual machine.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>String()</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>String( const char* )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>String( const String&amp; )</td>
+<td>Copy Constructor</td>
+</tr>
+<tr>
+<td>String( const CharList&amp; )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>String( const char )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>virtual ~String()</td>
+<td>Deconstructor</td>
+</tr>
+<tr>
+<td>operator= ( const String&amp; ): String&amp;</td>
+<td>Assignment</td>
+</tr>
+<tr>
+<td>operator= ( const char* ): String&amp;</td>
+<td>Assignment</td>
+</tr>
+<tr>
+<td>operator= ( const CharList&amp; ): String&amp;</td>
+<td>Assignment</td>
+</tr>
+<tr>
+<td>operator+= ( const String&amp; ): String&amp;</td>
+<td>Append a string to this one</td>
+</tr>
+<tr>
+<td>operator<a href="uint"></a>: char</td>
+<td>Character access</td>
+</tr>
+<tr>
+<td>c_str(): const char*</td>
+<td>C-style string return</td>
+</tr>
+<tr>
+<td>size(): uint</td>
+<td>Length of the string</td>
+</tr>
+<tr>
+<td>equals( const String&amp; ): bool</td>
+<td>Checks to see if strings match.</td>
+</tr>
+<tr>
+<td>equals( const CharList&amp; ): bool</td>
+<td>Chects to see if this string and list match in characters.</td>
+</tr>
+<tr>
+<td>equals( const char* ): bool</td>
+<td>Checks to see if strings match.</td>
+</tr>
+<tr>
+<td>equalsIgnoreCase( const String&amp; ): bool</td>
+<td>Checks to see if the lower case versions of these strings match.</td>
+</tr>
+<tr>
+<td>toInt(): int</td>
+<td>Returns the numeric reading of the string as an integer.</td>
+</tr>
+<tr>
+<td>toUnsignedLong(): unsigned long</td>
+<td>Returns the numeric reading of the string as an unsigned long.</td>
+</tr>
+<tr>
+<td>toFloat(): float</td>
+<td>Returns the numeric reading of the string as a float.</td>
+</tr>
+<tr>
+<td>toDouble(): double</td>
+<td>Returns the numeric reading of the string as a double.</td>
+</tr>
+<tr>
+<td>purgeNonPrintableASCII(): void</td>
+<td>Removes invisible characters (newlines, tabs,..).</td>
+</tr>
+<tr>
+<td>contains( char ): bool</td>
+<td>Returns true if the string contains the given character.</td>
+</tr>
+<tr>
+<td>numberType(): unsigned char</td>
+<td>Returns the best numeric type for representing the string. 0 for no type, 1 for integer, 2 for a decimal type.</td>
+</tr>
+<tr>
+<td>keyValue(): uint</td>
+<td>Returns a unique value representing this string that is usable in a hash map.</td>
+</tr>
+</tbody></table>
+<h3 id='util-rhhash-lt-t-gt'>util::RHHash&lt;T&gt;</h3>
+<p>File: <em>RHHash.h</em></p>
+
+<p>Robin-Hood Hash Table implementation.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>RHHash( uint )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>RobinHoodHash( const RobinHoodHash&lt;T&amp;&gt;&amp; )</td>
+<td>Copy constructor</td>
+</tr>
+<tr>
+<td>~RobinHoodHash()</td>
+<td>Destructor</td>
+</tr>
+<tr>
+<td>appendCopyOf( RobinHoodHash&lt;T&gt;&amp; ): void</td>
+<td>Copies the given hash table to this one.</td>
+</tr>
+<tr>
+<td>get( pIndex: uint ): Bucket*</td>
+<td>Returns the bucket at the given index.</td>
+</tr>
+<tr>
+<td>getBucketData( pName: const String&amp; ): BucketData*</td>
+<td>Returns the data stored in the given bucket.</td>
+</tr>
+<tr>
+<td>insert( pName: const String&amp;, pItem: T ): T*</td>
+<td>Inserts the item into the table with the given name.</td>
+</tr>
+<tr>
+<td>getSize(): uint</td>
+<td>Returns the allocated size in memory of the table.</td>
+</tr>
+<tr>
+<td>getOccupancy(): uint</td>
+<td>Returns the number of elements in the table.</td>
+</tr>
+<tr>
+<td>erase( pName: const String&amp; ): void</td>
+<td>Removes an element from the table.</td>
+</tr>
+</tbody></table>
+<h3 id='util-rhhash-bucketdata-lt-t-gt'>util::RHHash::BucketData&lt;T&gt;</h3>
+<p>File: <em>RHHash.h</em></p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>name: const String</td>
+<td>Bucket name</td>
+</tr>
+<tr>
+<td>item: T</td>
+<td>Element data</td>
+</tr>
+<tr>
+<td>delay: uint</td>
+<td>Number slots the bucket is located away from the slot its name&#39;s hash value gives</td>
+</tr>
+<tr>
+<td>BucketData( pName: const String&amp;, pItem: const T&amp; )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>BucketData( pOther: const BucketData&amp; )</td>
+<td>Copy Constructor</td>
+</tr>
+</tbody></table>
+<h3 id='util-rhhash-bucket-lt-t-gt'>util::RHHash::Bucket&lt;T&gt;</h3>
+<p>File: <em>RHHash.h</em></p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>data: BucketData*</td>
+<td>Pointer to data</td>
+</tr>
+<tr>
+<td>wasOccupied: bool</td>
+<td>Indicates if this data had been full once before</td>
+</tr>
+<tr>
+<td>Bucket()</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>~Bucket()</td>
+<td>Deconstructor</td>
+</tr>
+<tr>
+<td>clear(): void</td>
+<td>Data removal</td>
+</tr>
+</tbody></table>
+<h3 id='cu-ref'>Cu::Ref</h3>
+<p>Reference-counted objects. Used as a base for other objects.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>ref(): void</td>
+<td>Increments the reference count.</td>
+</tr>
+<tr>
+<td>deref(): void</td>
+<td>Decrements the reference count.</td>
+</tr>
+<tr>
+<td>getRefCount(): int</td>
+<td>Returns the reference count.</td>
+</tr>
+</tbody></table>
+<h3 id='cu-refptr-lt-t-gt'>Cu::RefPtr&lt;T&gt;</h3>
+<p>Reference-counting pointer for objects descending from <code>Cu::Ref</code>.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>RefPtr()</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>RefPtr( const RefPtr&amp; )</td>
+<td>Copy Constructor</td>
+</tr>
+<tr>
+<td>~RefPtr()</td>
+<td>Deconstructor</td>
+</tr>
+<tr>
+<td>set( pObject: T* ): void</td>
+<td>Sets the pointer.</td>
+</tr>
+<tr>
+<td>setWithoutRef( pObject: T* ): void</td>
+<td>Sets the pointer and calls deref() without calling ref().</td>
+</tr>
+<tr>
+<td>operator= ( pOther: const RefPtr<T> ): RefPtr<T></td>
+<td>Shared assignment.</td>
+</tr>
+<tr>
+<td>obtain( pStorage: T*&amp; ): bool</td>
+<td>Sets the given pointer with the object stored here and returns true if there is an object.</td>
+</tr>
+<tr>
+<td>raw(): T*</td>
+<td>Directly returns the address stored here (unsafe).</td>
+</tr>
+</tbody></table>
+<h3 id='cu-object'>Cu::Object</h3>
+<p>Base class for all objects (object-functions and data) in Copper.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Object( ObjectType::Value )</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>virtual ~Object()</td>
+<td>Destructor</td>
+</tr>
+<tr>
+<td>getType(): ObjectType::Value</td>
+<td>Returns the object type (Function, Bool, String, List, Integer, Decimal, or UnknownData).</td>
+</tr>
+<tr>
+<td>operator Object*()</td>
+<td>Implicit Cast</td>
+</tr>
+<tr>
+<td>virtual copy(): Object*</td>
+<td>Meant to be overridden. Returns a copy of this object.</td>
+</tr>
+<tr>
+<td>virtual writeToString( out: String&amp; ): void</td>
+<td>Meant to be overridden. Sets the given string to a string representation of this object&#39;s value.</td>
+</tr>
+<tr>
+<td>virtual getIntegerValue(): Integer</td>
+<td>Meant to be overridden. Returns an integer representation of this object&#39;s value.</td>
+</tr>
+<tr>
+<td>virtual getDecimalValue(): Decimal</td>
+<td>Meant to be overridden. Returns a number-with-decimal representation of this object&#39;s value.</td>
+</tr>
+<tr>
+<td>virtual typeName(): const char*</td>
+<td>Meant to be overridden. Returns a C-style string name of this object&#39;s type.</td>
+</tr>
+</tbody></table>
+<h3 id='cu-object-descendents'>Cu::Object Descendents</h3>
+<ul>
+<li>Cu::FunctionContainer - Object-function container component. This contains Function, the class containing all of the function data.</li>
+<li>Cu::ObjectBool - Basic boolean class.</li>
+<li>Cu::ObjectString - Basic string class wrapping util::String.</li>
+<li>Cu::ObjectInteger - Basic integer class wrapping Cu::Integer.</li>
+<li>Cu::ObjectDecimal - Basic decimal class wrapping Cu::Decimal.</li>
+<li>Cu::ObjectList - Doubly-linked list class with a special Node subclass for owning FunctionContainer.</li>
+</ul>
+
+<p><br id="api-ffi"></p>
+<h3 id='cu-foreignfunc'>Cu::ForeignFunc</h3>
+<p>Interface for foreign functions to interact with the engine.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>FFIServices( Engine&amp;, ArgsIter )</td>
+<td>Constructor (DO NOT USE)</td>
+</tr>
+<tr>
+<td>getNextArg(): Object*</td>
+<td>Returns each successive argument sent to the function.</td>
+</tr>
+<tr>
+<td>hasMoreArgs(): bool</td>
+<td>Indicates more arguments are available (that is, unaccessed via getNextArg()).</td>
+</tr>
+<tr>
+<td>printInfo( message: const char* ): void</td>
+<td>Print information to the logger.</td>
+</tr>
+<tr>
+<td>printWarning( message: const char* ): void</td>
+<td>Print a warning message to the logger.</td>
+</tr>
+<tr>
+<td>printError( message: const char* ): void</td>
+<td>Print an error message to the logger.</td>
+</tr>
+<tr>
+<td>setResult( Object* ): void</td>
+<td>Sets the foreign function return. (Unset, it will be an empty function.)</td>
+</tr>
+<tr>
+<td>setNewResult( Object* ): void</td>
+<td>Sets the foreign function return and dereferences it. (Same purpose as <code>setResult()</code>.)</td>
+</tr>
+</tbody></table>
+<h3 id='cu-engine'>Cu::Engine</h3>
+<p>Main interpreter component; parser, lexer, processor.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Engine()</td>
+<td>Constructor</td>
+</tr>
+<tr>
+<td>setLogger( Logger* ): void</td>
+<td>Sets the interface used for printing engine messages such as errors.</td>
+</tr>
+<tr>
+<td>print( logLevel: const LogLevel::Value, msg: const char* ): void</td>
+<td>Prints a message to the logger.</td>
+</tr>
+<tr>
+<td>print( logLevel: const LogLevel::Value, msg: const EngineMessage::Value ): void</td>
+<td>Prints a message to the logger.</td>
+</tr>
+<tr>
+<td>setEndofProcessingCallback( callback: EngineEndProcCallback* ): void</td>
+<td>Sets the interface used for responding when the processing has ended.</td>
+</tr>
+<tr>
+<td>setIgnoreBadForeignFunctionCalls( yes: bool ): void</td>
+<td>Sets whether to allow bad calls to foreign functions to proceed by returning empty function rather than terminating processing with an error.</td>
+</tr>
+<tr>
+<td>setOwnershipChangingEnabled( yes: bool ): void</td>
+<td>Sets whether to allow the <code>own</code> structure to work.</td>
+</tr>
+<tr>
+<td>setStackTracePrintingEnabled( yes: bool ): void</td>
+<td>Sets whether to show the stack trace upon error.</td>
+</tr>
+<tr>
+<td>setNameFilter( bool(*filter)(const String&amp;) ): void</td>
+<td>Sets the function used for filtering the characters permitted in names.</td>
+</tr>
+<tr>
+<td>addForeignFunction( pName: const String&amp;, pFunction: ForeignFunc* ): void</td>
+<td>Adds a foreign function for use in Copper.</td>
+</tr>
+<tr>
+<td>run( ByteStream&amp; ): EngineResult::Value</td>
+<td>Initiates processing in the virtual machine.</td>
+</tr>
+<tr>
+<td>clearGlobals(): void</td>
+<td>Clears all global variables. (Globals are not clear when processing completes, so this method is provided.)</td>
+</tr>
+<tr>
+<td>parse( context: ParserContext&amp;, srcDone: bool ): ParseResult::Value</td>
+<td>Proceeds parsing with the given context. (You should not need to use this function directly.)</td>
+</tr>
+<tr>
+<td>execute(): EngineResult::Value</td>
+<td>Continues processing in the virtual machine. (You should not need to use this function directly.)</td>
+</tr>
+<tr>
+<td>runFunctionObject( FunctionContainer* ): EngineResult::Value</td>
+<td>Executes the body of code of the given object-function. (Used for callbacks.)</td>
+</tr>
+</tbody></table>
+
+<p><br id="virtual machine-internals"></p>
+<h2 id='how-the-virtual-machine-works'>How the Virtual Machine Works</h2>
+<p>First and foremost, most objects in the virtual machine are reference-counted using the dedicated classes <code>Ref</code> and <code>RefPtr</code>. The class <code>RefPtr</code> has two methods that must be used for setting it: <code>set()</code> and <code>setWithoutRef()</code>. The former should be used when the data is shared. The latter does not increment the reference counting; it is intended for directly passing newly-created heap objects to the pointer.</p>
+
+<p>The Copper virtual machine Engine class is the main component and the bulk of the virtual machine. To run the virtual machine, a bytestream is passed to the method Engine::run(). The engine will then attempt to exhaust the byte source and convert its contents into tokens. Standard ASCII whitespace (simple space, newlines, tab) is treated as a deliminator. When the engine encounters a set of bytes that it cannot lex, it considers it a name and checks it for validity. Optionally, a name-filter can be given to the engine, and this filter will be passed the strand of unknown bytes as a string.</p>
+
+<p>Once tokenized, the engine proceeds to interpret the strand of tokens using a state machine. When an operation is found to be incomplete, the machine checks for more input. If more input is available (as is the case with console input), the state machine will wait. If not, the machine will terminate in error.</p>
+
+<p>The parsing aspect of the machine has been made publically available for the sake of nested code bodies. The interpreter will not parse code bodies until they are activated as part of a function call. However, lexing occurs immediately upon received input, so invalid tokens are identified immediately upon entry into the virtual machine.</p>
+
+<p>The parsing system is a large state-machine. Rather than waiting for a syntactically-complete input and possibly using a regex, the parsing machine accepts any input and simply tracks its progress through parsing by using &quot;parse tasks&quot;. The reason for this system is partially due to the grammar of the language; no explicit statement termination token means interrupted console input should (in many cases) default to termination.</p>
+
+<aside class="notice">
+The virtual machine does not use a regex, so it is a large state-machine that may be tedious to extend with new structures.
+</aside>
+
+<p>The final result of parsing is a strand of &quot;Opcode&quot; instances that contain both instructions and some of the data necessary to complete those instructions. Opcodes can contain the addresses of variables, bodies of code, simple data (numbers and strings), or pointers to other parts of the strand (for use in if-structures and loops).</p>
+
+<p>The addresses of variables are special structures that contain lists of byte strings, which are the components of the address. An address represents the full call path of the object they represent from within the scope where they are from. Built-in functions, foreign functions, and user-created functions are all represented by variable addresses.</p>
+
+<p>Bodies of code, as represented in both instances of Function and in instances of Opcode, are containers for both a list of unparsed tokens and a list of Opcode instances. The former is converted to the latter via an Engine::parse() call that utilizes its parser context. Bodies of code are shared by instances of Function and remain constant after their conversion.</p>
+
+<p>The engine makes extensive use of FunctionContainer. The class Function holds the persistent scope of the object-function as well as the body of executable code, but the class FunctionContainer acts as the &quot;Copper object&quot; wrapper for Function. FunctionContainers can be &quot;owned&quot; by a class inheriting from class Owner. Once owned, the lifetime of the Function class inside of FunctionContainer is tied to lifetime of the class inheriting Owner.</p>
+
+<p>Variables are one of the descendents of class Owner.</p>
+
+<aside class="success">
+The ObjectList class has a sub-class Node that automatically handles ownership so that the nodes of a list can act like a large collection of variables tied to one name.
+</aside>
+
+<p>When processing the opcodes, the engine first checks the type and the attempts to access the associated data from inside the opcode.</p>
+
+<p>Some opcodes create tasks inside of the engine. These tasks are initiated when the engine tries to process certain opcodes. In some cases, opcodes are dependent on each other and therefore must follow each other in the correct order or they can crash the engine. In some cases, certain opcodes can be run as shortcuts for tasks.</p>
+
+<aside class="warning">
+Do not try to create your own opcode strands to feed to the engine. Do not try to run opcodes loaded from a file. The engine is not designed to handle arrangements of opcodes that it did not create.
+</aside>
+
+<p>For example, creating an object-function definition requires opcodes for initiating the task - either starting from the object body component or from the execution body component - and terminating the building. Among the object body component opcodes, there is an opcode for adding names to the list of parameters to the function as well as an opcode for adding names to the persistent scope. The object body component opcodes are all optional.</p>
+
+<p>Function calls in the Engine can only be made when appended to addresses. The address for the call is first checked against a list of built-in function names. If it matches, the built-in function is called. If not, foreign function names are checked for a match. If the address matches a foreign function, the arguments are checked to be sure they match the required parameters of the foreign function.</p>
+
+<aside class="success">
+Foreign functions can be variadic and still require that a certain number of arguments be a specific type. The engine will attempt to match as many arguments as are returned from ForeignFunc::getParameterCount().
+</aside>
+
+<p>If no match is found among foreign functions, it is assumed to be a user function. The engine first searches the local scope for a variable whose existence matches the full address. If no match is found, the global scope is searched. If the base variable of the path does not exist in either scope, all of the members of its address are created in the local scope.</p>
+
+<p>The engine transmits Copper data from place to place using the <code>RefPtr lastObject</code>. This special pointer is set by almost everything from function calls to data creation. Even the foreign function interface (FFIServices) methods set this object. Once set, this data can be used in variable assignments and pointer assignments both inside and outside function building.</p>
+
+<p>The engine uses a number of enumerations for its processes. Most of these enums are struct enums, meaning that they are enumerations wrapped in struct. A small number are regular enums and not meant to be used or invoked outside of the engine.</p>
+
+<p>The engine uses a set of flags (from an enumeration) for identifying current state of processing and tell the main processing loop whether or not it should proceed. These have an enormous effect on the state of the engine, so care should be used in passing them. For example, the main engine loop accepts return flags that exit the engine (when the <code>exit</code> token is found), pop the opcode operations stack (which occurs at the end of a user-function call), continue processing, and throw an error (which destroys most of the stack).</p>
+<h3 id='debugging'>Debugging</h3>
+<p>The virtual machine is equipped with a number of features for debugging it. At the top of the Copper.h file are a set of enumerations that will trigger the sending of messages to the logger. These messages reveal the function calls inside particular components of the virtual machine. Some of these components are isolated and cannot print to the logger. These require a std::printf() be available, so to use them, uncomment the <code>#include &lt;cstdio&gt;</code> near the top of the Copper.h file.</p>
+<h3 id='speed-profiling'>Speed Profiling</h3>
+<p>Speed profiling code has been made available for testing certain components in the engine. However, if you wish to check the overall speed of Copper, it is recommended that you use the Time/systime extension.</p>
+<h1 id='faq'>FAQ</h1><h2 id='what-is-the-parse-tree'>What is the parse tree?</h2>
+<p>The parse tree is available in <a href="https://copperlang.wordpress.com/2016/11/18/printsyntax/">an article on the official blog</a>.</p>
+<h2 id='why-not-provide-numeric-operations'>Why not provide numeric operations?</h2>
+<p>Numbers are not an essential facet of the language grammar, and by not providing such functionality in the interpreter, it allows for setting up tightly controlled environments (with limited functionality, perhaps for demos). It also frees up names so that they can be used for functions of user-implemented libraries. For example, you may prefer to use the &quot;+&quot; function name for addition of GNU MP numbers.</p>
+<h2 id='why-is-there-no-privacy-model'>Why is there no privacy model?</h2>
+<p>Because it would be absurd.</p>
+
+<p>See <a href="https://copperlang.wordpress.com/2017/12/08/pub-private/">this blog post</a> for a more detailed answer.</p>
+
+<p><br id="faq-why-no-exceptions-system"></p>
+<h2 id='why-is-there-no-exceptions-system'>Why is there no exceptions system?</h2>
+<p>While it is possible that an exceptions system be developed to handle errors, the reality is that, if such an error does occur, there would be a breakage in logic and the rest of your application operations could be meaningless. This has less to do with program design and more to do with the simplicity of Copper.</p>
+
+<p>Copper is not designed for large-scale applications where constant testing is needed. It is meant for applications where scripting would be a nice benefit.</p>
+
+<p><br id="faq-why-have-own"></p>
+<h2 id='why-have-own-if-it-39-s-unsafe'>Why have <code>own</code> if it&#39;s unsafe?</h2>
+<p>Some programmers might prefer a model whereby they use a designated constructor function for producing objects before passing them off to the rest of the program. However, certain ways of doing this require changing ownership to prevent the destruction of those objects when the stack frame closes. This practice, when done correctly, is still memory-safe.</p>
+
+<p>Technically, any program can be written in such a way that avoids this practice, but rather than force programmers into a particular model, the interpreter leaves it up to user discretion.</p>
+
+<p>By default, the feature is disabled and can only be enabled by passing <code>true</code> to <code>Engine::setOwnershipChangingEnabled()</code>.</p>
+<h2 id='benchmarks-how-fast-is-copper'>Benchmarks? How fast is Copper?</h2>
+<p>Tests run on an HP Pavilion AMD-64 Dual-core rated at 2.1~2.3GHz using the Time/sysclock and Math/basicmath extensions.</p>
+<h3 id='first-5000-primes'>First 5000 Primes</h3>
+<blockquote>
+<p>First 5000 Primes</p>
+</blockquote>
+<pre class="highlight copper tab-copper"><code><span class="cm"># First 5000 Primes #</span><span class="w">
+</span><span class="n">isprime</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w">
+    </span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">gte</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="n">n</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">are_zero</span><span class="p">(</span><span class="n">%</span><span class="p">(</span><span class="n">n</span><span class="o">:</span><span class="w"> </span><span class="n">i</span><span class="o">:</span><span class="p">))</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nb">ret</span><span class="p">(</span><span class="k">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+        </span><span class="n">++</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="p">)</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+    </span><span class="nb">ret</span><span class="p">(</span><span class="k">true</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span><span class="n">primes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">
+    </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w">
+    </span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">gte</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="n">n</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">isprime</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="n">++</span><span class="p">(</span><span class="n">count</span><span class="o">:</span><span class="p">)</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+        </span><span class="n">++</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="p">)</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+    </span><span class="nb">ret</span><span class="p">(</span><span class="n">count</span><span class="o">:</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span><span class="n">benchmark</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+ </span><span class="n">st</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_time</span><span class="o">:</span><span class="w">
+ </span><span class="n">print</span><span class="p">(</span><span class="s">"primes: "</span><span class="w"> </span><span class="n">primes</span><span class="p">(</span><span class="mi">5000</span><span class="p">))</span><span class="w">
+ </span><span class="n">et</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_time</span><span class="o">:</span><span class="w">
+ </span><span class="n">st_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_milliseconds</span><span class="p">(</span><span class="n">st</span><span class="o">:</span><span class="p">)</span><span class="w">
+ </span><span class="n">et_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_milliseconds</span><span class="p">(</span><span class="n">et</span><span class="o">:</span><span class="p">)</span><span class="w">
+ </span><span class="n">print</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">Start time = "</span><span class="w"> </span><span class="n">st_ms</span><span class="o">:</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">End time = "</span><span class="w"> </span><span class="n">et_ms</span><span class="o">:</span><span class="w">
+    </span><span class="s">"</span><span class="se">\n</span><span class="s">Total time = "</span><span class="w"> </span><span class="n">-</span><span class="p">(</span><span class="n">et_ms</span><span class="o">:</span><span class="w"> </span><span class="n">st_ms</span><span class="o">:</span><span class="p">))</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<p>Sample run times are in milliseconds.</p>
+
+<table><thead>
+<tr>
+<th>Time</th>
+<th>Run 1</th>
+<th>Run 2</th>
+<th>Run 3</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Start</td>
+<td>26</td>
+<td>22452</td>
+<td>44202</td>
+</tr>
+<tr>
+<td>End</td>
+<td>22452</td>
+<td>44201</td>
+<td>66206</td>
+</tr>
+<tr>
+<td>Total</td>
+<td>22426</td>
+<td>21749</td>
+<td>22004</td>
+</tr>
+</tbody></table>
+<h3 id='first-1000-fibonacci-numbers'>First 1000 Fibonacci Numbers</h3>
+<blockquote>
+<p>First 1000 Fibonacci Numbers</p>
+</blockquote>
+<pre class="highlight copper tab-copper"><code><span class="cm"># First 1000 Fibonacci Numbers Test #</span><span class="w">
+</span><span class="n">benchmark</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+ </span><span class="n">st</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_time</span><span class="o">:</span><span class="w">
+ </span><span class="n">fib_gen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nb">ret</span><span class="p">([</span><span class="n">a</span><span class="o">=</span><span class="mf">1.</span><span class="w"> </span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="o">=</span><span class="mi">0</span><span class="p">]{</span><span class="w">
+   </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">+</span><span class="p">(</span><span class="kr">this</span><span class="o">.</span><span class="n">a</span><span class="o">:</span><span class="w"> </span><span class="kr">this</span><span class="o">.</span><span class="n">b</span><span class="o">:</span><span class="p">)</span><span class="w">
+   </span><span class="kr">this</span><span class="o">.</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kr">this</span><span class="o">.</span><span class="n">a</span><span class="w">
+   </span><span class="kr">this</span><span class="o">.</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">c</span><span class="w">
+   </span><span class="nb">ret</span><span class="p">(</span><span class="kr">this</span><span class="o">.</span><span class="n">b</span><span class="o">:</span><span class="p">)</span><span class="w">
+ </span><span class="p">})}</span><span class="w">
+
+ </span><span class="n">f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fib_gen</span><span class="o">:</span><span class="w">
+ </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">
+ </span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">equal</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
+  </span><span class="n">++</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="p">)</span><span class="w">
+  </span><span class="n">print</span><span class="p">(</span><span class="s">"fib "</span><span class="w"> </span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="s">" = "</span><span class="w"> </span><span class="n">f</span><span class="o">:</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span><span class="w">
+ </span><span class="p">}</span><span class="w">
+ </span><span class="n">et</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_time</span><span class="o">:</span><span class="w">
+ </span><span class="n">print</span><span class="p">(</span><span class="s">"i == "</span><span class="w"> </span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span><span class="w">
+ </span><span class="n">st_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_milliseconds</span><span class="p">(</span><span class="n">st</span><span class="o">:</span><span class="p">)</span><span class="w">
+ </span><span class="n">et_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_milliseconds</span><span class="p">(</span><span class="n">et</span><span class="o">:</span><span class="p">)</span><span class="w">
+ </span><span class="n">print</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">Start time = "</span><span class="w"> </span><span class="n">st_ms</span><span class="o">:</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">End time = "</span><span class="w"> </span><span class="n">et_ms</span><span class="o">:</span><span class="w">
+    </span><span class="s">"</span><span class="se">\n</span><span class="s">Total time = "</span><span class="w"> </span><span class="n">-</span><span class="p">(</span><span class="n">et_ms</span><span class="o">:</span><span class="w"> </span><span class="n">st_ms</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<p>Sample run times are in milliseconds.</p>
+
+<table><thead>
+<tr>
+<th>Time</th>
+<th>Run 1</th>
+<th>Run 2</th>
+<th>Run 3</th>
+<th>Run 4</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Start</td>
+<td>176</td>
+<td>366</td>
+<td>492</td>
+<td>602</td>
+</tr>
+<tr>
+<td>End</td>
+<td>267</td>
+<td>491</td>
+<td>602</td>
+<td>726</td>
+</tr>
+<tr>
+<td>Total</td>
+<td>91</td>
+<td>125</td>
+<td>110</td>
+<td>124</td>
+</tr>
+</tbody></table>
+<h2 id='can-i-do-builder-notation'>Can I do builder notation?</h2>
+<p>No. Even though returning a pointer from a function is still safe in Copper, the grammar of Copper dictates that function calls end a statement. This allows for lazy programming because statement-ending tokens are not required.</p>
+<h2 id='can-i-use-it-with-c'>Can I use it with C?</h2>
+<p>Sorry, nothing is wrapped in extern &quot;C&quot;, but since there are only a small handful of files, it shouldn&#39;t be hard for you to do this yourself.</p>
+<h2 id='comparison-to-angelscript'>Comparison to AngelScript?</h2><h3 id='intepreter-comparison'>Intepreter Comparison</h3>
+<p>The following table summarizes the notable <em>differences</em>.</p>
+
+<table><thead>
+<tr>
+<th>AngelScript</th>
+<th>Copper</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Module setup required</td>
+<td>No modules</td>
+</tr>
+<tr>
+<td>Reads from files</td>
+<td>Reads from input class</td>
+</tr>
+<tr>
+<td>Compiles to binary</td>
+<td>Uses simple opcodes</td>
+</tr>
+<tr>
+<td>Expects to be on application top level</td>
+<td>Can be created anywhere in an application</td>
+</tr>
+</tbody></table>
+<h3 id='language-comparison'>Language Comparison</h3>
+<p>The following table summarizes the notable <em>differences</em>.</p>
+
+<table><thead>
+<tr>
+<th>AngelScript</th>
+<th>Copper</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Variables store multiple types</td>
+<td>Variables store 1 type</td>
+</tr>
+<tr>
+<td>Variables directly return their values based on context</td>
+<td>A variable&#39;s object-function must be called to get its value</td>
+</tr>
+<tr>
+<td>Pointers are part of the variable&#39;s type</td>
+<td>Pointers are created using pointer-assignment operator</td>
+</tr>
+<tr>
+<td>Permits null but throws exceptions</td>
+<td>No null</td>
+</tr>
+</tbody></table>
+<h2 id='comparison-to-chaiscript'>Comparison to ChaiScript?</h2><h3 id='intepreter-comparison-2'>Intepreter Comparison</h3>
+<p>The following table summarizes the notable <em>differences</em>.</p>
+
+<table><thead>
+<tr>
+<th>ChaiScript</th>
+<th>Copper</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Requires C++11</td>
+<td>C++ version agnostic (98+)</td>
+</tr>
+<tr>
+<td>C++11 hooks can be created with lambda</td>
+<td>Hooks are created via inheritance</td>
+</tr>
+</tbody></table>
+<h3 id='language-comparison-2'>Language Comparison</h3>
+<p>The following table summarizes the notable <em>differences</em>.</p>
+
+<table><thead>
+<tr>
+<th>ChaiScript</th>
+<th>Copper</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>Mathematical operations are built-in</td>
+<td>Math operations come in extensions</td>
+</tr>
+<tr>
+<td>Dynamic objects must be created with special constructor</td>
+<td>Dynamic objects are default</td>
+</tr>
+<tr>
+<td>Null pointers allowed</td>
+<td>No null</td>
+</tr>
+</tbody></table>
+<h2 id='comparison-to-lua'>Comparison to Lua?</h2>
+<table><thead>
+<tr>
+<th>Lua</th>
+<th>Copper</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>C, requiring wrappers for C++</td>
+<td>C++</td>
+</tr>
+<tr>
+<td>Direct stack-control</td>
+<td>Private, self-managed stacks; FFI provided</td>
+</tr>
+<tr>
+<td>Tables-based variables</td>
+<td>Object-oriented</td>
+</tr>
+<tr>
+<td>Whitespace-sensitive</td>
+<td>White-space is irrelevant</td>
+</tr>
+<tr>
+<td>Nil allowed locally but nil deletes globals</td>
+<td>No null/nil</td>
+</tr>
+</tbody></table>
+<h2 id='is-copper-thread-safe'>Is Copper Thread-Safe?</h2>
+<p>The Copper interpreter is designed to run on one thread. However, within the interpreter itself, it may be feasible to add multi-threading capabilities in the future.</p>
+
+      </div>
+      <div class="dark-box">
+          <div class="lang-selector">
+                <a href="#" data-language-name="copper">copper</a>
+                <a href="#" data-language-name="cpp">cpp</a>
+          </div>
+      </div>
+    </div>
+  </body>
 </html>

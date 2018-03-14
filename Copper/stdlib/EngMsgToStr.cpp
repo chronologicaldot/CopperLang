@@ -218,7 +218,7 @@ getStringFromEngineMessage(
 	/* Missing parameter for a function call.
 	This results in a default value (of empty function) for the parameter. */
 	case EngineMessage::MissingFunctionCallParam:
-		return "Missing parameter for function call. Defaulting to empty function.";
+		return "Missing argument for function call. Defaulting to empty function.";
 
 	// ERROR
 	// Attempting to treat a built-in function like a variable.
@@ -315,13 +315,13 @@ getStringFromEngineMessage(
 	// Encountered a non-string token when searching for one in "own" or "is_ptr" structure.
 	case EngineMessage::NonNameFoundInPtrHandlerParamBody:
 		errLevel = EngineErrorLevel::error;
-		return "Invalid token found in pointer-handling function parameter list.";
+		return "Invalid token found in pointer-handling function argument list.";
 
 	// ERROR
 	// A token other than the parameter body ending was found before "own" or "is_ptr" ended (after parameter collection).
 	case EngineMessage::InvalidTokenForEndingPtrHandlerParamBody:
 		errLevel = EngineErrorLevel::error;
-		return "Invalid token found before end of pointer-handling function parameter.";
+		return "Invalid token found before end of pointer-handling function argument.";
 
 	// User-induced error
 	case EngineMessage::AssertionFailed:
@@ -332,25 +332,25 @@ getStringFromEngineMessage(
 	// An incorrect number of args (!=2) was passed to a system function.
 	case EngineMessage::SystemFunctionWrongArgCount:
 		errLevel = EngineErrorLevel::error;
-		return "Wrong number of parameters passed to a system function.";
+		return "Wrong number of arguments passed to a system function.";
 
 	// ERROR
 	// An incorrect arg was passed to a system function.
 	case EngineMessage::SystemFunctionBadArg:
 		errLevel = EngineErrorLevel::error;
-		return "Bad parameter passed to a system function.";
+		return "Bad argument passed to a system function.";
 
 	// ERROR
 	// member() was given the wrong number of parameters.
 	case EngineMessage::MemberWrongArgCount:
 		errLevel = EngineErrorLevel::error;
-		return "Wrong number of parameters passed to member(). Should be 2.";
+		return "Wrong number of arguments passed to member(). Should be 2.";
 
 	// ERROR
 	// First parameter passed to member() was not a function.
 	case EngineMessage::MemberArg1NotFunction:
 		errLevel = EngineErrorLevel::error;
-		return "1st parameter of member() was not a function.";
+		return "First argument of member() was not a function.";
 
 	// ERROR
 	// Destroyed function passed to member() function. Parameter was probably a pointer.
@@ -362,25 +362,25 @@ getStringFromEngineMessage(
 	// Second parameter passed to member() was not a string.
 	case EngineMessage::MemberArg2NotString:
 		errLevel = EngineErrorLevel::error;
-		return "2nd parameter passed to member() was not a string.";
+		return "Second argument passed to member() was not a string.";
 
 	// ERROR
 	// Invalid name passed to member() function.
 	case EngineMessage::MemberFunctionInvalidNameArg:
 		errLevel = EngineErrorLevel::error;
-		return "Invalid name passed as 2nd parameter to member().";
+		return "Invalid name passed as second argument to member().";
 
 	// ERROR
 	// member_count() was given the wrong number of parameters.
 	case EngineMessage::MemberCountWrongArgCount:
 		errLevel = EngineErrorLevel::error;
-		return "No parameters passed to member_count(). Default return is zero.";
+		return "No arguments passed to member_count(). Default return is zero.";
 
 	// ERROR
 	// First parameter passed to member_count() was not a function.
 	case EngineMessage::MemberCountArg1NotFunction:
 		errLevel = EngineErrorLevel::error;
-		return "1st parameter of member_count() was not a function.";
+		return "First argument of member_count() was not a function.";
 
 	// ERROR
 	// Destroyed function passed to member_count() function. Parameter was probably a pointer.
@@ -392,13 +392,13 @@ getStringFromEngineMessage(
 	// is_member() was given the wrong number of parameters.
 	case EngineMessage::IsMemberWrongArgCount:
 		errLevel = EngineErrorLevel::error;
-		return "Wrong number of parameters passed to is_member(). Should be 2.";
+		return "Wrong number of arguments passed to is_member(). Should be 2.";
 
 	// ERROR
 	// First parameter passed to is_member() was not a function.
 	case EngineMessage::IsMemberArg1NotFunction:
 		errLevel = EngineErrorLevel::error;
-		return "1st parameter of is_member() was not a function.";
+		return "First argument of is_member() was not a function.";
 
 	// ERROR
 	// Destroyed function passed to is_member() function. Parameter was probably a pointer.
@@ -410,25 +410,25 @@ getStringFromEngineMessage(
 	// Second parameter passed to is_member() was not a string.
 	case EngineMessage::IsMemberArg2NotString:
 		errLevel = EngineErrorLevel::error;
-		return "2nd parameter of is_member() was not a string.";
+		return "Second argument of is_member() was not a string.";
 
 	// ERROR
 	// set_member() was given the wrong number of parameters.
 	case EngineMessage::SetMemberWrongArgCount:
 		errLevel = EngineErrorLevel::error;
-		return "Wrong number of parameters passed to set_member(). Should be 3.";
+		return "Wrong number of arguments passed to set_member(). Should be 3.";
 
 	// ERROR
 	// First parameter passed to set_member() was not a function.
 	case EngineMessage::SetMemberArg1NotFunction:
 		errLevel = EngineErrorLevel::error;
-		return "1st parameter of set_member() was not a function.";
+		return "First argument of set_member() was not a function.";
 
 	// ERROR
 	// Second parameter passed to set_member() was not a string.
 	case EngineMessage::SetMemberArg2NotString:
 		errLevel = EngineErrorLevel::error;
-		return "2nd parameter of set_member() was not a string.";
+		return "Second argument of set_member() was not a string.";
 
 	// ERROR
 	// Destroyed function passed to set_member() function. Parameter was probably a pointer.
@@ -454,7 +454,7 @@ getStringFromEngineMessage(
 	// WARNING
 	// A parameter passed to the union() function was not a function.
 	case EngineMessage::NonFunctionAsUnionArg:
-		return "Param passed to union() was not a function.";
+		return "Argument passed to union() was not a function.";
 
 	// ERROR
 	// The wrong number of arguments was passed to a foreign function.
