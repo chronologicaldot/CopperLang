@@ -4723,10 +4723,7 @@ Engine::operate(
 			} else {
 				//print(LogLevel::warning, "Condition for goto operation is not boolean. Default is false.");
 				print(LogLevel::warning, EngineMessage::ConditionlessIf);
-				// Perform as though condition were "false"
-				// Here we cheat and cast to volatile because we don't have a const iterator for the list
-				//opIter.set( ((const Opcode*)opcode)->getOpStrandIter() );
-				opIter.set( opcode->getOpStrandIter() );
+				return ExecutionResult::Error;
 			}
 		} else {
 			//print(LogLevel::error, "Missing condition for goto operation.");
