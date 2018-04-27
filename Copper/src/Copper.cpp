@@ -2571,6 +2571,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
 
 	builtinFunctions.insert(String("copy_of"), SystemFunction::_copy);
+	builtinFunctions.insert(String("xwsv"), SystemFunction::_execute_with_alt_super);
 
 	builtinFunctions.insert(String("list"), SystemFunction::_make_list);
 	builtinFunctions.insert(String("length"), SystemFunction::_list_size);
@@ -4898,7 +4899,7 @@ Engine::setupFunctionExecution(
 	if ( ! task.getAddress().has() )
 		throw VarAddressException( VarAddressException::is_empty );
 
-	result = setupBuiltinFunctionExecution(task);
+	result = setupBuiltinFunctionExecution(task, opStrandStackIter);
 	if ( result != FuncExecReturn::NoMatch ) {
 		return result;
 	}
@@ -4913,7 +4914,8 @@ Engine::setupFunctionExecution(
 
 FuncExecReturn::Value
 Engine::setupBuiltinFunctionExecution(
-	FuncFoundTask& task
+	FuncFoundTask& task,
+	OpStrandStackIter&	opStrandStackIter
 ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupBuiltinFunctionExecution");
@@ -5038,6 +5040,9 @@ Engine::setupBuiltinFunctionExecution(
 
 	case SystemFunction::_copy:
 		return process_sys_copy(task);
+
+	case SystemFunction::_execute_with_alt_super:
+		return process_sys_execute_with_alt_super(task, opStrandStackIter);
 
 	case SystemFunction::_make_list:
 		return process_sys_make_list(task);
@@ -5322,8 +5327,8 @@ Engine::setupUserFunctionExecution(
 			stackFrame->getScope().addVariable( *funcParamsIter );
 		} while ( funcParamsIter.next() );
 	}
-	// TODO: Leftover task parameters may eventually be stored in a splat variable or included as part
-	// of an all-inclusive "arguments" array.
+	// TODO: Leftover task arguments may eventually be stored in a splat variable or included as part
+	// of an all-inclusive "arguments" list.
 
 	stack.push(stackFrame);
 	stackFrame->deref();
@@ -6079,6 +6084,114 @@ Engine::process_sys_copy(
 		lastObject.setWithoutRef( (*argsIter)->copy() );
 	}
 	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_execute_with_alt_super(
+	FuncFoundTask& task,
+	OpStrandStackIter&	opStrandStackIter
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_execute_with_alt_super");
+#endif
+	if ( task.args.size() < 2 ) {
+		print(LogLevel::error, EngineMessage::ExecuteWithAltSuperWrongArgCount);
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	ArgsIter argsIter = task.args.start();
+	Object* superObject = *argsIter;
+	argsIter.next();
+	Object* callObject = *argsIter;
+	argsIter.next();
+
+	if ( ! isObjectFunction(*superObject) ) {
+		print(LogLevel::error, EngineMessage::ExecuteWithAltSuperWrongArg1);
+		return FuncExecReturn::ErrorOnRun;
+	}
+	if ( ! isObjectFunction(*callObject) ) {
+		print(LogLevel::error, EngineMessage::ExecuteWithAltSuperWrongArg2);
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	//Function* superFunc;
+	Function* func;
+	/*if ( ! ((FunctionContainer*)superObject)->getFunction(superFunc) ) {
+		print(LogLevel::debug, "[DEBUG: Empty function container passed to execute-with-alt-super.");
+		return FuncExecReturn::ErrorOnRun;
+	}*/
+	if ( ! ((FunctionContainer*)callObject)->getFunction(func) ) {
+		print(LogLevel::debug, "[DEBUG: Empty function container passed to execute-with-alt-super.");
+		//print(LogLevel::error, "ERROR: Empty function passed to execute-with-alternate-super.");
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	// Modified code from setupUserFunctionExecution(). See there for more comments.
+	// Since we aren't using variables, the setting of the "this" and "super" pointers is different.
+
+	// Short-circuit for constant-return functions
+	if ( func->constantReturn ) {
+		lastObject.set( func->result.raw() ); // Copy is created when saved to variable
+		return FuncExecReturn::Ran;
+	}
+
+	Body* body;
+	if ( ! func->body.obtain(body) ) {
+		print(LogLevel::error, "SYSTEM ERROR: Function body is missing.");
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	if ( body->isEmpty() ) {
+		return FuncExecReturn::Ran;
+	}
+
+	if ( ! body->compile(this) ) {
+		print(LogLevel::error, EngineMessage::UserFunctionBodyError);
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	VarAddress* callAddress = new VarAddress();
+	callAddress->push_back("xwsv");
+	StackFrame* stackFrame = new StackFrame(callAddress);
+	callAddress->deref();
+
+	// Add "super" pointer
+	stackFrame->getScope().setVariableFrom(CONSTANT_FUNCTION_SUPER, superObject, true);
+
+	// Add "this" pointer
+	stackFrame->getScope().setVariableFrom(CONSTANT_FUNCTION_SELF, callObject, true);
+
+	// Assign arguments to each function parameter name.
+	// The first two arguments were used, so we use the remainder.
+	List<String>::Iter funcParamsIter = func->params.start();
+	bool done = false;
+	if ( funcParamsIter.has() ) {
+		if ( argsIter.has() )
+		do {
+			// Match parameters with parameter list items
+			stackFrame->getScope().setVariableFrom( *funcParamsIter, *argsIter, true );
+			if ( ! funcParamsIter.next() ) {
+				done = true;
+				break;
+			}
+		} while ( argsIter.next() );
+		if ( !done )
+		do {
+			print( LogLevel::warning, EngineMessage::MissingFunctionCallParam );
+			// Default remaining parameters to empty function.
+			stackFrame->getScope().addVariable( *funcParamsIter );
+		} while ( funcParamsIter.next() );
+	}
+	// TODO: Leftover task arguments may eventually be stored in a splat variable or included as part
+	// of an all-inclusive "arguments" list.
+
+	stack.push(stackFrame);
+	stackFrame->deref();
+
+	addOpStrandToStack(body->getOpcodeStrand());
+	opStrandStackIter.next();
+
+	return FuncExecReturn::Reset;
 }
 
 FuncExecReturn::Value

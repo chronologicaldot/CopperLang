@@ -457,6 +457,24 @@ getStringFromEngineMessage(
 		return "Argument passed to union() was not a function.";
 
 	// ERROR
+	// Wrong number of arguments passed to Execute With Alternate Super function.
+	case EngineMessage::ExecuteWithAltSuperWrongArgCount:
+		errLevel = EngineErrorLevel::error;
+		return "Wrong number of arguments passed to execute-with-super-variable function (xwsv).";
+
+	// ERROR
+	// Wrong argument given to Execute With Alternate Super function for super variable.
+	case EngineMessage::ExecuteWithAltSuperWrongArg1:
+		errLevel = EngineErrorLevel::error;
+		return "Wrong first argument passed to execute-with-super-variable function (xwsv).";
+
+	// ERROR
+	// Wrong argument given to Execute With Alternate Super function for call variable.
+	case EngineMessage::ExecuteWithAltSuperWrongArg2:
+		errLevel = EngineErrorLevel::error;
+		return "Wrong second argument passed to execute-with-super-variable function (xwsv).";
+
+	// ERROR
 	// The wrong number of arguments was passed to a foreign function.
 	// Aliases to "Argument count does not match foreign function header."
 	case EngineMessage::ForeignFunctionWrongArgCount:

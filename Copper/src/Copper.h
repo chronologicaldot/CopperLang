@@ -91,12 +91,12 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.42
+#define COPPER_INTERPRETER_VERSION 0.421
 #define COPPER_INTERPRETER_BRANCH 5
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 2.2
+#define COPPER_LANG_VERSION 2.3
 
 // ******* Language modifications *******
 
@@ -540,6 +540,18 @@ struct EngineMessage {
 	NonFunctionAsUnionArg,
 
 	// ERROR
+	// Wrong number of arguments passed to Execute With Alternate Super function.
+	ExecuteWithAltSuperWrongArgCount,
+
+	// ERROR
+	// Wrong argument given to Execute With Alternate Super function for super variable.
+	ExecuteWithAltSuperWrongArg1,
+
+	// ERROR
+	// Wrong argument given to Execute With Alternate Super function for call variable.
+	ExecuteWithAltSuperWrongArg2,
+
+	// ERROR
 	// The wrong number of arguments was passed to a foreign function.
 	ForeignFunctionWrongArgCount,
 
@@ -814,6 +826,7 @@ struct SystemFunction {
 	_are_decimal,
 	_assert,
 	_copy,
+	_execute_with_alt_super, // "xwsv"
 
 	_make_list,		// "list"
 	_list_size,		// "length"
@@ -1293,7 +1306,7 @@ public:
 
 	const String&
 	first() const {
-#ifdef COPPER_STRIC_CHECKS
+#ifdef COPPER_STRICT_CHECKS
 		if ( !head )
 			throw VarAddressException( VarAddressException::is_empty );
 #endif
@@ -3357,7 +3370,8 @@ protected:
 
 	FuncExecReturn::Value
 	setupBuiltinFunctionExecution(
-		FuncFoundTask& task
+		FuncFoundTask& task,
+		OpStrandStackIter&	opStrandStackIter
 	);
 
 	FuncExecReturn::Value
@@ -3421,6 +3435,7 @@ protected:
 	FuncExecReturn::Value	process_sys_are_decimal(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_copy(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_execute_with_alt_super( FuncFoundTask& task, OpStrandStackIter&	opStrandStackIter );
 
 	// List functions
 	FuncExecReturn::Value	process_sys_make_list(		FuncFoundTask& task );

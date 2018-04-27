@@ -1,5 +1,17 @@
 ====================
-2018/4/7
+2018/4/26
+v 5-0.421
+
+- Added support for execute-with-alternative-super-variable ("xwsv").
+- Bumped up COPPER_LANG_VERSION to 2.3 to reflect addition of execute-with-alternative-super function.
+- Fixed typo in #ifdef in VarAddress::first().
+
+EngineMsgToStr
+- Updated with error messages for execute-width-alternative-super errors.
+
+
+====================
+2018/4/7 - 2018/4/26
 v 5-0.42
 
 - Changed Opcode::ConditionalGoto case in Engine::operate() to return an error instead of treating it as false.
