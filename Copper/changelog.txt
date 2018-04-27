@@ -4,6 +4,7 @@ v 5-0.42
 
 - Changed Opcode::ConditionalGoto case in Engine::operate() to return an error instead of treating it as false.
 - Bumped up COPPER_LANG_VERSION to 2.2 to reflect change in if-statements.
+- Fixed bug in Body::compile_internal that caused parsing to stop (stream completed before parsing) even for valid input without a statement ending.
 
 
 ====================

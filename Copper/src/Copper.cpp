@@ -338,14 +338,18 @@ Body::compile_internal(Engine* engine) {
 	context.setTokenSource(tokens);
 	if ( isNull(engine) )
 		return false; //throw 0;
-	if ( isEmpty() )
+	if ( isEmpty() ) {
 		return false;
+	}
+	tokens.push_back(Token(TT_end_segment)); // Avoid parser complaining about end of stream
 	switch( engine->parse(context, true) ) {
 	case ParseResult::More: // Wat?
 		// Should throw
+		tokens.pop();
 		return false;
 	case ParseResult::Error:
 		state = HasErrors;
+		tokens.pop();
 		return false;
 	case ParseResult::Done:
 		tokens.clear();
