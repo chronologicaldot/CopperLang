@@ -9,6 +9,9 @@ v 5-0.421
 EngineMsgToStr
 - Updated with error messages for execute-width-alternative-super errors.
 
+docs
+- Updated
+
 
 ====================
 2018/4/7 - 2018/4/26

@@ -419,10 +419,12 @@ Order of the unassigned parameters matters, but placement does not. Unassigned p
 </span><span class="p">}</span><span class="w">
 </span><span class="n">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">c</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="cm"># prints 5 #</span><span class="w">
 </span></code></pre>
-<p>When a function is called, a function is given a member variable named <code>this</code> or that member is updated. The <code>this</code> member is a pointer to the wrapping object-function itself to allow you to access its members. If the function is stored in a variable that is a member of another object-function, it is given a member named <code>super</code> that points to that parent object-function.</p>
+<p>When a function is called, a function is given a member variable named <code>this</code> or that member is updated. The <code>this</code> member is a pointer to the wrapping object-function itself to allow you to access its members. If the function is stored in a variable that is a member of another object-function, it is given a member named <code>super</code> that points to that preceding object-function in the address chain.</p>
 
 <aside class="notice">
-<code>this</code> is always updated every function call, but <code>super</code> is only overwritten when the variable (whose function is the one being called) is the member of another variable.
+<code>this</code> is always updated every function call, but <code>super</code> is only overwritten when the variable (whose function is the one being called) is accessed via another variable (via member access).
+<br>
+<code>super</code> changes based on context. If a function is called via a pointer, then it is the preceding object-function in the pointer address chain that becomes <code>super</code>. If you wish to use a specific object-function for <code>super</code>, use <code>xwsv</code>.
 </aside>
 
 <p>Function return is done by calling the built-in return function, &quot;ret&quot;. Only one argument will be returned. All others are ignored. Arguments are returned by reference. Data is stored in a new function when returned.</p>
@@ -642,7 +644,11 @@ In the virtual machine, the types are compared based on their returns from Cu::O
 <p>Returns <code>true</code> if all of the given arguments are of type number with decimal.</p>
 <h3 id='assert-condition'>assert( <em>condition</em> )</h3>
 <p>Throws an error if <em>condition</em> does not resolve to <code>true</code>.</p>
-<h3 id='copy_of-arg'>copy_of( <em>arg</em> )</h3><h3 id='not-boolean_arg'>not( <em>boolean_arg</em> )</h3>
+<h3 id='copy_of-arg'>copy_of( <em>arg</em> )</h3>
+<p>Returns an independent copy of the given argument.</p>
+<h3 id='xwsv-super_variable-call_variable-call_args'>xwsv( <em>super_variable</em>, <em>call_variable</em>, <em>call_args</em> ... )</h3>
+<p>Calls <em>call_variable</em> with the extra arguments and sets the &quot;super&quot; variable to <em>super_variable</em>.</p>
+<h3 id='not-boolean_arg'>not( <em>boolean_arg</em> )</h3>
 <p>Returns the opposite boolean value of <em>boolean_arg</em>.</p>
 <h3 id='all-boolean_arg'>all( <em>boolean_arg</em> ... )</h3>
 <p>Returns <code>true</code> if all of the given arguments are boolean <code>true</code>.</p>
