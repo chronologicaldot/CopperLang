@@ -25,8 +25,8 @@ bool equals(const char* str1, const char* str2) {
 	while( *i1 != '\0' ) {
 		if ( *i2 == '\0' || *i1 != *i2 )
 			return false;
-		i1++;
-		i2++;
+		++i1;
+		++i2;
 	}
 	return *i2 == '\0';
 }

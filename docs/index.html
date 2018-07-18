@@ -803,7 +803,7 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
 </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w">
 </span><span class="n">p</span><span class="o">:</span><span class="w"> </span><span class="cm"># Prints "hey" #</span><span class="w">
 
-</span><span class="cm"># Sub-lists have be made from valid indexes</span><span class="err">
+</span><span class="cm"># Sub-lists have to be made from valid indexes</span><span class="err">
 </span><span class="cm">that map to the range 0 to list size. #</span><span class="w">
 </span><span class="n">q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">sublist</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">length</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="p">))</span><span class="w">
 
@@ -887,7 +887,7 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
 
 <p>An instance of an engine isn&#39;t useful on its own. You will need to add <a href="#foreign-functions">foreign functions</a> to it. Some have been provided. See the <a href="#provided-extensions">provided extensions section</a> for more information.</p>
 <h2 id='compiling-the-virtual-machine'>Compiling the Virtual Machine</h2>
-<p>If you wish to test the virtual machine, a premake5 project file has been provided. Premake can generate both GCC make files and Visual Studio project files. For example,</p>
+<p>If you wish to test the virtual machine, a premake5 project file has been provided. Premake can generate both GCC make files and Visual Studio project files.</p>
 
 <p>Premake can be downloaded from <a href="http://premake.github.io/download.html">here</a>.</p>
 
@@ -925,7 +925,7 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 <span class="c1">// Ways of adding it to an instance of Engine.
 </span><span class="n">Engine</span> <span class="n">engine</span><span class="p">;</span>
 <span class="c1">// Option 1:
-</span><span class="n">addForeignFuncInstance</span><span class="err">\</span><span class="o">&lt;</span><span class="n">MyFF</span><span class="err">\</span><span class="o">&gt;</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="s">"myff"</span><span class="p">));</span>
+</span><span class="n">addForeignFuncInstance</span><span class="o">&lt;</span><span class="n">MyFF</span><span class="o">&gt;</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="s">"myff"</span><span class="p">));</span>
 <span class="c1">// Option 2:
 </span><span class="n">addNewForeignFunc</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="s">"myff"</span><span class="p">),</span> <span class="k">new</span> <span class="n">MyFF</span><span class="p">());</span>
 <span class="c1">// Option 3:
@@ -1912,23 +1912,25 @@ Foreign functions can be variadic and still require that a certain number of arg
 </thead><tbody>
 <tr>
 <td>Start</td>
-<td>26</td>
+<td>5</td>
 <td>22452</td>
 <td>44202</td>
 </tr>
 <tr>
 <td>End</td>
-<td>22452</td>
+<td>22456</td>
 <td>44201</td>
 <td>66206</td>
 </tr>
 <tr>
 <td>Total</td>
-<td>22426</td>
+<td>22451</td>
 <td>21749</td>
 <td>22004</td>
 </tr>
 </tbody></table>
+
+<p>Roughly 22 seconds per run.</p>
 <h3 id='first-1000-fibonacci-numbers'>First 1000 Fibonacci Numbers</h3>
 <blockquote>
 <p>First 1000 Fibonacci Numbers</p>
