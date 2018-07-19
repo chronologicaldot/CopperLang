@@ -1015,13 +1015,13 @@ void Scope::copyAsgnFromHashTable( RobinHoodHash<RefVariableStorage>& pTable ) {
 	robinHoodTable = new RobinHoodHash<RefVariableStorage>(pTable);
 }
 
-Scope::Scope()
+Scope::Scope( UInteger  pTableSize )
 	: robinHoodTable(REAL_NULL)
 {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope constructor 1 (bool) [%p]\n", (void*)this);
 #endif
-	robinHoodTable = new RobinHoodHash<RefVariableStorage>(100);
+	robinHoodTable = new RobinHoodHash<RefVariableStorage>(pTableSize);
 }
 
 Scope::~Scope() {
@@ -1189,7 +1189,7 @@ UInteger Scope::occupancy() {
 
 StackFrame::StackFrame( VarAddress* pAddress )
 	: parent(REAL_NULL)
-	, scope(new Scope())
+	, scope(new Scope(CU_STACK_FRAME_SCOPE_SIZE))
 	, address(pAddress)
 {
 	if ( address )
@@ -6574,7 +6574,7 @@ CallbackWrapper::~CallbackWrapper() {
 bool
 CallbackWrapper::run() {
 	if ( callback ) {
-		return engine.runFunctionObject(callback) == EngineResult::Ok;
+		return engine.runFunctionObject(callback) != EngineResult::Error;
 	}
 	return true;
 }

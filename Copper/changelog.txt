@@ -1,16 +1,25 @@
 ====================
-2018/4/26
-v 5-0.421
+2018/4/26, 2018/7/18,19
+v 5-0.43
 
 - Added support for execute-with-alternative-super-variable ("xwsv").
 - Bumped up COPPER_LANG_VERSION to 2.3 to reflect addition of execute-with-alternative-super function.
 - Fixed typo in #ifdef in VarAddress::first().
+- Changed CallbackWrapper run() to check against EngineResult::Error rather than EngineResult::Ok.
+- Changed Scope to have settable initial size and set default to smaller. Stack frames use larger size. Sizes are #defines:
+-- CU_FUNCTION_SCOPE_SIZE = 15
+-- CU_STACK_FRAME_SCOPE_SIZE = 100
+--- NOTE: The speed updates are incredible!
 
 EngineMsgToStr
 - Updated with error messages for execute-width-alternative-super errors.
 
+Added StringInStream
+Added FileInStream
+
 docs
 - Updated
+- Small fixes
 
 
 ====================

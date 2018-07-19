@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.421
+#define COPPER_INTERPRETER_VERSION 0.43
 #define COPPER_INTERPRETER_BRANCH 5
 
 // ******* Language version *******
@@ -125,6 +125,12 @@
 // that many things need to be created for each function call. Consequently, the number
 // of active open function parameter bodies and execution bodies must be limited.
 #define PARSER_OPENBODY_MAX_COUNT 350
+
+//! Initial size of function scope
+#define CU_FUNCTION_SCOPE_SIZE 10
+
+//! Initial size of stack frame scope
+#define CU_STACK_FRAME_SCOPE_SIZE 100
 
 // ******* Error templates *******
 
@@ -2417,10 +2423,8 @@ protected:
 	void copyAsgnFromHashTable( RobinHoodHash<RefVariableStorage>& pTable );
 
 public:
-	// Should probably have variable table allocation size as a parameter
-	// Or I could have an optional boolean parameter that requests a large variable size
-	// The Global Namespace would be better served having a list or tree (since it may be "infinite")
-	Scope();
+	Scope( UInteger pTableSize = CU_FUNCTION_SCOPE_SIZE );
+	// Note: The Global Namespace would be better served having a list or tree (since it may be "infinite")
 
 	// What's the point of this dance?
 #ifdef COMPILE_COPPER_FOR_C_PLUS_PLUS_11
