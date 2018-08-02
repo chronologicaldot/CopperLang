@@ -153,6 +153,7 @@ namespace Cu {
 
 // ******* External Classes in Use ********
 
+using util::uint;
 using util::List;
 using util::CharList;
 using util::String;

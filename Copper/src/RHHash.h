@@ -5,10 +5,6 @@
 
 #include "Strings.h"
 
-#ifndef uint
-#define uint unsigned int
-#endif
-
 namespace util {
 
 template<class T>

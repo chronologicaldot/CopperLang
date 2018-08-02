@@ -1,5 +1,5 @@
 ====================
-2018/4/26, 2018/7/18,19
+2018/4/26, 2018/7/18,19, 2018/8/2
 v 5-0.43
 
 - Added support for execute-with-alternative-super-variable ("xwsv").
@@ -10,6 +10,7 @@ v 5-0.43
 -- CU_FUNCTION_SCOPE_SIZE = 15
 -- CU_STACK_FRAME_SCOPE_SIZE = 100
 --- NOTE: The speed updates are incredible!
+- Fixed duplicate definition of uint from RHHash.h competing with utilList.h
 
 EngineMsgToStr
 - Updated with error messages for execute-width-alternative-super errors.

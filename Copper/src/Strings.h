@@ -6,6 +6,8 @@
 
 namespace util {
 
+using util::uint;
+
 char tolower( char pChar );
 bool equals(const char* str1, const char* str2);
 bool isAlphaNumeric(const char& c);
