@@ -1,4 +1,12 @@
 ====================
+2018/8/6
+v 5-0.5
+
+- Changed Variable::setFuncReturn(Object*, bool) to force variables to change functions when assigned data.
+- Changed COPPER_LANG_VERSION to 3 to reflect changes in data storage in variables.
+
+
+====================
 2018/8/4 - 2018/8/5
 v 5-0.44
 

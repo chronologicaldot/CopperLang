@@ -91,12 +91,12 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.43
+#define COPPER_INTERPRETER_VERSION 0.5
 #define COPPER_INTERPRETER_BRANCH 5
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 2.3
+#define COPPER_LANG_VERSION 3
 
 // ******* Language modifications *******
 

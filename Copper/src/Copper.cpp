@@ -661,27 +661,15 @@ Variable::setFuncReturn( Object* pData, bool pPerformCopy ) {
 	if ( isNull(box) )
 		throw NullVariableException();
 #endif
+	box->disown(this);
+	box->deref();
 
-	Function* f = REAL_NULL;
-	if ( box->getFunction(f) ) {
-//std::printf("[DEBUG: Variable::setFuncReturn: using current function\n");
-		if ( pPerformCopy ) {
-			f->result.setWithoutRef(pData->copy());
-		} else {
-			f->result.set(pData);
-		}
-		f->constantReturn = true;
+	if ( pPerformCopy ) {
+		box = FunctionContainer::createInitialized(pData);
 	} else {
-//std::printf("[DEBUG: Variable::setFuncReturn: creating new container\n");
-		box->disown(this);
-		box->deref();
-		if ( pPerformCopy ) {
-			box = FunctionContainer::createInitialized(pData);
-		} else {
-			box = FunctionContainer::createInitializedNoCopy(pData);
-		}
-		box->own(this);
+		box = FunctionContainer::createInitializedNoCopy(pData);
 	}
+	box->own(this);
 }
 
 // Used for FuncFound_processRunVariable
