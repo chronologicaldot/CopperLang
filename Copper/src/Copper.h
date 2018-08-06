@@ -1024,8 +1024,9 @@ public:
 		obj = pObject;
 	}
 
-	RefPtr<T> operator= (const RefPtr<T> pOther) {
+	RefPtr<T>& operator= (const RefPtr<T> pOther) {
 		set(pOther.obj);
+		return *this;
 	}
 
 	bool obtain(T*& pStorage) {
@@ -1608,6 +1609,7 @@ public:
 	Function();
 	Function(const Function& pOther); // Do NOT use directly. Use set() for copying.
 	~Function();
+	Function& operator=(const Function& pOther);
 	Scope& getPersistentScope();
 	void set( Function& other );
 	void addParam( const String pName );
@@ -2394,13 +2396,19 @@ class RefVariableStorage {
 public:
 	RefVariableStorage();
 
-	RefVariableStorage(Variable& refedVariable);
+	RefVariableStorage(Variable* refedVariable);
+
+	RefVariableStorage(RefVariableStorage& pOther);
 
 	RefVariableStorage(const RefVariableStorage& pOther);
 
 	~RefVariableStorage();
 
-	Variable& getVariable();
+	RefVariableStorage&  operator= (RefVariableStorage&);
+
+	Variable&  getVariable();
+
+	RefVariableStorage  copy();
 };
 
 //-------------------
@@ -2416,7 +2424,6 @@ class NonExistentScopeTableException {};
 #define CHECK_SCOPE_HASH_NULL(x)
 #endif
 
-
 class Scope : public Ref {
 	RobinHoodHash<RefVariableStorage>* robinHoodTable;
 
@@ -2426,7 +2433,7 @@ protected:
 public:
 	Scope( UInteger pTableSize = CU_FUNCTION_SCOPE_SIZE );
 	// Note: The Global Namespace would be better served having a list or tree (since it may be "infinite")
-
+/*
 	// What's the point of this dance?
 #ifdef COMPILE_COPPER_FOR_C_PLUS_PLUS_11
 	Scope(const Scope& pOther) = delete;
@@ -2435,6 +2442,8 @@ private:
 	Scope(const Scope& pOther);
 public:
 #endif
+*/
+	Scope(Scope& pOther); // For implicit copy construction. DO NOT USE FOR TRUE COPY
 
 	~Scope();
 

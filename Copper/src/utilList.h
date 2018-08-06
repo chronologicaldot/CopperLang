@@ -406,6 +406,31 @@ public:
 		return n->getItem();
 	}
 
+	//! Optimized index search
+	const T& operator[] ( uint pIndex ) const
+	{
+		// should throw exceptions when no items
+		const Node* n = head;
+		uint i=0;
+		if ( pIndex >= count )
+			throw IndexOutOfBoundsException();
+		if ( pIndex > count / 2 ) // index is over halfway, so start from back instead
+		{
+			n = tail;
+			i = count - 1;
+			for ( ; i > pIndex && i > 0; i-- )
+			{
+				n = n->prev;
+			}
+		} else {
+			for ( ; i < pIndex && i < count; i++ )
+			{
+				n = n->next;
+			}
+		}
+		return n->getConstItem();
+	}
+
 	T& getFromBack( uint pReverseIndex )
 	{
 		// should throw exceptions when no items

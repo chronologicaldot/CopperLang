@@ -17,8 +17,8 @@ class StringInStream : public ByteStream {
 	UInteger  column;
 
 public:
-	StreamInStream( const char* );
-	StreamInStream( const util::String& );
+	StringInStream( const char* );
+	StringInStream( const util::String& );
 
 	virtual char getNextByte();
 	virtual bool atEOS();

@@ -396,6 +396,17 @@ Function::~Function() {
 	persistentScope->deref();
 }
 
+Function& Function::operator=(const Function& pOther) {
+#ifdef COPPER_VAR_LEVEL_MESSAGES
+	std::printf("[DEBUG: Function::operator= [%p]\n", (void*)this);
+#endif
+	constantReturn = pOther.constantReturn;
+	body = pOther.body;
+	params = pOther.params;
+	result = pOther.result;
+	*persistentScope = *(pOther.persistentScope);
+}
+
 Scope&
 Function::getPersistentScope() {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
@@ -410,7 +421,7 @@ Function::set( Function& other ) {
 	std::printf("[DEBUG: Function::set [%p]\n", (void*)this);
 #endif
 	constantReturn = other.constantReturn;
-	body.set( other.body.raw() );
+	body = other.body;
 	params = other.params; // If params is changed to a pointer, this has to be changed to a copy
 	*persistentScope = *(other.persistentScope);
 	Object* rs;
@@ -968,22 +979,35 @@ RefVariableStorage::RefVariableStorage()
 #endif
 }
 
-RefVariableStorage::RefVariableStorage(Variable& refedVariable)
+RefVariableStorage::RefVariableStorage(Variable* refedVariable)
 	: variable(REAL_NULL)
 {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: RefVariableStorage cstor 2 (Variable&) [%p]\n", (void*)this);
 #endif
 	// Copy required in order to keep scopes independent.
-	variable = refedVariable.getCopy();
+	variable = refedVariable->getCopy();
+}
+
+RefVariableStorage::RefVariableStorage(RefVariableStorage& pOther)
+	: variable(REAL_NULL)
+{
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: RefVariableStorage cstor 3 (RefVariableStorage&) [%p]\n", (void*)this);
+	std::printf("[DEBUG: arg = [%p]\n", (void*)&pOther);
+#endif
+	// Share to preserve variable data between copies
+	variable = pOther.variable;
+	variable->ref();
 }
 
 RefVariableStorage::RefVariableStorage(const RefVariableStorage& pOther)
 	: variable(REAL_NULL)
 {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
-	std::printf("[DEBUG: RefVariableStorage cstor 3 (const RefVariableStorage&) [%p]\n", (void*)this);
+	std::printf("[DEBUG: RefVariableStorage cstor 4 (const RefVariableStorage&) [%p]\n", (void*)this);
 #endif
+	// Used for true copying
 	// Copy required in order to keep scopes independent.
 	variable = pOther.variable->getCopy();
 }
@@ -993,6 +1017,16 @@ RefVariableStorage::~RefVariableStorage() {
 	std::printf("[DEBUG: RefVariableStorage::~RefVariableStorage [%p]\n", (void*)this);
 #endif
 	variable->deref();
+	//variable = 0;
+}
+
+RefVariableStorage&  RefVariableStorage::operator= (RefVariableStorage& pOther) {
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: RefVariableStorage operator= (RefVariableStorage&) [%p]\n", (void*)this);
+	std::printf("[DEBUG: arg = [%p]\n", (void*)&pOther);
+#endif
+	variable = pOther.variable;
+	variable->ref();
 }
 
 Variable&
@@ -1001,6 +1035,11 @@ RefVariableStorage::getVariable() {
 	std::printf("[DEBUG: RefVariableStorage::getVariable [%p]\n", (void*)this);
 #endif
 	return *variable;
+}
+
+RefVariableStorage
+RefVariableStorage::copy() {
+	return RefVariableStorage(variable);
 }
 
 //--------------------------------------
@@ -1012,16 +1051,37 @@ void Scope::copyAsgnFromHashTable( RobinHoodHash<RefVariableStorage>& pTable ) {
 	CHECK_SCOPE_HASH_NULL(robinHoodTable)
 
 	delete robinHoodTable;
-	robinHoodTable = new RobinHoodHash<RefVariableStorage>(pTable);
+	robinHoodTable = new RobinHoodHash<RefVariableStorage>(pTable.getSize());
+	RobinHoodHash<RefVariableStorage>::Bucket*  rawBuckets = pTable.getTablePointer();
+	uint i=0;
+	// Manually copy to ensure copy of variables, not merely sharing when storage is "copied"
+	for (; i < pTable.getSize(); ++i) {
+		if ( rawBuckets[i].data ) {
+			robinHoodTable->insert(
+				rawBuckets[i].data->name,
+				((RefVariableStorage&)(rawBuckets[i].data->item)).copy()
+			);
+		}
+	}
 }
 
 Scope::Scope( UInteger  pTableSize )
 	: robinHoodTable(REAL_NULL)
 {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
-	std::printf("[DEBUG: Scope constructor 1 (bool) [%p]\n", (void*)this);
+	std::printf("[DEBUG: Scope constructor 1 (Uinteger) [%p]\n", (void*)this);
 #endif
 	robinHoodTable = new RobinHoodHash<RefVariableStorage>(pTableSize);
+}
+
+Scope::Scope( Scope&  scope )
+	: robinHoodTable(REAL_NULL)
+{
+#ifdef COPPER_SCOPE_LEVEL_MESSAGES
+	std::printf("[DEBUG: Scope copy constructor (Scope&) [%p]\n", (void*)this);
+#endif
+	// Maintain connection
+	robinHoodTable = new RobinHoodHash<RefVariableStorage>(*(scope.robinHoodTable));
 }
 
 Scope::~Scope() {
@@ -1039,7 +1099,8 @@ Scope& Scope::operator = (Scope& pOther) {
 #endif
 	CHECK_SCOPE_HASH_NULL(pOther.robinHoodTable)
 
-	copyAsgnFromHashTable(*(pOther.robinHoodTable));
+	if ( &pOther != this )
+		copyAsgnFromHashTable(*(pOther.robinHoodTable));
 
 	return *this;
 }
@@ -1061,7 +1122,8 @@ Variable* Scope::addVariable(const String& pName) {
 #endif
 	CHECK_SCOPE_HASH_NULL(robinHoodTable)
 
-	return &( robinHoodTable->insert(pName, RefVariableStorage())->getVariable() );
+	// Unfortunately, we can't use a local variable for the RefVariableStorage because it dies.
+	return &( robinHoodTable->insert(pName)->getVariable() );
 }
 
 // Gets the variable, creating it if it does not exist
@@ -1074,7 +1136,8 @@ void Scope::getVariable(const String& pName, Variable*& pVariable) {
 	RobinHoodHash<RefVariableStorage>::BucketData* data = robinHoodTable->getBucketData(pName);
 	if ( !data ) {
 		// Create the slot
-		pVariable = &( robinHoodTable->insert(pName, RefVariableStorage())->getVariable() );
+		// Unfortunately, we can't use a local variable for the RefVariableStorage because it dies.
+		pVariable = &( robinHoodTable->insert(pName)->getVariable() );
 	} else {
 		pVariable = &( data->item.getVariable() );
 	}
@@ -1979,17 +2042,27 @@ Engine::run(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::run");
 #endif
+	EngineResult::Value  engineResult;
+
 	switch( lexAndParse(stream, false) ) {
 	case ParseResult::Done:
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 		printGlobalStrand();
 #endif
-		return execute();
+		engineResult = execute();
+		if ( engineResult == EngineResult::Ok ) {
+			if ( stream.atEOS() )
+				return EngineResult::Done;
+		}
+		return engineResult;
+
 	case ParseResult::Error:
 		print(LogLevel::error, "Parsing error.");
 		return EngineResult::Error;
+
 	case ParseResult::More:
 		return EngineResult::Ok;
+
 	// to get -Wall to stop griping:
 	default:
 		print(LogLevel::error, "Falloff error in run.");

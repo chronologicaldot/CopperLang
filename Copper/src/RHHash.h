@@ -7,6 +7,10 @@
 
 namespace util {
 
+//! Robin Hood Hash Table
+/*
+	One limitation of this table is that the items stored here must have a default empty constructor.
+*/
 template<class T>
 class RobinHoodHash {
 public:
@@ -15,7 +19,13 @@ public:
 		T item;
 		uint delay; // Time to reach this data
 
-		BucketData(const String& pName, const T& pItem)
+		BucketData(const String& pName)
+			: name(pName)
+			, item()
+			, delay(0)
+		{}
+
+		BucketData(const String& pName, T& pItem)
 			: name(pName)
 			, item(pItem)
 			, delay(0)
@@ -34,13 +44,18 @@ public:
 
 		Bucket() : data(0), wasOccupied(false) {}
 
+		Bucket(const Bucket& b)
+			: data(new BucketData(b.data->name, b.data->item))
+			, wasOccupied(false)
+		{}
+
 		~Bucket() {
 			clear();
 		}
 
 		void clear() {
 			if ( data ) {
-				delete data;
+				delete data; // This line is causing the crash
 				data = 0;
 				wasOccupied = true;
 			}
@@ -63,9 +78,13 @@ public:
 	Bucket* get(uint pIndex);
 	BucketData* getBucketData(const String& pName);
 	T* insert(const String& pName, T pItem);
+	T* insert(const String& pName);
 	uint getSize() const;
 	uint getOccupancy() const;
 	void erase(const String& pName);
+
+	// For cases where you really need the table
+	Bucket* getTablePointer();
 };
 
 template<class T>
@@ -73,7 +92,12 @@ RobinHoodHash<T>::RobinHoodHash(uint pInitSize)
 	: size(pInitSize)
 	, occupancy(0)
 {
-	buckets = new Bucket[size]();
+	//buckets = new Bucket[size]();
+	buckets = new Bucket[size];
+	uint i = 0;
+	for (; i < size; ++i) {
+		buckets[i] = Bucket();
+	}
 }
 
 template<class T>
@@ -81,10 +105,12 @@ RobinHoodHash<T>::RobinHoodHash(const RobinHoodHash<T>& pOther) // Which is best
 	: size(pOther.size)
 	, occupancy(pOther.occupancy)
 {
-	buckets = new Bucket[size]();
+	//buckets = new Bucket[size]();
+	buckets = new Bucket[size];
 	BucketData* bucketData;
 	uint i=0;
-	for(; i < pOther.size; ++i) {
+	for(; i < size; ++i) {
+		buckets[i] = Bucket();
 		bucketData = pOther.buckets[i].data;
 		if ( bucketData ) {
 			buckets[i].data = new BucketData(*bucketData);
@@ -144,7 +170,7 @@ typename RobinHoodHash<T>::BucketData* RobinHoodHash<T>::getBucketData(const Str
 			return 0;
 		}
 		jump(idx);
-		jumpCount++;
+		++jumpCount;
 		bucket = get(idx);
 		if ( bucket == initBucket ) // This is problematic if the jump doesn't cycle thru all open spots
 			return 0;
@@ -164,7 +190,48 @@ T* RobinHoodHash<T>::insert(const String& pName, T pItem) {
 		//if ( bucket == 0 ) throw 1;
 		if ( bucket->data == 0 ) {
 			bucket->data = floatData;
-			occupancy++;
+			++occupancy;
+			return itemPtr;
+		}
+		// else data != 0
+		if ( bucket->data->name.equals(floatData->name) ) {
+			// Replacing data should only be done directly, via getBucketdata()
+			return itemPtr;
+		}
+		// Compare delays to reach
+		// May be problematic if index jump exceeds 1.
+		if ( bucket->data->delay < floatData->delay ) {
+			tempData = bucket->data;
+			bucket->data = floatData;
+			floatData = tempData;
+		}
+		jump(idx);
+		bucket = get(idx);
+		floatData->delay++;
+		// If all spots are checked, try to resize the table.
+		if ( bucket == initBucket ) {
+			resizeTable();
+			// Restart search for a location because the table has changed
+			idx = getInitKey(floatData->name);
+			initBucket = get(idx);
+			bucket = initBucket;
+		}
+	}
+}
+
+template<class T>
+T* RobinHoodHash<T>::insert(const String& pName) {
+	uint idx = getInitKey(pName);
+	Bucket* initBucket = get(idx);
+	Bucket* bucket = initBucket;
+	BucketData* floatData = new BucketData(pName);
+	T* itemPtr = &(floatData->item);
+	BucketData* tempData = 0;
+	while( true ) {
+		//if ( bucket == 0 ) throw 1;
+		if ( bucket->data == 0 ) {
+			bucket->data = floatData;
+			++occupancy;
 			return itemPtr;
 		}
 		// else data != 0
@@ -213,7 +280,7 @@ void RobinHoodHash<T>::erase(const String& pName) {
 	while ( bucket->data != 0 || bucket->wasOccupied ) {
 		if ( bucket->data->name.equals(pName) ) {
 			bucket->clear();
-			occupancy--;
+			--occupancy;
 			return;
 		}
 		jump(idx);
@@ -231,16 +298,25 @@ void RobinHoodHash<T>::resizeTable() {
 	Bucket* oldBuckets = buckets;
 	uint oldSize = size;
 	size *= 2;
-	buckets = new Bucket[size]();
+	buckets = new Bucket[size];
 	uint i=0;
+	for (; i < size; ++i) {
+		buckets[i] = Bucket();
+	}
+	i = 0;
 	occupancy = 0; // Reset because everything must be re-added
 	for (; i < oldSize; ++i) {
-		Bucket& oldBucket = oldBuckets[i];
+		Bucket oldBucket = oldBuckets[i];
 		if ( oldBucket.data != 0 ) {
 			insert( oldBucket.data->name, oldBucket.data->item );
 		}
 	}
 	delete[] oldBuckets;
+}
+
+template<class T>
+typename RobinHoodHash<T>::Bucket*  RobinHoodHash<T>::getTablePointer() {
+	return buckets;
 }
 
 }

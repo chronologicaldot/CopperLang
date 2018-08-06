@@ -15,8 +15,8 @@ FileInStream::FileInStream( const char*  filename )
 
 char
 FileInStream::getNextByte() {
-	char c = ' ';
-	if ( stream.good() && ! stream.eof() ) {
+	int c = ' ';
+	if ( stream.is_open() && stream.good() && ! stream.eof() ) {
 		c = stream.get();
 		if ( c == '\n' ) {
 			++line;
@@ -25,18 +25,22 @@ FileInStream::getNextByte() {
 		++index;
 		++column;
 	}
-	return c;
+	if ( c < 0 ) // End of file
+		return ' ';
+	return (char)c;
 }
 
 bool
 FileInStream::atEOS() {
-	return stream.eof();
+	return stream.eof() || stream.fail();
 }
 
+UInteger
 FileInStream::getLine() {
 	return line;
 }
 
+UInteger
 FileInStream::getColumn() {
 	return column;
 }
