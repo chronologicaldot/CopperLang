@@ -36,7 +36,7 @@ GetSeconds( FFIServices& ffi ) {
 			totalTime += ((ClockTime*)arg)->getSecondsValue();
 		}
 	}
-	ffi.setNewResult( new ObjectInteger( totalTime ) );
+	ffi.setNewResult( new IntegerObject( totalTime ) );
 	return true;
 }
 
@@ -51,7 +51,7 @@ GetMilliseconds( FFIServices& ffi ) {
 			totalTime += ((ClockTime*)arg)->getMillisecondsValue();
 		}
 	}
-	ffi.setNewResult( new ObjectDecimal( totalTime ) );
+	ffi.setNewResult( new DecimalNumObject( totalTime ) );
 	return true;
 }
 
@@ -66,7 +66,7 @@ GetNanoseconds( FFIServices& ffi ) {
 			totalTime += ((ClockTime*)arg)->getMillisecondsValue();
 		}
 	}
-	ffi.setNewResult( new ObjectDecimal( totalTime ) );
+	ffi.setNewResult( new DecimalNumObject( totalTime ) );
 	return true;
 }
 

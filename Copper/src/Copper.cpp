@@ -718,7 +718,7 @@ Variable::isPointer() const {
 
 bool
 Variable::owns( FunctionContainer*  container ) const {
-	return box != REAL_NULL && box == container;
+	return notNull(box) && box == container;
 }
 
 FunctionContainer*
@@ -1209,7 +1209,7 @@ void Scope::appendNamesByInterface(AppendObjectInterface* aoi) {
 		for(; i < robinHoodTable->getSize(); ++i) {
 			bucket = robinHoodTable->get(i);
 			if ( bucket->data != 0 ) {
-				obj = new ObjectString(bucket->data->name);
+				obj = new StringObject(bucket->data->name);
 				aoi->append(obj);
 				obj->deref();
 			}
@@ -4779,9 +4779,9 @@ Engine::operate(
 #endif
 		Object* obj; // Needs to be declared at the beginning of this method
 		if ( lastObject.obtain(obj) ) {
-			if ( isObjectBool(*obj) ) {
+			if ( isBoolObject(*obj) ) {
 				// Use the inverse of the value because if-statements request jumps when condition is false
-				if ( ((ObjectBool*)obj)->getValue() == false ) {
+				if ( ((BoolObject*)obj)->getValue() == false ) {
 					// Here we cheat and cast to volatile because we don't have a const iterator for the list
 					//opIter.set( ((const Opcode*)opcode)->getOpStrandIter() );
 					opIter.set( opcode->getOpStrandIter() );
@@ -4824,14 +4824,14 @@ Engine::operate(
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode CreateBoolTrue");
 #endif
-		lastObject.setWithoutRef(new ObjectBool(true));
+		lastObject.setWithoutRef(new BoolObject(true));
 		break;
 
 	case Opcode::CreateBoolFalse:
 #ifdef COPPER_OPCODE_DEBUGGING
 		print(LogLevel::debug, "[DEBUG: Execute opcode CreateBoolFalse");
 #endif
-		lastObject.setWithoutRef(new ObjectBool(false));
+		lastObject.setWithoutRef(new BoolObject(false));
 		break;
 
 	case Opcode::CreateString:
@@ -4840,7 +4840,7 @@ Engine::operate(
 #endif
 		// Should be creating strings from a user-set factory
 		lastObject.setWithoutRef(
-			new ObjectString( opcode->getNameData() )
+			new StringObject( opcode->getNameData() )
 		);
 		break;
 
@@ -4849,7 +4849,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode CreateInteger");
 #endif
 		lastObject.setWithoutRef(
-			new ObjectInteger( opcode->getIntegerData() )
+			new IntegerObject( opcode->getIntegerData() )
 		);
 		break;
 
@@ -4858,7 +4858,7 @@ Engine::operate(
 		print(LogLevel::debug, "[DEBUG: Execute opcode CreateInteger");
 #endif
 		lastObject.setWithoutRef(
-			new ObjectDecimal( opcode->getDecimalData() )
+			new DecimalNumObject( opcode->getDecimalData() )
 		);
 		break;
 
@@ -5532,7 +5532,7 @@ Engine::run_Is_owner(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::run_Is_owner");
 #endif
-	lastObject.setWithoutRef(new ObjectBool(
+	lastObject.setWithoutRef(new BoolObject(
 		! is_var_pointer( address )
 	));
 	return ExecutionResult::Ok;
@@ -5545,7 +5545,7 @@ Engine::run_Is_ptr(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::run_Is_ptr");
 #endif
-	lastObject.setWithoutRef(new ObjectBool(
+	lastObject.setWithoutRef(new BoolObject(
 		is_var_pointer( address )
 	));
 	return ExecutionResult::Ok;
@@ -5576,7 +5576,7 @@ Engine::process_sys_not(
 	if ( ai.has() ) {
 		result = ! getBoolValue(**ai);
 	}
-	lastObject.setWithoutRef(new ObjectBool(result));
+	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
 
@@ -5593,7 +5593,7 @@ Engine::process_sys_all(
 	do {
 		result = getBoolValue(**ai);
 	} while ( ai.next() && ! result );
-	lastObject.setWithoutRef(new ObjectBool(result));
+	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
 
@@ -5610,7 +5610,7 @@ Engine::process_sys_any(
 	do {
 		result = getBoolValue(**ai);
 	} while ( ai.next() && result );
-	lastObject.setWithoutRef(new ObjectBool(result));
+	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
 
@@ -5627,7 +5627,7 @@ Engine::process_sys_nall(
 	do {
 		result = ! getBoolValue(**ai);
 	} while ( ai.next() && !result );
-	lastObject.setWithoutRef(new ObjectBool(result));
+	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
 
@@ -5644,7 +5644,7 @@ Engine::process_sys_none(
 	do {
 		result = ! getBoolValue(**ai);
 	} while ( ai.next() && !result );
-	lastObject.setWithoutRef(new ObjectBool(result));
+	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
 
@@ -5661,7 +5661,7 @@ Engine::process_sys_are_fn(
 	do {
 		result = isObjectFunction(**ai);
 	} while ( ai.next() && !result );
-	lastObject.setWithoutRef(new ObjectBool(result));
+	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
 
@@ -5678,7 +5678,7 @@ Engine::process_sys_are_empty(
 	do {
 		result = isObjectEmptyFunction(**ai);
 	} while ( ai.next() && result );
-	lastObject.setWithoutRef(new ObjectBool(result));
+	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
 
@@ -5700,7 +5700,7 @@ Engine::process_sys_are_same(
 			result = ( firstPtr == *ai );
 		}
 	}
-	lastObject.setWithoutRef(new ObjectBool(result));
+	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
 
@@ -5732,11 +5732,11 @@ Engine::process_sys_member(
 	}
 	// Second parameter is the name of the member
 	argsIter.next();
-	if ( !isObjectString(**argsIter) ) {
+	if ( !isStringObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::MemberArg2NotString);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectString* objStr = (ObjectString*)(*argsIter);
+	StringObject* objStr = (StringObject*)(*argsIter);
 	String& rawStr = objStr->getString();
 	if ( ! isValidName( rawStr ) ) {
 		print(LogLevel::error, EngineMessage::MemberFunctionInvalidNameArg);
@@ -5759,7 +5759,7 @@ Engine::process_sys_member_count(
 	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 1 ) {
 		print(LogLevel::warning, EngineMessage::MemberCountWrongArgCount);
-		lastObject.setWithoutRef(new ObjectInteger(0));
+		lastObject.setWithoutRef(new IntegerObject(0));
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// The only parameter is the parent function of the members
@@ -5774,7 +5774,7 @@ Engine::process_sys_member_count(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	unsigned long size = parentFunc->getPersistentScope().occupancy();
-	lastObject.setWithoutRef(new ObjectInteger(Integer(size)));
+	lastObject.setWithoutRef(new IntegerObject(Integer(size)));
 
 	return FuncExecReturn::Ran;
 }
@@ -5790,7 +5790,7 @@ Engine::process_sys_is_member(
 	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 2 ) {
 		print(LogLevel::error, EngineMessage::IsMemberWrongArgCount);
-		lastObject.setWithoutRef(new ObjectBool(false));
+		lastObject.setWithoutRef(new BoolObject(false));
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the members
@@ -5807,13 +5807,13 @@ Engine::process_sys_is_member(
 	// Second parameter should be a string
 	argsIter.next();
 	bool result = false;
-	if ( ! isObjectString(**argsIter) ) {
+	if ( ! isStringObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::IsMemberArg2NotString);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	const String& memberName = ((ObjectString*)*argsIter)->getString();
+	const String& memberName = ((StringObject*)*argsIter)->getString();
 	result = parentFunc->getPersistentScope().variableExists( memberName );
-	lastObject.setWithoutRef(new ObjectBool(result));
+	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
 
@@ -5844,11 +5844,11 @@ Engine::process_sys_set_member(
 	}
 	// Second parameter should be a string
 	argsIter.next();
-	if ( ! isObjectString(**argsIter) ) {
+	if ( ! isStringObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::SetMemberArg2NotString);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	String& memberName = ((ObjectString*)*argsIter)->getString();
+	String& memberName = ((StringObject*)*argsIter)->getString();
 	if ( !isValidName(memberName) ) {
 		print(LogLevel::error, EngineMessage::SystemFunctionBadArg);
 		return FuncExecReturn::ErrorOnRun;
@@ -5937,11 +5937,11 @@ Engine::process_sys_type(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new ObjectString());
+		lastObject.setWithoutRef(new StringObject());
 		return FuncExecReturn::Ran;
 	}
 	// Get only the first parameter
-	lastObject.setWithoutRef(new ObjectString( (*argsIter)->typeName() ));
+	lastObject.setWithoutRef(new StringObject( (*argsIter)->typeName() ));
 	return FuncExecReturn::Ran;
 }
 
@@ -5970,7 +5970,7 @@ Engine::process_sys_are_same_type(
 			break;
 	} while( argsIter.next() );
 	// Get only the first parameter
-	lastObject.setWithoutRef(new ObjectBool(same));
+	lastObject.setWithoutRef(new BoolObject(same));
 	return FuncExecReturn::Ran;
 }
 
@@ -5983,16 +5983,16 @@ Engine::process_sys_are_bool(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
+		lastObject.setWithoutRef(new BoolObject(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectBool(**argsIter);
+		out = isBoolObject(**argsIter);
 		if ( !out) break;
 	} while ( argsIter.next() );
-	lastObject.setWithoutRef(new ObjectBool(out));
+	lastObject.setWithoutRef(new BoolObject(out));
 	return FuncExecReturn::Ran;
 }
 
@@ -6005,17 +6005,17 @@ Engine::process_sys_are_string(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
+		lastObject.setWithoutRef(new BoolObject(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectString(**argsIter);
+		out = isStringObject(**argsIter);
 		if ( !out)
 			break;
 	} while ( argsIter.next() );
-	lastObject.setWithoutRef(new ObjectBool(out));
+	lastObject.setWithoutRef(new BoolObject(out));
 	return FuncExecReturn::Ran;
 }
 
@@ -6028,7 +6028,7 @@ Engine::process_sys_are_list(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
+		lastObject.setWithoutRef(new BoolObject(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
@@ -6038,7 +6038,7 @@ Engine::process_sys_are_list(
 		if ( !out)
 			break;
 	} while ( argsIter.next() );
-	lastObject.setWithoutRef(new ObjectBool(out));
+	lastObject.setWithoutRef(new BoolObject(out));
 	return FuncExecReturn::Ran;
 }
 
@@ -6051,17 +6051,17 @@ Engine::process_sys_are_number(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
+		lastObject.setWithoutRef(new BoolObject(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectInteger(**argsIter) || isObjectDecimal(**argsIter);
+		out = isIntegerObject(**argsIter) || isDecimalNumObject(**argsIter);
 		if ( !out)
 			break;
 	} while ( argsIter.next() );
-	lastObject.setWithoutRef(new ObjectBool(out));
+	lastObject.setWithoutRef(new BoolObject(out));
 	return FuncExecReturn::Ran;
 }
 
@@ -6074,17 +6074,17 @@ Engine::process_sys_are_integer(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
+		lastObject.setWithoutRef(new BoolObject(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectInteger(**argsIter);
+		out = isIntegerObject(**argsIter);
 		if ( !out)
 			break;
 	} while ( argsIter.next() );
-	lastObject.setWithoutRef(new ObjectBool(out));
+	lastObject.setWithoutRef(new BoolObject(out));
 	return FuncExecReturn::Ran;
 }
 
@@ -6097,17 +6097,17 @@ Engine::process_sys_are_decimal(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new ObjectBool(false));
+		lastObject.setWithoutRef(new BoolObject(false));
 		return FuncExecReturn::Ran;
 	}
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectDecimal(**argsIter);
+		out = isDecimalNumObject(**argsIter);
 		if ( !out)
 			break;
 	} while ( argsIter.next() );
-	lastObject.setWithoutRef(new ObjectBool(out));
+	lastObject.setWithoutRef(new BoolObject(out));
 	return FuncExecReturn::Ran;
 }
 
@@ -6129,7 +6129,7 @@ Engine::process_sys_assert(
 			return FuncExecReturn::ErrorOnRun;
 		}
 	} while ( argsIter.next() );
-	lastObject.setWithoutRef(new ObjectBool(true));
+	lastObject.setWithoutRef(new BoolObject(true));
 	return FuncExecReturn::Ran;
 }
 
@@ -6291,7 +6291,7 @@ Engine::process_sys_list_size(
 	ObjectList* listPtr = (ObjectList*)*argsIter;
 
 	lastObject.setWithoutRef(
-		new ObjectInteger( listPtr->size() )
+		new IntegerObject( listPtr->size() )
 	);
 	return FuncExecReturn::Ran;
 }
@@ -6557,18 +6557,18 @@ Engine::process_sys_string_match(
 	String* base_string = REAL_NULL;
 	if ( argsIter.has() ) {
 		do {
-			if ( isObjectString( **argsIter ) ) {
+			if ( isStringObject( **argsIter ) ) {
 				if ( isNull(base_string) ) {
-					base_string = &(((ObjectString*)(*argsIter))->getString());
+					base_string = &(((StringObject*)(*argsIter))->getString());
 				} else {
-					matches &= base_string->equals( ((ObjectString*)(*argsIter))->getString() );
+					matches &= base_string->equals( ((StringObject*)(*argsIter))->getString() );
 				}
 			} else {
 				print(LogLevel::warning, EngineMessage::StringMatchGivenNonStringArg);
 			}
 		} while ( argsIter.next() && matches );
 	}
-	lastObject.setWithoutRef( new ObjectBool(matches) );
+	lastObject.setWithoutRef( new BoolObject(matches) );
 	return FuncExecReturn::Ran;
 }
 
@@ -6584,8 +6584,8 @@ Engine::process_sys_string_concat(
 	String part_str;
 	if ( argsIter.has() ) {
 		do {
-			if ( isObjectString( **argsIter ) ) {
-				builder.append( ((ObjectString*)(*argsIter))->getString() );
+			if ( isStringObject( **argsIter ) ) {
+				builder.append( ((StringObject*)(*argsIter))->getString() );
 			} else {
 				(*argsIter)->writeToString(part_str);
 				builder.append(part_str);
@@ -6593,7 +6593,7 @@ Engine::process_sys_string_concat(
 			}
 		} while ( argsIter.next() );
 	}
-	lastObject.setWithoutRef( new ObjectString( String(builder) ) ); // implicit cast to const String here
+	lastObject.setWithoutRef( new StringObject( String(builder) ) ); // implicit cast to const String here
 	return FuncExecReturn::Ran;
 }
 
@@ -6644,7 +6644,7 @@ bool
 CallbackWrapper::owns(
 	FunctionContainer*  container
 ) const {
-	return callback != REAL_NULL && callback == container;
+	return notNull(callback) && callback == container;
 }
 
 bool

@@ -92,7 +92,7 @@
 // ******* Virtual machine version *******
 
 #define COPPER_INTERPRETER_VERSION 0.5
-#define COPPER_INTERPRETER_BRANCH 5
+#define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
 
@@ -1220,12 +1220,12 @@ public:
 
 		bool
 		atEnd() const {
-			return curr == REAL_NULL;
+			return isNull(curr);
 		}
 
 		bool
 		atLast() const {
-			if ( curr != REAL_NULL )
+			if ( notNull(curr) )
 				return curr->post == REAL_NULL;
 			return false;
 		}
@@ -1237,7 +1237,7 @@ public:
 				throw VarAddressException( VarAddressException::index_out_of_bounds );
 #endif
 			curr = curr->post;
-			return curr != REAL_NULL;
+			return notNull(curr);
 		}
 
 		const String&
@@ -1265,7 +1265,7 @@ public:
 		: head(REAL_NULL)
 		, tail(REAL_NULL)
 	{
-		if ( pOther.head == REAL_NULL )
+		if ( isNull(pOther.head) )
 			return;
 
 		Node* n = pOther.head;
@@ -1291,12 +1291,12 @@ public:
 
 	bool
 	has() const {
-		return head != REAL_NULL;
+		return notNull(head);
 	}
 
 	bool
 	hasOne() const {
-		if ( head != REAL_NULL )
+		if ( notNull(head) )
 			return head->post == REAL_NULL;
 		return false;
 	}
@@ -1798,17 +1798,17 @@ public:
 //-------------------
 // ****** DATA CLASSES ******
 
-class ObjectBool : public Object {
+class BoolObject : public Object {
 	bool value;
 public:
-	explicit ObjectBool(bool b)
+	explicit BoolObject(bool b)
 		: Object(ObjectType::Bool)
 		, value(b)
 	{}
 
 	virtual Object*
 	copy() {
-		return new ObjectBool(value);
+		return new BoolObject(value);
 	}
 
 	bool
@@ -1848,34 +1848,34 @@ public:
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
-		return "ObjectBool";
+		return "BoolObject";
 	}
 #endif
 };
 
 
-class ObjectString : public Object {
+class StringObject : public Object {
 	String value;
 
 public:
-	ObjectString()
+	StringObject()
 		: Object( ObjectType::String )
 		, value()
 	{}
 
-	explicit ObjectString( const String& pValue )
+	explicit StringObject( const String& pValue )
 		: Object( ObjectType::String )
 		, value(pValue)
 	{}
 
-	explicit ObjectString( const char* pValue )
+	explicit StringObject( const char* pValue )
 		: Object( ObjectType::String )
 		, value(pValue)
 	{}
 
 	virtual Object*
 	copy() {
-		return new ObjectString(value);
+		return new StringObject(value);
 	}
 
 	virtual const char*
@@ -1929,7 +1929,7 @@ public:
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
-		return "ObjectString";
+		return "StringObject";
 	}
 #endif
 };
@@ -1939,24 +1939,24 @@ public:
 	Object type represeting integers
 	Created with characters 0-9
 */
-class ObjectInteger : public Object {
+class IntegerObject : public Object {
 	Integer  value;
 
 public:
 	//! cstor
-	ObjectInteger()
+	IntegerObject()
 		: Object( ObjectType::Integer )
 		, value(0)
 	{}
 
 	//! cstor
-	ObjectInteger( Integer newValue )
+	IntegerObject( Integer newValue )
 		: Object( ObjectType::Integer )
 		, value ( newValue )
 	{}
 
 	//! cstor
-	ObjectInteger( const ObjectInteger& other )
+	IntegerObject( const IntegerObject& other )
 		: Object( ObjectType::Integer )
 		, value( other.value )
 	{}
@@ -1964,7 +1964,7 @@ public:
 	//! Copy
 	virtual Object*
 	copy() {
-		return new ObjectInteger(value);
+		return new IntegerObject(value);
 	}
 
 	void
@@ -2004,7 +2004,7 @@ public:
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
-		return "ObjectInteger";
+		return "IntegerObject";
 	}
 #endif
 };
@@ -2013,24 +2013,24 @@ public:
 	Object type represeting integers
 	Created with characters 0-9 and a singel decimal
 */
-class ObjectDecimal : public Object {
+class DecimalNumObject : public Object {
 	Decimal  value;
 
 public:
 	//! cstor
-	ObjectDecimal()
+	DecimalNumObject()
 		: Object( ObjectType::Decimal )
 		, value(0)
 	{}
 
 	//! cstor
-	ObjectDecimal( Decimal newValue )
+	DecimalNumObject( Decimal newValue )
 		: Object( ObjectType::Decimal )
 		, value ( newValue )
 	{}
 
 	//! cstor
-	ObjectDecimal( const ObjectDecimal& other )
+	DecimalNumObject( const DecimalNumObject& other )
 		: Object( ObjectType::Decimal )
 		, value( other.value )
 	{}
@@ -2038,7 +2038,7 @@ public:
 	//! Copy
 	virtual Object*
 	copy() {
-		return new ObjectDecimal(value);
+		return new DecimalNumObject(value);
 	}
 
 	void
@@ -2078,7 +2078,7 @@ public:
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
-		return "ObjectDecimal";
+		return "DecimalNumObject";
 	}
 #endif
 };
@@ -2966,7 +2966,7 @@ isObjectEmptyFunction(
 }
 
 inline bool
-isObjectBool(
+isBoolObject(
 	const Object& pObject
 ) {
 	return ( pObject.getType() == ObjectType::Bool );
@@ -2976,14 +2976,14 @@ inline bool
 getBoolValue(
 	const Object& pObject
 ) {
-	if ( isObjectBool( pObject ) ) {
-		return ((ObjectBool&)pObject).getValue();
+	if ( isBoolObject( pObject ) ) {
+		return ((BoolObject&)pObject).getValue();
 	}
 	return false;
 }
 
 inline bool
-isObjectString(
+isStringObject(
 	const Object& pObject
 ) {
 	return ( pObject.getType() == ObjectType::String );
@@ -2997,14 +2997,14 @@ isObjectList(
 }
 
 inline bool
-isObjectInteger(
+isIntegerObject(
 	const Object& pObject
 ) {
 	return ( pObject.getType() == ObjectType::Integer );
 }
 
 inline bool
-isObjectDecimal(
+isDecimalNumObject(
 	const Object& pObject
 ) {
 	return ( pObject.getType() == ObjectType::Decimal );

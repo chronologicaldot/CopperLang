@@ -1,4 +1,17 @@
 ====================
+2018/8/17
+v 6-0.5
+
+- Now on branch Feldspar.
+- Changed " != REAL_NULL " to "notNull" usages.
+- Changed nomenclature:
+-- ObjectBool is now BoolObject
+-- ObjectString is now StringObject
+-- ObjectInteger is now IntegerObject
+-- ObjectDecimal is now DecimalNumObject
+
+
+====================
 2018/8/6
 v 5-0.5
 
