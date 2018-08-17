@@ -753,7 +753,7 @@ Variable::getCopy() {
 
 //--------------------------------------
 
-ObjectList::ObjectList()
+ListObject::ListObject()
 	: Object( ObjectType::List )
 	, nodeCount(0)
 	, selectorIndex(0)
@@ -763,7 +763,7 @@ ObjectList::ObjectList()
 {}
 
 /*
-ObjectList::ObjectList( const ObjectList&  pOther )
+ListObject::ListObject( const ListObject&  pOther )
 	: Object( ObjectType::List )
 	, nodeCount(0)
 	, selectorIndex(0)
@@ -774,13 +774,13 @@ ObjectList::ObjectList( const ObjectList&  pOther )
 }
 */
 
-ObjectList::~ObjectList() {
+ListObject::~ListObject() {
 	clear();
 }
 
 Object*
-ObjectList::copy() {
-	ObjectList*  outList = new ObjectList();
+ListObject::copy() {
+	ListObject*  outList = new ListObject();
 	Node* n = head.node;
 	Object* item;
 	while( n ) {
@@ -793,12 +793,12 @@ ObjectList::copy() {
 }
 
 Integer
-ObjectList::size() {
+ListObject::size() {
 	return nodeCount;
 }
 
 bool
-ObjectList::gotoIndex( Integer  index ) {
+ListObject::gotoIndex( Integer  index ) {
 	if ( index >= nodeCount )
 		return false;
 	while ( index < 0 ) {
@@ -826,7 +826,7 @@ ObjectList::gotoIndex( Integer  index ) {
 }
 
 void
-ObjectList::clear() {
+ListObject::clear() {
 	if ( nodeCount == 0 )
 		return;
 
@@ -844,12 +844,12 @@ ObjectList::clear() {
 }
 
 void
-ObjectList::append( Object*  pItem ) {
+ListObject::append( Object*  pItem ) {
 	push_back(pItem);
 }
 
 void
-ObjectList::push_back( Object*  pItem ) {
+ListObject::push_back( Object*  pItem ) {
 	if ( isNull(pItem) )
 		return;
 	if ( nodeCount == 0 ) {
@@ -864,7 +864,7 @@ ObjectList::push_back( Object*  pItem ) {
 }
 
 void
-ObjectList::push_front( Object* pItem ) {
+ListObject::push_front( Object* pItem ) {
 	if ( isNull(pItem) )
 		return;
 	if ( nodeCount == 0 ) {
@@ -880,7 +880,7 @@ ObjectList::push_front( Object* pItem ) {
 }
 
 bool
-ObjectList::remove( Integer  index ) {
+ListObject::remove( Integer  index ) {
 	if ( ! gotoIndex(index) )
 		return false;
 
@@ -902,7 +902,7 @@ ObjectList::remove( Integer  index ) {
 }
 
 bool
-ObjectList::insert( Integer  index, Object*  pItem ) {
+ListObject::insert( Integer  index, Object*  pItem ) {
 	if ( isNull(pItem) ) {
 		return false;
 	}
@@ -924,7 +924,7 @@ ObjectList::insert( Integer  index, Object*  pItem ) {
 }
 
 bool
-ObjectList::swap( Integer  index1, Integer  index2 ) {
+ListObject::swap( Integer  index1, Integer  index2 ) {
 	Node* n;
 	if ( gotoIndex(index1) ) {
 		n = selector.node;
@@ -937,7 +937,7 @@ ObjectList::swap( Integer  index1, Integer  index2 ) {
 }
 
 bool
-ObjectList::replace( Integer  index, Object*  pNewItem ) {
+ListObject::replace( Integer  index, Object*  pNewItem ) {
 	if ( isNull(pNewItem) ) {
 		return false;
 	}
@@ -949,7 +949,7 @@ ObjectList::replace( Integer  index, Object*  pNewItem ) {
 }
 
 Object*
-ObjectList::getItem( Integer  index ) {
+ListObject::getItem( Integer  index ) {
 	if ( gotoIndex(index) ) {
 		return selector.node->item;
 	}
@@ -5870,11 +5870,11 @@ Engine::process_sys_member_list(
 	ArgsIter  argsIter = task.args.start();
 	if ( !argsIter.has() ) {
 		// Nothing to do here
-		lastObject.setWithoutRef(new ObjectList());
+		lastObject.setWithoutRef(new ListObject());
 		return FuncExecReturn::Ran;
 	}
 	// This function can take any number of functions; it will simply add them to the same list.
-	ObjectList* outList = new ObjectList();
+	ListObject* outList = new ListObject();
 	FunctionObject* usableFC;
 	Function* usableFunc;
 	do {
@@ -6034,7 +6034,7 @@ Engine::process_sys_are_list(
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isObjectList(**argsIter);
+		out = isListObject(**argsIter);
 		if ( !out)
 			break;
 	} while ( argsIter.next() );
@@ -6263,7 +6263,7 @@ Engine::process_sys_make_list(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_make_list");
 #endif
 	ArgsIter argsIter = task.args.start();
-	ObjectList* out = new ObjectList();
+	ListObject* out = new ListObject();
 	lastObject.setWithoutRef(out);
 	if ( argsIter.has() ) {
 		do {
@@ -6284,11 +6284,11 @@ Engine::process_sys_list_size(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListSizeFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectList* listPtr = (ObjectList*)*argsIter;
+	ListObject* listPtr = (ListObject*)*argsIter;
 
 	lastObject.setWithoutRef(
 		new IntegerObject( listPtr->size() )
@@ -6307,11 +6307,11 @@ Engine::process_sys_list_append(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListAppendFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectList* listPtr = (ObjectList*)*argsIter;
+	ListObject* listPtr = (ListObject*)*argsIter;
 
 	while ( argsIter.next() ) {
 		listPtr->push_back(*argsIter);
@@ -6330,11 +6330,11 @@ Engine::process_sys_list_prepend(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListAppendFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectList* listPtr = (ObjectList*)*argsIter;
+	ListObject* listPtr = (ListObject*)*argsIter;
 
 	while ( argsIter.next() ) {
 		listPtr->push_front(*argsIter);
@@ -6353,11 +6353,11 @@ Engine::process_sys_list_insert(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListInsertFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectList* listPtr = (ObjectList*)*argsIter;
+	ListObject* listPtr = (ListObject*)*argsIter;
 
 	if ( ! argsIter.next() )
 		return FuncExecReturn::Ran;
@@ -6381,11 +6381,11 @@ Engine::process_sys_list_get_item(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListGetItemFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectList* listPtr = (ObjectList*)*argsIter;
+	ListObject* listPtr = (ListObject*)*argsIter;
 
 	if ( ! argsIter.next() )
 		return FuncExecReturn::Ran;
@@ -6409,11 +6409,11 @@ Engine::process_sys_list_remove(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListRemoveFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectList* listPtr = (ObjectList*)*argsIter;
+	ListObject* listPtr = (ListObject*)*argsIter;
 
 	if ( ! argsIter.next() )
 		return FuncExecReturn::Ran;
@@ -6434,11 +6434,11 @@ Engine::process_sys_list_clear(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListClearFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	((ObjectList*)*argsIter)->clear();
+	((ListObject*)*argsIter)->clear();
 	return FuncExecReturn::Ran;
 }
 
@@ -6453,11 +6453,11 @@ Engine::process_sys_list_swap(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListSwapFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectList* listPtr = (ObjectList*)*argsIter;
+	ListObject* listPtr = (ListObject*)*argsIter;
 
 	if ( ! argsIter.next() )
 		return FuncExecReturn::Ran;
@@ -6485,11 +6485,11 @@ Engine::process_sys_list_replace(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListReplaceFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectList* listPtr = (ObjectList*)*argsIter;
+	ListObject* listPtr = (ListObject*)*argsIter;
 
 	if ( ! argsIter.next() )
 		return FuncExecReturn::Ran;
@@ -6516,14 +6516,14 @@ Engine::process_sys_list_sublist(
 	if ( !argsIter.has() )
 		return FuncExecReturn::Ran;
 
-	if ( ! isObjectList(**argsIter) ) {
+	if ( ! isListObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::ListSublistFunctionGivenNonList);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	ObjectList* listPtr = (ObjectList*)*argsIter;
+	ListObject* listPtr = (ListObject*)*argsIter;
 	Integer startIndex = 0;
 	Integer endIndex = listPtr->size();
-	ObjectList* newList = new ObjectList();
+	ListObject* newList = new ListObject();
 
 	if ( argsIter.next() ) {
 		startIndex = (*argsIter)->getIntegerValue();

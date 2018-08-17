@@ -2102,7 +2102,7 @@ struct AppendObjectInterface {
 
 //------------------
 
-class ObjectList : public Object, public AppendObjectInterface {
+class ListObject : public Object, public AppendObjectInterface {
 
 	struct Node : public Owner {
 		Object*  item;
@@ -2231,13 +2231,13 @@ class ObjectList : public Object, public AppendObjectInterface {
 	NodePtr  tail;
 
 	// Copy-constructor forbidden
-	ObjectList( const ObjectList&  pOther );
+	ListObject( const ListObject&  pOther );
 
 public:
 
-	ObjectList();
+	ListObject();
 
-	~ObjectList();
+	~ListObject();
 
 	virtual Object*
 	copy();
@@ -2305,7 +2305,7 @@ public:
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
-		return "ObjectList";
+		return "ListObject";
 	}
 #endif
 };
@@ -2990,7 +2990,7 @@ isStringObject(
 }
 
 inline bool
-isObjectList(
+isListObject(
 	const Object& pObject
 ) {
 	return ( pObject.getType() == ObjectType::List );

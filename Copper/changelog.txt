@@ -9,7 +9,8 @@ v 6-0.5
 -- ObjectString is now StringObject
 -- ObjectInteger is now IntegerObject
 -- ObjectDecimal is now DecimalNumObject
--- FunctionContainer is now FunctionObject.
+-- FunctionContainer is now FunctionObject
+-- ObjectList is now ListObject
 
 
 ====================
