@@ -437,55 +437,55 @@ Function::addParam( const String pName ) {
 
 //--------------------------------------
 
-FunctionContainer::FunctionContainer(Function* pFunction, UInteger id)
+FunctionObject::FunctionObject(Function* pFunction, UInteger id)
 	: Object(ObjectType::Function)
 	, funcBox()
 	, owner(REAL_NULL)
 	, ID(id)
 {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer constructor (Function*) [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject constructor (Function*) [%p]\n", (void*)this);
 #endif
 	type = ObjectType::Function;
 	funcBox.set(pFunction);
 }
 
-FunctionContainer::FunctionContainer()
+FunctionObject::FunctionObject()
 	: Object(ObjectType::Function)
 	, funcBox()
 	, owner(REAL_NULL)
 	, ID(0)
 {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer constructor 2 [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject constructor 2 [%p]\n", (void*)this);
 #endif
 	type = ObjectType::Function;
 	funcBox.setWithoutRef(new Function());
 }
 
-FunctionContainer::FunctionContainer(const FunctionContainer& pOther)
+FunctionObject::FunctionObject(const FunctionObject& pOther)
 	: Object(ObjectType::Function)
 	, funcBox()
 	, owner(REAL_NULL)
 	, ID(pOther.ID)
 {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer constructor 3 (const FunctionContainer&) [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject constructor 3 (const FunctionObject&) [%p]\n", (void*)this);
 #endif
 	funcBox.set(pOther.funcBox.raw());
 	owner = pOther.owner;
 }
 
-FunctionContainer::~FunctionContainer()
+FunctionObject::~FunctionObject()
 {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer::~FunctionContainer [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject::~FunctionObject [%p]\n", (void*)this);
 #endif
 }
 
-void FunctionContainer::own( Owner* pGrabber ) {
+void FunctionObject::own( Owner* pGrabber ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer::own [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject::own [%p]\n", (void*)this);
 #endif
 	// Finders keepers
 	if ( isNull(owner) )
@@ -493,9 +493,9 @@ void FunctionContainer::own( Owner* pGrabber ) {
 	//ref(); // Called by RefPtr already, so I'm using FuncBoxRefPtr for variables instead.
 }
 
-void FunctionContainer::disown( Owner* pDropper ) {
+void FunctionObject::disown( Owner* pDropper ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer::disown [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject::disown [%p]\n", (void*)this);
 #endif
 	// Language spec says abandoned functions must be destroyed
 	if ( notNull(owner) && owner == pDropper ) {
@@ -505,23 +505,23 @@ void FunctionContainer::disown( Owner* pDropper ) {
 	//deref(); // Called by RefPtr already, so I'm using FuncBoxRefPtr for variables instead.
 }
 
-bool FunctionContainer::isOwned() const {
+bool FunctionObject::isOwned() const {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer::isOwned [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject::isOwned [%p]\n", (void*)this);
 #endif
 	return notNull(owner);
 }
 
-bool FunctionContainer::isOwner( const Owner* pOwner ) const {
+bool FunctionObject::isOwner( const Owner* pOwner ) const {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer::isOwner [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject::isOwner [%p]\n", (void*)this);
 #endif
 	return owner == pOwner;
 }
 
-void FunctionContainer::changeOwnerTo( Owner* pNewOwner ) {
+void FunctionObject::changeOwnerTo( Owner* pNewOwner ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer::changeOwnerTo [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject::changeOwnerTo [%p]\n", (void*)this);
 #endif
 	// NOTE: This performs no ref() or deref(). Those should have been performed elsewhere automatically.
 
@@ -531,20 +531,20 @@ void FunctionContainer::changeOwnerTo( Owner* pNewOwner ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 		std::printf("[ERROR: Attempting to change function owner to an owner that doesn't point to this container.\n");
 #endif
-		throw BadFunctionContainerOwnerException();
+		throw BadFunctionObjectOwnerException();
 	}
 }
 
-bool FunctionContainer::getFunction( Function*& storage ) {
+bool FunctionObject::getFunction( Function*& storage ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer::getFunction [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject::getFunction [%p]\n", (void*)this);
 #endif
 	return funcBox.obtain(storage);
 }
 
-void FunctionContainer::setFrom( FunctionContainer& pOther ) {
+void FunctionObject::setFrom( FunctionObject& pOther ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer::setFrom [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject::setFrom [%p]\n", (void*)this);
 #endif
 	Function* f;
 	Function* of;
@@ -557,16 +557,16 @@ void FunctionContainer::setFrom( FunctionContainer& pOther ) {
 	}
 }
 
-Object* FunctionContainer::copy() {
+Object* FunctionObject::copy() {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
-	std::printf("[DEBUG: FunctionContainer::copy [%p]\n", (void*)this);
+	std::printf("[DEBUG: FunctionObject::copy [%p]\n", (void*)this);
 #endif
 	Function* f = new Function();
 	Function* mine;
 	if ( funcBox.obtain(mine) ) {
 		f->set( *mine );
 	}
-	FunctionContainer* c = new FunctionContainer(f, ID);
+	FunctionObject* c = new FunctionObject(f, ID);
 	f->deref();
 	return c;
 }
@@ -575,7 +575,7 @@ Object* FunctionContainer::copy() {
 
 
 Variable::Variable()
-	: box(new FunctionContainer())
+	: box(new FunctionObject())
 {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Variable constructor [%p]\n", (void*)this);
@@ -602,7 +602,7 @@ Variable::reset() {
 #endif
 	box->disown(this);
 	box->deref();
-	box = new FunctionContainer();
+	box = new FunctionObject();
 	box->own(this);
 }
 
@@ -618,7 +618,7 @@ Variable::set( Variable* pOther, bool pReuseStorage ) {
 }
 
 void
-Variable::setFunc( FunctionContainer* pContainer, bool pReuseStorage ) {
+Variable::setFunc( FunctionObject* pContainer, bool pReuseStorage ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Variable::setFunc [%p]\n", (void*)this);
 #endif
@@ -630,7 +630,7 @@ Variable::setFunc( FunctionContainer* pContainer, bool pReuseStorage ) {
 		throw NullVariableException();
 #endif
 
-	FunctionContainer* fc = REAL_NULL;
+	FunctionObject* fc = REAL_NULL;
 
 	if ( pReuseStorage ) {
 		pContainer->ref();
@@ -643,7 +643,7 @@ Variable::setFunc( FunctionContainer* pContainer, bool pReuseStorage ) {
 		// Delinks from pointers (which is desired).
 		// Copy occurs here in case of assigning box's contents to itself.
 		// (See changelog.txt: 2017/1/24 v 0.12)
-		fc = (FunctionContainer*)(pContainer->copy());
+		fc = (FunctionObject*)(pContainer->copy());
 		box->disown(this);
 		box->deref();
 		box = fc;
@@ -665,9 +665,9 @@ Variable::setFuncReturn( Object* pData, bool pPerformCopy ) {
 	box->deref();
 
 	if ( pPerformCopy ) {
-		box = FunctionContainer::createInitialized(pData);
+		box = FunctionObject::createInitialized(pData);
 	} else {
-		box = FunctionContainer::createInitializedNoCopy(pData);
+		box = FunctionObject::createInitializedNoCopy(pData);
 	}
 	box->own(this);
 }
@@ -698,7 +698,7 @@ Variable::getFunction(Logger* logger) {
 	// This happens when this variable is a pointer and the variable-it-points-to changes.
 	box->disown(this);
 	box->deref();
-	box = new FunctionContainer();
+	box = new FunctionObject();
 	box->own(this);
 	box->getFunction(f);
 	return f;
@@ -717,11 +717,11 @@ Variable::isPointer() const {
 }
 
 bool
-Variable::owns( FunctionContainer*  container ) const {
+Variable::owns( FunctionObject*  container ) const {
 	return notNull(box) && box == container;
 }
 
-FunctionContainer*
+FunctionObject*
 Variable::getRawContainer() {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Variable::getRawContainer [%p]\n", (void*)this);
@@ -745,7 +745,7 @@ Variable::getCopy() {
 		var->box->own(var);
 		return var;
 	} // else
-	FunctionContainer* fc = (FunctionContainer*)(box->copy());
+	FunctionObject* fc = (FunctionObject*)(box->copy());
 	var->box = fc;
 	var->box->own(var);
 	return var;
@@ -1152,7 +1152,7 @@ bool Scope::findVariable(const String& pName, Variable*& pStorage) {
 }
 
 // Sets the variable, creating the variable if it does not exist
-// The pMakePointer option may be ignored if the FunctionContainer is not owned
+// The pMakePointer option may be ignored if the FunctionObject is not owned
 void Scope::setVariable(const String& pName, Variable* pSourceVariable, bool pReuseStorage) {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
 	std::printf("[DEBUG: Scope::setVariable , name=%s\n", pName.c_str());
@@ -1182,7 +1182,7 @@ void Scope::setVariableFrom(const String& pName, Object* pObject, bool pReuseSto
 		switch(pObject->getType()) {
 		case ObjectType::Function:
 			// Save directly
-			var->setFunc( (FunctionContainer*)pObject, pReuseStorage );
+			var->setFunc( (FunctionObject*)pObject, pReuseStorage );
 			break;
 		//case ObjectType::Data:
 		default:
@@ -2262,7 +2262,7 @@ Engine::setVariableByAddress(
 
 		switch( obj->getType() ) {
 		case ObjectType::Function:
-			var->setFunc((FunctionContainer*)obj, reuseStorage);
+			var->setFunc((FunctionObject*)obj, reuseStorage);
 			lastObject.set(var->getRawContainer());
 			break;
 		//case ObjectType::Data:
@@ -2273,7 +2273,7 @@ Engine::setVariableByAddress(
 			break;
 		}
 	} else {
-		lastObject.setWithoutRef(new FunctionContainer());
+		lastObject.setWithoutRef(new FunctionObject());
 	}
 }
 
@@ -4649,7 +4649,7 @@ Engine::operate(
 		task = getLastTask();
 		if ( task->name == TaskType::FuncBuild ) {
 			lastObject.setWithoutRef(
-				new FunctionContainer( ((FuncBuildTask*)task)->function )
+				new FunctionObject( ((FuncBuildTask*)task)->function )
 			);
 			popLastTask();
 		} else {
@@ -4668,7 +4668,7 @@ Engine::operate(
 		if ( notNull(variable) ) {
 			lastObject.set( variable->getRawContainer() );
 		} else {
-			lastObject.setWithoutRef( new FunctionContainer() );
+			lastObject.setWithoutRef( new FunctionObject() );
 		}
 		break;
 
@@ -4876,7 +4876,7 @@ Engine::operate(
 // must be run after them.
 EngineResult::Value
 Engine::runFunctionObject(
-	FunctionContainer*  functionObject
+	FunctionObject*  functionObject
 ) {
 	// Slightly-varied version of setupUserFunctionExecution.
 
@@ -4954,7 +4954,7 @@ Engine::setupFunctionExecution(
 	print(LogLevel::debug, "[DEBUG: Engine::setupFunctionExecution");
 #endif
 	// Protect from polution and allow for functions to have a default return.
-	lastObject.setWithoutRef(new FunctionContainer());
+	lastObject.setWithoutRef(new FunctionObject());
 	FuncExecReturn::Value result;
 
 	if ( ! task.getAddress().has() )
@@ -5493,7 +5493,7 @@ Engine::run_Own(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::run_Own");
 #endif
-	lastObject.setWithoutRef(new FunctionContainer());
+	lastObject.setWithoutRef(new FunctionObject());
 	if ( !ownershipChangingEnabled ) {
 		//print(LogLevel::warning, "Ownership changing is disabled.");
 		print(LogLevel::warning, EngineMessage::PointerNewOwnershipDisabled);
@@ -5722,7 +5722,7 @@ Engine::process_sys_member(
 		print(LogLevel::error, EngineMessage::MemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	FunctionContainer* parentFc = (FunctionContainer*)*argsIter;
+	FunctionObject* parentFc = (FunctionObject*)*argsIter;
 	Function* parentFunc;
 		// Attempt to extract the function
 		// Failure occurs for "pointer variables" that have not reset
@@ -5768,7 +5768,7 @@ Engine::process_sys_member_count(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
-	FunctionContainer* fc = (FunctionContainer*)(*argsIter);
+	FunctionObject* fc = (FunctionObject*)(*argsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsMemberCountArg);
 		return FuncExecReturn::ErrorOnRun;
@@ -5799,7 +5799,7 @@ Engine::process_sys_is_member(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
-	FunctionContainer* fc = (FunctionContainer*)(*argsIter);
+	FunctionObject* fc = (FunctionObject*)(*argsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsIsMemberArg);
 		return FuncExecReturn::ErrorOnRun;
@@ -5828,7 +5828,7 @@ Engine::process_sys_set_member(
 	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 3 ) {
 		print(LogLevel::error, EngineMessage::SetMemberWrongArgCount);
-		lastObject.setWithoutRef(new FunctionContainer());
+		lastObject.setWithoutRef(new FunctionObject());
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter should be the parent function of the members
@@ -5837,7 +5837,7 @@ Engine::process_sys_set_member(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	Function* parentFunc;
-	FunctionContainer* fc = (FunctionContainer*)(*argsIter);
+	FunctionObject* fc = (FunctionObject*)(*argsIter);
 	if ( ! fc->getFunction(parentFunc) ) {
 		print(LogLevel::error, EngineMessage::DestroyedFuncAsSetMemberArg);
 		return FuncExecReturn::ErrorOnRun;
@@ -5856,7 +5856,7 @@ Engine::process_sys_set_member(
 	// Third parameter can be anything
 	argsIter.next();
 	parentFunc->getPersistentScope().setVariableFrom( memberName, *argsIter, false );
-	lastObject.setWithoutRef(new FunctionContainer());
+	lastObject.setWithoutRef(new FunctionObject());
 	return FuncExecReturn::Ran;
 }
 
@@ -5875,11 +5875,11 @@ Engine::process_sys_member_list(
 	}
 	// This function can take any number of functions; it will simply add them to the same list.
 	ObjectList* outList = new ObjectList();
-	FunctionContainer* usableFC;
+	FunctionObject* usableFC;
 	Function* usableFunc;
 	do {
 		if ( isObjectFunction(**argsIter) ) {
-			usableFC = (FunctionContainer*)(*argsIter);
+			usableFC = (FunctionObject*)(*argsIter);
 			if ( usableFC->getFunction(usableFunc) ) {
 				usableFunc->getPersistentScope().appendNamesByInterface(outList);
 			} else {
@@ -5903,17 +5903,17 @@ Engine::process_sys_union(
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
 		//print(LogLevel::info, "union function called without parameters. Default return is empty function.");
-		lastObject.setWithoutRef(new FunctionContainer());
+		lastObject.setWithoutRef(new FunctionObject());
 		return FuncExecReturn::Ran;
 	}
-	FunctionContainer* finalFC = new FunctionContainer();
+	FunctionObject* finalFC = new FunctionObject();
 	Function* finalFunc;
 	finalFC->getFunction(finalFunc); // Guaranteed
-	FunctionContainer* usableFC;
+	FunctionObject* usableFC;
 	Function* usableFunc;
 	do {
 		if ( isObjectFunction(**argsIter) ) {
-			usableFC = (FunctionContainer*)(*argsIter);
+			usableFC = (FunctionObject*)(*argsIter);
 			if ( usableFC->getFunction(usableFunc) ) {
 				finalFunc->getPersistentScope().copyMembersFrom( usableFunc->getPersistentScope() );
 			} else {
@@ -5954,7 +5954,7 @@ Engine::process_sys_are_same_type(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new FunctionContainer());
+		lastObject.setWithoutRef(new FunctionObject());
 		return FuncExecReturn::Ran;
 	}
 	// First parameter, to which all other parameters are compared
@@ -6177,11 +6177,11 @@ Engine::process_sys_execute_with_alt_super(
 
 	//Function* superFunc;
 	Function* func;
-	/*if ( ! ((FunctionContainer*)superObject)->getFunction(superFunc) ) {
+	/*if ( ! ((FunctionObject*)superObject)->getFunction(superFunc) ) {
 		print(LogLevel::debug, "[DEBUG: Empty function container passed to execute-with-alt-super.");
 		return FuncExecReturn::ErrorOnRun;
 	}*/
-	if ( ! ((FunctionContainer*)callObject)->getFunction(func) ) {
+	if ( ! ((FunctionObject*)callObject)->getFunction(func) ) {
 		print(LogLevel::debug, "[DEBUG: Empty function container passed to execute-with-alt-super.");
 		//print(LogLevel::error, "ERROR: Empty function passed to execute-with-alternate-super.");
 		return FuncExecReturn::ErrorOnRun;
@@ -6642,7 +6642,7 @@ CallbackWrapper::run() {
 
 bool
 CallbackWrapper::owns(
-	FunctionContainer*  container
+	FunctionObject*  container
 ) const {
 	return notNull(callback) && callback == container;
 }
@@ -6651,7 +6651,7 @@ bool
 CallbackWrapper::call(
 	FFIServices&  ffi
 ) {
-	callback = (FunctionContainer*)(ffi.getNextArg());
+	callback = (FunctionObject*)(ffi.getNextArg());
 	callback->ref();
 	callback->changeOwnerTo(this);
 	return true;
@@ -6667,7 +6667,7 @@ CallbackWrapper::call(
 	if ( ffi.hasMoreArgs() ) {
 		obj = ffi.getNextArg();
 		if ( isObjectFunction(obj) ) {
-			callback = (FunctionContainer*)obj;
+			callback = (FunctionObject*)obj;
 			callback->ref();
 			callback->changeOwnerTo(this);
 		}

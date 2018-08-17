@@ -38,7 +38,7 @@ void handler(int sig) {
 
 class Cu_cb_receiver : public Cu::ForeignFunc, public Cu::Owner {
 	Cu::Engine&  engine;
-	Cu::FunctionContainer*  cb;
+	Cu::FunctionObject*  cb;
 
 public:
 	Cu_cb_receiver(Cu::Engine& e)
@@ -52,7 +52,7 @@ public:
 	}
 
 	virtual bool
-	owns( Cu::FunctionContainer*  container ) const {
+	owns( Cu::FunctionObject*  container ) const {
 		return cb == container;
 	}
 
@@ -62,7 +62,7 @@ public:
 		if ( ffi.hasMoreArgs() ) {
 			obj = ffi.getNextArg();
 			if ( Cu::isObjectFunction(*obj) ) {
-				cb = (Cu::FunctionContainer*)obj;
+				cb = (Cu::FunctionObject*)obj;
 				cb->ref();
 				cb->changeOwnerTo(this);
 				ffi.printInfo("Callback is set");

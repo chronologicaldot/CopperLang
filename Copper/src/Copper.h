@@ -241,7 +241,7 @@ struct EngineMessage {
 	StackOverflow,
 
 	// WARNING
-	/* Function does not exist when trying to access it via FunctionContainer.
+	/* Function does not exist when trying to access it via FunctionObject.
 	This can occur when trying to access via a pointer. */
 	NoFunctionInContainer,
 
@@ -1623,13 +1623,13 @@ public:
 
 //-------------------
 
-class FunctionContainer; // Pre-declaration
+class FunctionObject; // Pre-declaration
 
 //class RefNullFunctionInContainerException {};
-class BadFunctionContainerOwnerException {};
+class BadFunctionObjectOwnerException {};
 class SettingNullFunctionInContainerException {};
 
-// Base class for ownership over a FunctionContainer
+// Base class for ownership over a FunctionObject
 struct Owner {
 	virtual ~Owner() {}
 
@@ -1637,7 +1637,7 @@ struct Owner {
 		return (Owner*)this;
 	}
 
-	virtual bool owns( FunctionContainer*  container ) const = 0;
+	virtual bool owns( FunctionObject*  container ) const = 0;
 };
 
 /*
@@ -1654,20 +1654,20 @@ Pointers that wish to access the function will reference-count this object rathe
 Interestly enough, this (instead of Function) has to inherit Object since this is what is stored
 by variables and passed around the system.
 */
-class FunctionContainer : public Object {
+class FunctionObject : public Object {
 	RefPtr<Function> funcBox;
 	Owner* owner;
 	UInteger ID;
 
 public:
-	explicit FunctionContainer(Function* pFunction, UInteger id=0);
+	explicit FunctionObject(Function* pFunction, UInteger id=0);
 
-	FunctionContainer();
+	FunctionObject();
 
 	// Should only be used for data transfer where the old copy immediately dies
-	FunctionContainer(const FunctionContainer& pOther);
+	FunctionObject(const FunctionObject& pOther);
 //private:
-	~FunctionContainer();
+	~FunctionObject();
 //public:
 	void own( Owner* pGrabber );
 
@@ -1683,14 +1683,14 @@ public:
 	bool getFunction( Function*& storage );
 
 	// Used for assignment, which only requires copying
-	void setFrom( FunctionContainer& pOther );
+	void setFrom( FunctionObject& pOther );
 
-	// FunctionContainer* copy()
+	// FunctionObject* copy()
 	virtual Object* copy();
 
 	// Create a function container initialized to a copy of the given data
-	static FunctionContainer* createInitialized(Object* pData) {
-		FunctionContainer* fc = new FunctionContainer();
+	static FunctionObject* createInitialized(Object* pData) {
+		FunctionObject* fc = new FunctionObject();
 		Function* f;
 		fc->getFunction(f);
 		if ( notNull(pData) ) {
@@ -1701,8 +1701,8 @@ public:
 	}
 
 	// Create a function container initialized to the given data
-	static FunctionContainer* createInitializedNoCopy(Object* pData) {
-		FunctionContainer* fc = new FunctionContainer();
+	static FunctionObject* createInitializedNoCopy(Object* pData) {
+		FunctionObject* fc = new FunctionObject();
 		Function* f;
 		fc->getFunction(f);
 		if ( notNull(pData) ) {
@@ -1738,7 +1738,7 @@ public:
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char* getDebugName() const {
-		return "FunctionContainer";
+		return "FunctionObject";
 	}
 #endif
 };
@@ -1753,7 +1753,7 @@ class NullVariableException {};
 	As a language rule, all variables MUST point to a function container.
 */
 class Variable : public Ref, public Owner {
-	FunctionContainer* box;
+	FunctionObject* box;
 
 public:
 	Variable();
@@ -1772,7 +1772,7 @@ public:
 
 	void set( Variable* pOther, bool pReuseStorage );
 
-	void setFunc( FunctionContainer* pContainer, bool pReuseStorage );
+	void setFunc( FunctionObject* pContainer, bool pReuseStorage );
 
 	// Used only for data
 	void setFuncReturn( Object* pData, bool pPerformCopy=true );
@@ -1782,9 +1782,9 @@ public:
 
 	bool isPointer() const;
 
-	FunctionContainer* getRawContainer();
+	FunctionObject* getRawContainer();
 
-	virtual bool owns( FunctionContainer*  container ) const;
+	virtual bool owns( FunctionObject*  container ) const;
 
 	Variable* getCopy();
 
@@ -2116,18 +2116,18 @@ class ObjectList : public Object, public AppendObjectInterface {
 		{
 			item->ref();
 			if ( item->getType() == ObjectType::Function )
-				((FunctionContainer*)item)->own(this);
+				((FunctionObject*)item)->own(this);
 		}
 
 		virtual bool
-		owns( FunctionContainer*  container ) const {
+		owns( FunctionObject*  container ) const {
 			return (Object*)container == item;
 		}
 
 		void
 		destroy() {
 			if ( item->getType() == ObjectType::Function ) {
-				((FunctionContainer*)item)->disown(this);
+				((FunctionObject*)item)->disown(this);
 			}
 			item->deref();
 			if ( prior )
@@ -2143,22 +2143,22 @@ class ObjectList : public Object, public AppendObjectInterface {
 			pOther.item = item;
 			item = temp;
 			if ( item->getType() == ObjectType::Function )
-				((FunctionContainer*)item)->changeOwnerTo(this);
+				((FunctionObject*)item)->changeOwnerTo(this);
 			if ( pOther.item->getType() == ObjectType::Function )
-				((FunctionContainer*)(pOther.item))->changeOwnerTo(&pOther);
+				((FunctionObject*)(pOther.item))->changeOwnerTo(&pOther);
 		}
 
 		void
 		replace( Object*  pItem ) {
 			if ( item ) {
 				if ( item->getType() == ObjectType::Function )
-					((FunctionContainer*)item)->disown(this);
+					((FunctionObject*)item)->disown(this);
 				item->deref();
 			}
 			item = pItem;
 			if ( item ) {
 				if ( item->getType() == ObjectType::Function )
-					((FunctionContainer*)item)->own(this);
+					((FunctionObject*)item)->own(this);
 				item->ref();
 			}
 		}
@@ -2168,7 +2168,7 @@ class ObjectList : public Object, public AppendObjectInterface {
 			if ( item->getType() != ObjectType::Function )
 				return false;
 
-			return ! ((FunctionContainer*)item)->isOwner(this);
+			return ! ((FunctionObject*)item)->isOwner(this);
 		}
 	};
 
@@ -2463,7 +2463,7 @@ public:
 	bool findVariable(const String& pName, Variable*& pStorage);
 
 	// Sets the variable, creating the variable if it does not exist
-	// The pReuseStorage option may be ignored if the FunctionContainer is not owned
+	// The pReuseStorage option may be ignored if the FunctionObject is not owned
 	void setVariable(const String& pName, Variable* pSourceVariable, bool pReuseStorage);
 
 	// Sets the variable, creating the variable if it does not exist
@@ -2951,7 +2951,7 @@ isObjectEmptyFunction(
 		return false;
 	}
 	Function* function;
-	if ( !((FunctionContainer&)pObject).getFunction(function) ) {
+	if ( !((FunctionObject&)pObject).getFunction(function) ) {
 		return false;
 	}
 	if ( function->constantReturn ) {
@@ -3366,7 +3366,7 @@ public:
 	*/
 	EngineResult::Value
 	runFunctionObject(
-		FunctionContainer*	functionObject
+		FunctionObject*	functionObject
 	);
 
 protected:
@@ -3524,7 +3524,7 @@ addForeignFuncInstance(
 class CallbackWrapper : public ForeignFunc, public Owner {
 
 	Engine& engine;
-	FunctionContainer*  callback;
+	FunctionObject*  callback;
 
 public:
 	CallbackWrapper( Engine&  pEngine, const String&  pName );
@@ -3535,7 +3535,7 @@ public:
 	run();
 
 	virtual bool
-	owns( FunctionContainer*  container ) const;
+	owns( FunctionObject*  container ) const;
 
 	virtual bool
 	call( FFIServices&  ffi );
