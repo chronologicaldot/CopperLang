@@ -7,6 +7,7 @@ using util::List;
 using Cu::RefPtr;
 using Cu::ObjectType;
 using Cu::Object;
+using Cu::NumericObject;
 using Cu::FFIServices;
 
 /*
@@ -45,6 +46,18 @@ public:
 					std::fprintf(writeFile, "\33[92m%s\33[0m", out.c_str());
 					break;
 
+				case ObjectType::Numeric:
+					switch ( ((NumericObject*)arg)->getSubType() ) {
+					case NumericObject::SubType::Integer:
+						std::fprintf(writeFile, "\33[96m%ld\33[0m", arg->getIntegerValue());
+						break;
+					case NumericObject::SubType::DecimalNum:
+					default:
+						std::fprintf(writeFile, "\33[95m%lf\33[0m", arg->getDecimalValue());
+						break;
+					}
+					break;
+/*
 				case ObjectType::Integer:
 					std::fprintf(writeFile, "\33[96m%ld\33[0m", arg->getIntegerValue());
 					break;
@@ -52,7 +65,7 @@ public:
 				case ObjectType::Decimal:
 					std::fprintf(writeFile, "\33[95m%lf\33[0m", arg->getDecimalValue());
 					break;
-
+*/
 				default:
 					arg->writeToString(out);
 					std::fprintf(writeFile, "\33[93m%s\33[0m", out.c_str());
@@ -66,6 +79,18 @@ public:
 					std::fprintf(writeFile, "%s", out.c_str());
 					break;
 
+				case ObjectType::Numeric:
+					switch ( ((NumericObject*)arg)->getSubType() ) {
+					case NumericObject::SubType::Integer:
+						std::fprintf(writeFile, "%ld", arg->getIntegerValue());
+						break;
+					case NumericObject::SubType::DecimalNum:
+					default:
+						std::fprintf(writeFile, "%lf", arg->getDecimalValue());
+						break;
+					}
+					break;
+/*
 				case ObjectType::Integer:
 					std::fprintf(writeFile, "%ld", arg->getIntegerValue());
 					break;
@@ -73,7 +98,7 @@ public:
 				case ObjectType::Decimal:
 					std::fprintf(writeFile, "%lf", arg->getDecimalValue());
 					break;
-
+*/
 				default:
 					arg->writeToString(out);
 					std::fprintf(writeFile, "%s", out.c_str());

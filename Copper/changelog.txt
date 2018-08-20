@@ -1,5 +1,5 @@
 ====================
-2018/8/17
+2018/8/17 - 2018/8/20
 v 6-0.5
 
 - Now on branch Feldspar.
@@ -11,6 +11,16 @@ v 6-0.5
 -- ObjectDecimal is now DecimalNumObject
 -- FunctionContainer is now FunctionObject
 -- ObjectList is now ListObject
+- Created NumericObject parent class, inheriting Object.
+-- Added enum value ObjectType::Numeric.
+-- Changed IntegerObject to inherit NumericObject.
+-- Changed DecimalObject to inherit NumericObject.
+- Implemented NumericObject interface for IntegerObject. (Ported basicmath.cpp extension.)
+- Implemented NumericObject interface for DecimalNumObject. (Ported basicmath.cpp extension.)
+- Added system functions for numeric operations: _equals, _greater_than, _greater_or_equal, _abs, _add, _subtract, _multipy, _divide, and implemented processing functions for them in the Engine.
+
+Printer.h
+- Updated to use Numeric for printing numbers instead of the usual Integer and Decimal types.
 
 
 ====================

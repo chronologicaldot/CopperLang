@@ -2,6 +2,10 @@
 
 #include "Copper.h"
 
+#ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
+#include <limits>
+#endif
+
 namespace Cu {
 
 // ******* Constants *******
@@ -749,6 +753,184 @@ Variable::getCopy() {
 	var->box = fc;
 	var->box->own(var);
 	return var;
+}
+
+//--------------------------------------
+// Defined here for the sake of the linker
+
+NumericObject::NumericObject()
+	: Object(ObjectType::Numeric)
+{}
+
+NumericObject::~NumericObject()
+{}
+
+//--------------------------------------
+
+void
+IntegerObject::setValue( NumericObject& other ) {
+	value = other.getIntegerValue();
+}
+
+bool
+IntegerObject::isEqualTo( NumericObject& other ) {
+	return value == other.getIntegerValue();
+}
+
+bool
+IntegerObject::isGreaterThan( NumericObject& other ) {
+	return value > other.getIntegerValue();
+}
+
+bool
+IntegerObject::isGreaterOrEqual( NumericObject& other ) {
+	return value >= other.getIntegerValue();
+}
+
+NumericObject*
+IntegerObject::absValue() {
+	return new IntegerObject( value >= 0 ? value : -value );
+}
+
+// Thanks to pmg for the bounds tests for integers.
+// https://stackoverflow.com/questions/199333/how-to-detect-integer-overflow-in-c-c
+// and thanks to Franz D. for observing more detection is needed for multiplication.
+
+NumericObject*
+IntegerObject::add( NumericObject& other ) {
+#ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
+	Integer oi = other.getIntegerValue();
+	// Detect overflow
+	if ( oi > 0 && value > std::numeric_limits<Integer>::max() - oi ) {
+		return new IntegerObject(std::numeric_limits<Integer>::max());
+	}
+	// Detect underflow
+	if ( oi < 0 && value < std::numeric_limits<Integer>::min() - oi ) {
+		return new IntegerObject(std::numeric_limits<Integer>::min());
+	}
+#endif
+	return new IntegerObject(value + other.getIntegerValue());
+}
+
+NumericObject*
+IntegerObject::subtract( NumericObject& other ) {
+#ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
+	Integer oi = other).getIntegerValue();
+	// detect overflow
+	if ( oi < 0 && value > std::numeric_limits<Integer>::max() + oi ) {
+		return new IntegerObject(std::numeric_limits<Integer>::max());
+	}
+	// detect underflow
+	if ( oi > 0 && value < std::numeric_limits<Integer>::min() + oi ) {
+		return new IntegerObject(std::numeric_limits<Integer>::min());
+	}
+#endif
+	return new IntegerObject(value - other.getIntegerValue());
+}
+
+NumericObject*
+IntegerObject::multiply( NumericObject& other ) {
+#ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
+	Integer oi = other.getIntegerValue();
+	if ( oi < 0 )
+		oi = -oi; // Get absolute value
+	if ( oi != 0 ) {
+		// detect overflow
+		if ( value > std::numeric_limits<Integer>::max() / oi ) {
+			return new IntegerObject(std::numeric_limits<Integer>::max());
+		}
+		if ( value < std::numeric_limits<Integer>::min() / oi ) {
+			return new IntegerObject(std::numeric_limits<Integer>::min());
+		}
+	}
+#endif
+	return new IntegerObject(value * other.getIntegerValue());
+}
+
+NumericObject*
+IntegerObject::divide( NumericObject& other ) {
+#ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
+	Integer oi = other.getIntegerValue();
+	if ( oi == 0 ) {
+		if ( value > 0 ) {
+			return new IntegerObject( std::numeric_limits<Integer>::max() );
+		}
+		if ( value == 0 ) {
+			return new IntegerObject( 0 );
+		}
+		// else
+		return new IntegerObject( std::numeric_limits<Integer>::min() );
+	}
+#endif
+	return new IntegerObject(value / other.getIntegerValue());
+}
+
+//--------------------------------------
+
+bool
+iszero(
+	Decimal p
+) {
+	// Check based on rounding error
+	return p < DECIMAL_ROUNDING_ERROR && p > - DECIMAL_ROUNDING_ERROR;
+}
+
+void
+DecimalNumObject::setValue( NumericObject& other ) {
+	value = other.getDecimalValue();
+}
+
+bool
+DecimalNumObject::isEqualTo( NumericObject& other ) {
+	return value == other.getDecimalValue();
+}
+
+bool
+DecimalNumObject::isGreaterThan( NumericObject& other ) {
+	return value > other.getDecimalValue();
+}
+
+bool
+DecimalNumObject::isGreaterOrEqual( NumericObject& other ) {
+	return value >= other.getDecimalValue();
+}
+
+NumericObject*
+DecimalNumObject::absValue() {
+	return new DecimalNumObject( value >= 0 ? value : -value );
+}
+
+NumericObject*
+DecimalNumObject::add( NumericObject& other ) {
+	return new DecimalNumObject(value + other.getDecimalValue());
+}
+
+NumericObject*
+DecimalNumObject::subtract( NumericObject& other ) {
+	return new DecimalNumObject(value - other.getDecimalValue());
+}
+
+NumericObject*
+DecimalNumObject::multiply( NumericObject& other ) {
+	return new DecimalNumObject(value * other.getDecimalValue());
+}
+
+NumericObject*
+DecimalNumObject::divide( NumericObject& other ) {
+#ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
+	Decimal od = other.getDecimalValue();
+	if ( iszero(od) ) {
+		if ( value > 0 ) {
+			return DecimalNumObject( std::numeric_limits<Decimal>::infinity() );
+		}
+		if ( iszero(value) ) {
+			return DecimalNumObject( 0 );
+		} else {
+			return DecimalNumObject( - std::numeric_limits<Decimal>::infinity() );
+		}
+	}
+#endif
+	return new DecimalNumObject(value / other.getDecimalValue());
 }
 
 //--------------------------------------
@@ -2648,6 +2830,23 @@ Engine::setupSystemFunctions() {
 
 	builtinFunctions.insert(String("matching"), SystemFunction::_string_match);
 	builtinFunctions.insert(String("concat"), SystemFunction::_string_concat);
+
+	builtinFunctions.insert(String("equals"), SystemFunction::_num_equals);
+	builtinFunctions.insert(String("gt"), SystemFunction::_num_greater_than);
+	builtinFunctions.insert(String("gte"), SystemFunction::_num_greater_or_equal);
+	builtinFunctions.insert(String("abs"), SystemFunction::_num_abs);
+#ifdef COPPER_ENABLE_EXTENDED_NAME_SET
+	builtinFunctions.insert(String("+"), SystemFunction::_num_add);
+	builtinFunctions.insert(String("-"), SystemFunction::_num_subtract);
+	builtinFunctions.insert(String("*"), SystemFunction::_num_multiply);
+	builtinFunctions.insert(String("/"), SystemFunction::_num_divide);
+#else
+	// Alternative names
+	builtinFunctions.insert(String("add"), SystemFunction::_num_add);
+	builtinFunctions.insert(String("sbtr"), SystemFunction::_num_subtract);
+	builtinFunctions.insert(String("mult"), SystemFunction::_num_multiply);
+	builtinFunctions.insert(String("divd"), SystemFunction::_num_divide);
+#endif
 }
 
 //-------------------------------------
@@ -5144,6 +5343,43 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_string_concat:
 		return process_sys_string_concat(task);
 
+	case SystemFunction::_num_equals:
+		return process_sys_num_equals(task);
+
+	case SystemFunction::_num_greater_than:
+		return process_sys_num_greater_than(task);
+
+	case SystemFunction::_num_greater_or_equal:
+		return process_sys_num_greater_or_equal(task);
+
+	case SystemFunction::_num_abs:
+		return process_sys_num_abs(task);
+/*
+	case SystemFunction::_num_add:
+		return process_sys_num_add(task);
+
+	case SystemFunction::_num_subtract:
+		return process_sys_num_subtract(task);
+
+	case SystemFunction::_num_multiply:
+		return process_sys_num_multiply(task);
+
+	case SystemFunction::_num_divide:
+		return process_sys_num_divide(task);
+*/
+
+	case SystemFunction::_num_add:
+		return process_sys_num_chain_num(task, process_sys_num_add);
+
+	case SystemFunction::_num_subtract:
+		return process_sys_num_chain_num(task, process_sys_num_subtract);
+
+	case SystemFunction::_num_multiply:
+		return process_sys_num_chain_num(task, process_sys_num_multiply);
+
+	case SystemFunction::_num_divide:
+		return process_sys_num_chain_num(task, process_sys_num_divide);
+
 	default:
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupBuiltinFunctionExecution could not match function");
@@ -6595,6 +6831,148 @@ Engine::process_sys_string_concat(
 	}
 	lastObject.setWithoutRef( new StringObject( String(builder) ) ); // implicit cast to const String here
 	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_num_chain_num(
+	FuncFoundTask& task,
+	NumericObject* (*operation)(NumericObject&, NumericObject&)
+) {
+	NumericObject*  startNumber;
+	NumericObject*  resultNumber;
+	ArgsIter argsIter = task.args.start();
+	if ( argsIter.has() ) {
+		if ( isNumericObject(**argsIter) ) {
+			startNumber = (NumericObject*)*argsIter;
+			startNumber->ref(); // Treat as new
+		} else {
+			print(LogLevel::warning, "Numeric processing function was not given a number as the first argument.");
+			return FuncExecReturn::Ran;
+		}
+		while ( argsIter.next() ) {
+			if ( isNumericObject(**argsIter) ) {
+				resultNumber = operation(*startNumber, *((NumericObject*)*argsIter));
+				startNumber->deref();
+				startNumber = resultNumber;
+			}
+		}
+	}
+	lastObject.setWithoutRef(resultNumber);
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_num_equals( FuncFoundTask& task ) {
+	bool result = true;
+	NumericObject*  first;
+	ArgsIter argsIter = task.args.start();
+	if ( argsIter.has() ) {
+		if ( isNumericObject(**argsIter) ) {
+			first = (NumericObject*)*argsIter;
+		} else {
+			print(LogLevel::warning, "Numeric equals function was not given a number as the first argument.");
+			return FuncExecReturn::Ran;
+		}
+		while ( argsIter.next() ) {
+			if ( isNumericObject(**argsIter) ) {
+				if ( ! first->isEqualTo(*((NumericObject*)*argsIter)) ) {
+					result = false;
+					break;
+				}
+			} else {
+				print(LogLevel::warning, "Numeric equals function was given a non-numeric argument.");
+			}
+		}
+	}
+	lastObject.setWithoutRef( new BoolObject(result) );
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_num_greater_than( FuncFoundTask& task ) {
+	bool result = true;
+	NumericObject*  first;
+	ArgsIter argsIter = task.args.start();
+	if ( argsIter.has() ) {
+		if ( isNumericObject(**argsIter) ) {
+			first = (NumericObject*)*argsIter;
+		} else {
+			print(LogLevel::warning, "Numeric greater-than function was not given a number as the first argument.");
+			return FuncExecReturn::Ran;
+		}
+		while ( argsIter.next() ) {
+			if ( isNumericObject(**argsIter) ) {
+				if ( ! first->isGreaterThan(*((NumericObject*)*argsIter)) ) {
+					result = false;
+					break;
+				}
+			} else {
+				print(LogLevel::warning, "Numeric greater-than function was given a non-numeric argument.");
+			}
+		}
+	}
+	lastObject.setWithoutRef( new BoolObject(result) );
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_num_greater_or_equal( FuncFoundTask& task ) {
+	bool result = true;
+	NumericObject*  first;
+	ArgsIter argsIter = task.args.start();
+	if ( argsIter.has() ) {
+		if ( isNumericObject(**argsIter) ) {
+			first = (NumericObject*)*argsIter;
+		} else {
+			print(LogLevel::warning, "Numeric greater-than-or-equal function was not given a number as the first argument.");
+			return FuncExecReturn::Ran;
+		}
+		while ( argsIter.next() ) {
+			if ( isNumericObject(**argsIter) ) {
+				if ( ! first->isGreaterOrEqual(*((NumericObject*)*argsIter)) ) {
+					result = false;
+					break;
+				}
+			} else {
+				print(LogLevel::warning, "Numeric greater-than-or-equal function was given a non-numeric argument.");
+			}
+		}
+	}
+	lastObject.setWithoutRef( new BoolObject(result) );
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_num_abs( FuncFoundTask& task ) {
+	ArgsIter argsIter = task.args.start();
+	if ( argsIter.has() ) {
+		if ( isNumericObject(**argsIter) ) {
+			lastObject.setWithoutRef( ((NumericObject*)*argsIter)->absValue() );
+		} else {
+			print(LogLevel::warning, "Numeric absolute-value was given a non-numeric argument.");
+		}
+	}
+	return FuncExecReturn::Ran;
+}
+
+NumericObject*
+Engine::process_sys_num_add( NumericObject& first, NumericObject& second ) {
+	return first.add(second);
+}
+
+NumericObject*
+Engine::process_sys_num_subtract( NumericObject& first, NumericObject& second ) {
+	return first.subtract(second);
+}
+
+NumericObject*
+Engine::process_sys_num_multiply( NumericObject& first, NumericObject& second ) {
+	return first.multiply(second);
+}
+
+NumericObject*
+Engine::process_sys_num_divide( NumericObject& first, NumericObject& second ) {
+	return first.divide(second);
 }
 
 void

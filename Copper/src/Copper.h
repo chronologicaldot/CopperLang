@@ -132,6 +132,11 @@
 //! Initial size of stack frame scope
 #define CU_STACK_FRAME_SCOPE_SIZE 100
 
+//! Allows for bounds-checking on integers
+// Slow but safe. Requires <limits>, however.
+//#define ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
+
+
 // ******* Error templates *******
 
 template<typename T>
@@ -638,6 +643,7 @@ struct ObjectType {
 		Bool,
 		String,
 		List,
+		Numeric, // Parent class
 		Integer,
 		Decimal,
 
@@ -849,6 +855,15 @@ struct SystemFunction {
 
 	_string_match,	// "matching"
 	_string_concat,	// "concat"
+
+	_num_equals,			// "equals"
+	_num_greater_than,		// "gt"
+	_num_greater_or_equal,	// "gte", greater than or equal
+	_num_abs,				// "abs", absolute value
+	_num_add,				// "add" or "+"
+	_num_subtract,			// "subtract" or "sbtr" or "-"
+	_num_multiply,			// "multiply" or "mul" or "mult" or "*"
+	_num_divide,			// "divide" or "divd" or "/"
 	};
 };
 
@@ -1061,7 +1076,8 @@ public:
 	}
 
 	// Meant to be overridden.
-	// If you return "this", you must call this->ref() to ensure proper memory manangement.
+	// Meant to return a "new" (heap) object or one with an extra reference count.
+	// If you return "this", you must call this->ref() to ensure proper memory management.
 	virtual Object*
 	copy() =0;
 
@@ -1080,9 +1096,16 @@ public:
 		return 0;
 	}
 
-	// Name of the data
-	/* The Data class can be extended to point to other types of data, such as huge numbers,
-	matrices, etc., and complemented by extension functions. */
+	// Meant to return the whether or not the internally-stored data is the same.
+	// Can be used to compare data pointers even if the wrapper (Copper Object) is different.
+	virtual bool
+	isSameData( Object* obj ) {
+		return this == obj;
+	}
+
+	//! Name of the data
+	// The class can be extended to point to other types of data, such as huge numbers,
+	// matrices, etc., and complemented by extension functions.
 	virtual const char*
 	typeName() const =0;
 
@@ -1934,30 +1957,148 @@ public:
 #endif
 };
 
+/*
+	A base object for all numbers, allowing interaction
+*/
+struct NumericObject : public Object {
+
+	// Please extend
+	struct SubType {
+	enum Value {
+		Integer = 0,	// Integer class
+		DecimalNum = 1,	// Decimal Number class
+		FORCE32 = 0x7fffffff // Allows extensions
+	};};
+
+	NumericObject();
+
+	virtual ~NumericObject();
+
+	static ObjectType::Value
+	StaticType() {
+		return ObjectType::Numeric;
+	}
+
+	virtual SubType::Value
+	getSubType() const = 0;
+
+	virtual void
+	writeToString(String& out) const {
+		out = "{number}";
+	}
+
+#ifdef COPPER_USE_DEBUG_NAMES
+	virtual const char* getDebugName() const {
+		return "NumericObject";
+	}
+#endif
+
+	virtual void
+	setValue( NumericObject& ) = 0;
+
+	virtual Integer
+	getIntegerValue() const = 0;
+
+	virtual Decimal
+	getDecimalValue() const = 0;
+
+	virtual bool
+	isEqualTo( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+
+	virtual bool
+	isGreaterThan( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+
+	virtual bool
+	isGreaterOrEqual( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+
+	virtual Object*
+	absValue() = 0;
+
+	virtual NumericObject*
+	add( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+
+	virtual NumericObject*
+	subtract( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+
+	virtual NumericObject*
+	multiply( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+
+	virtual NumericObject*
+	divide( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+
+/*
+	// Example Settings
+
+	virtual bool
+	isEqualTo( NumericObject& CU_UNUSED_ARG(other) ) {
+		return false;
+	}
+
+	virtual bool
+	isGreaterThan( NumericObject& CU_UNUSED_ARG(other) ) {
+		return false;
+	}
+
+	virtual bool
+	isGreaterOrEqual( NumericObject& CU_UNUSED_ARG(other) ) {
+		return false;
+	}
+
+	// These functions are meant to return heap-created objects or objects with at least
+	// 1 extra reference count since the object may be dropped.
+	virtual NumericObject*
+	absValue() { return copy(); }
+
+	virtual NumericObject*
+	add( Object& CU_UNUSED_ARG(other) ) { return copy(); }
+
+	virtual NumericObject*
+	subtract( Object& CU_UNUSED_ARG(other) ) { return copy(); }
+
+	virtual NumericObject*
+	multiply( Object& CU_UNUSED_ARG(other) ) { return copy(); }
+
+	virtual NumericObject*
+	divide( Object& CU_UNUSED_ARG(other) ) { return copy(); }
+*/
+};
+
+/*
+	Number Helper Classes
+*/
+
+bool
+iszero(
+	Decimal		p
+);
+
 
 /*
 	Object type represeting integers
 	Created with characters 0-9
 */
-class IntegerObject : public Object {
+class IntegerObject : public NumericObject {
 	Integer  value;
 
 public:
 	//! cstor
 	IntegerObject()
-		: Object( ObjectType::Integer )
+		//: Object( ObjectType::Integer )
+		: NumericObject()
 		, value(0)
 	{}
 
 	//! cstor
 	IntegerObject( Integer newValue )
-		: Object( ObjectType::Integer )
+		//: Object( ObjectType::Integer )
+		: NumericObject()
 		, value ( newValue )
 	{}
 
 	//! cstor
 	IntegerObject( const IntegerObject& other )
-		: Object( ObjectType::Integer )
+		//: Object( ObjectType::Integer )
+		: NumericObject()
 		, value( other.value )
 	{}
 
@@ -1965,21 +2106,6 @@ public:
 	virtual Object*
 	copy() {
 		return new IntegerObject(value);
-	}
-
-	void
-	setValue( Integer newValue ) {
-		value = newValue;
-	}
-
-	virtual Integer
-	getIntegerValue() const {
-		return value;
-	}
-
-	virtual Decimal
-	getDecimalValue() const {
-		return (Decimal)value;
 	}
 
 	static const char*
@@ -1992,9 +2118,14 @@ public:
 		return StaticTypeName();
 	}
 
-	static ObjectType::Value
-	StaticType() {
-		return ObjectType::Integer;
+	//static ObjectType::Value
+	//StaticType() {
+	//	return ObjectType::Integer;
+	//}
+
+	virtual NumericObject::SubType::Value
+	getSubType() const {
+		return NumericObject::SubType::Integer;
 	}
 
 	virtual void
@@ -2007,31 +2138,76 @@ public:
 		return "IntegerObject";
 	}
 #endif
+
+	void
+	setValue( Integer newValue ) {
+		value = newValue;
+	}
+
+	virtual void
+	setValue( NumericObject& );
+
+	virtual Integer
+	getIntegerValue() const {
+		return value;
+	}
+
+	virtual Decimal
+	getDecimalValue() const {
+		return (Decimal)value;
+	}
+
+	virtual bool
+	isEqualTo( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual bool
+	isGreaterThan( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual bool
+	isGreaterOrEqual( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	absValue();
+
+	virtual NumericObject*
+	add( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	subtract( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	multiply( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	divide( NumericObject& CU_UNUSED_ARG(other) );
 };
 
 /*
 	Object type represeting integers
-	Created with characters 0-9 and a singel decimal
+	Created with characters 0-9 and a single decimal
 */
-class DecimalNumObject : public Object {
+class DecimalNumObject : public NumericObject {
 	Decimal  value;
 
 public:
 	//! cstor
 	DecimalNumObject()
-		: Object( ObjectType::Decimal )
+		//: Object( ObjectType::Decimal )
+		: NumericObject()
 		, value(0)
 	{}
 
 	//! cstor
 	DecimalNumObject( Decimal newValue )
-		: Object( ObjectType::Decimal )
+		//: Object( ObjectType::Decimal )
+		: NumericObject()
 		, value ( newValue )
 	{}
 
 	//! cstor
 	DecimalNumObject( const DecimalNumObject& other )
-		: Object( ObjectType::Decimal )
+		//: Object( ObjectType::Decimal )
+		: NumericObject()
 		, value( other.value )
 	{}
 
@@ -2039,21 +2215,6 @@ public:
 	virtual Object*
 	copy() {
 		return new DecimalNumObject(value);
-	}
-
-	void
-	setValue( Decimal newValue ) {
-		value = newValue;
-	}
-
-	virtual Integer
-	getIntegerValue() const {
-		return (Integer)value;
-	}
-
-	virtual Decimal
-	getDecimalValue() const {
-		return value;
 	}
 
 	static const char*
@@ -2066,9 +2227,14 @@ public:
 		return StaticTypeName();
 	}
 
-	static ObjectType::Value
-	StaticType() {
-		return ObjectType::Decimal;
+	//static ObjectType::Value
+	//StaticType() {
+	//	return ObjectType::Decimal;
+	//}
+
+	virtual NumericObject::SubType::Value
+	getSubType() const {
+		return NumericObject::SubType::DecimalNum;
 	}
 
 	virtual void
@@ -2081,6 +2247,48 @@ public:
 		return "DecimalNumObject";
 	}
 #endif
+
+	void
+	setValue( Decimal newValue ) {
+		value = newValue;
+	}
+
+	virtual void
+	setValue( NumericObject& );
+
+	virtual Integer
+	getIntegerValue() const {
+		return (Integer)value;
+	}
+
+	virtual Decimal
+	getDecimalValue() const {
+		return value;
+	}
+
+	virtual bool
+	isEqualTo( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual bool
+	isGreaterThan( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual bool
+	isGreaterOrEqual( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	absValue();
+
+	virtual NumericObject*
+	add( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	subtract( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	multiply( NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	divide( NumericObject& CU_UNUSED_ARG(other) );
 };
 
 
@@ -2997,17 +3205,30 @@ isListObject(
 }
 
 inline bool
+isNumericObject(
+	const Object& pObject
+) {
+	return pObject.getType() == ObjectType::Numeric;
+}
+
+inline bool
 isIntegerObject(
 	const Object& pObject
 ) {
-	return ( pObject.getType() == ObjectType::Integer );
+	//return ( pObject.getType() == ObjectType::Integer );
+	if ( pObject.getType() == ObjectType::Numeric ) {
+		return ((NumericObject&)pObject).getSubType() == NumericObject::SubType::Integer;
+	}
 }
 
 inline bool
 isDecimalNumObject(
 	const Object& pObject
 ) {
-	return ( pObject.getType() == ObjectType::Decimal );
+	//return ( pObject.getType() == ObjectType::Decimal );
+	if ( pObject.getType() == ObjectType::Numeric ) {
+		return ((NumericObject&)pObject).getSubType() == NumericObject::SubType::DecimalNum;
+	}
 }
 
 //--------------------------------
@@ -3467,6 +3688,22 @@ protected:
 	// String functions
 	FuncExecReturn::Value	process_sys_string_match(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_string_concat(	FuncFoundTask& task );
+
+	// Numeric functions
+	FuncExecReturn::Value
+	process_sys_num_chain_num(
+		FuncFoundTask& task,
+		NumericObject* (*operation)(NumericObject&, NumericObject&)
+	);
+
+	FuncExecReturn::Value	process_sys_num_equals(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_num_greater_than(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_num_greater_or_equal(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_num_abs(			FuncFoundTask& task );
+	static NumericObject*	process_sys_num_add( NumericObject&, NumericObject& );
+	static NumericObject*	process_sys_num_subtract( NumericObject&, NumericObject& );
+	static NumericObject*	process_sys_num_multiply( NumericObject&, NumericObject& );
+	static NumericObject*	process_sys_num_divide( NumericObject&, NumericObject& );
 
 #ifdef COPPER_SPEED_PROFILE
 	timeval sp_startTime, sp_endTime;
