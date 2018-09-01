@@ -81,6 +81,7 @@ You are free to use, modify and redistribute this code to your heart's content, 
     <keyword>member_count</keyword>
     <keyword>is_member</keyword>
     <keyword>set_member</keyword>
+    <keyword>member_list</keyword>
     <keyword>union</keyword>
     <keyword>type_of</keyword>
     <keyword>are_same_type</keyword>
@@ -119,6 +120,17 @@ You are free to use, modify and redistribute this code to your heart's content, 
 
     <keyword>matching</keyword>
     <keyword>concat</keyword>
+
+    <keyword>equals</keyword>
+    <keyword>gt</keyword>
+    <keyword>gte</keyword>
+    <keyword>abs</keyword>
+    <keyword>add</keyword>
+    <keyword>sbtr</keyword>
+    <keyword>mult</keyword>
+    <keyword>divd</keyword>
+    <keyword>incr</keyword>
+    <keyword>decr</keyword>
   </context>
 
   <!-- Level 8 -->
