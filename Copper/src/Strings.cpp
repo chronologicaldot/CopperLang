@@ -370,6 +370,16 @@ String::~String()
 		delete[] str;
 }
 
+void
+String::steal( String& pSource ) {
+	if ( str )
+		delete str;
+	str = pSource.str;
+	pSource.str = 0;
+	len = pSource.len;
+	pSource.len = 0;
+}
+
 String& String::operator= ( const String& pString )
 {
 	len = 0;

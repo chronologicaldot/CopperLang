@@ -768,27 +768,27 @@ NumericObject::~NumericObject()
 //--------------------------------------
 
 void
-IntegerObject::setValue( NumericObject& other ) {
+IntegerObject::setValue( const NumericObject&  other ) {
 	value = other.getIntegerValue();
 }
 
 bool
-IntegerObject::isEqualTo( NumericObject& other ) {
+IntegerObject::isEqualTo( const NumericObject&  other ) {
 	return value == other.getIntegerValue();
 }
 
 bool
-IntegerObject::isGreaterThan( NumericObject& other ) {
+IntegerObject::isGreaterThan( const NumericObject&  other ) {
 	return value > other.getIntegerValue();
 }
 
 bool
-IntegerObject::isGreaterOrEqual( NumericObject& other ) {
+IntegerObject::isGreaterOrEqual( const NumericObject&  other ) {
 	return value >= other.getIntegerValue();
 }
 
 NumericObject*
-IntegerObject::absValue() {
+IntegerObject::absValue() const {
 	return new IntegerObject( value >= 0 ? value : -value );
 }
 
@@ -797,7 +797,7 @@ IntegerObject::absValue() {
 // and thanks to Franz D. for observing more detection is needed for multiplication.
 
 NumericObject*
-IntegerObject::add( NumericObject& other ) {
+IntegerObject::add( const NumericObject&  other ) {
 #ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
 	Integer oi = other.getIntegerValue();
 	// Detect overflow
@@ -813,7 +813,7 @@ IntegerObject::add( NumericObject& other ) {
 }
 
 NumericObject*
-IntegerObject::subtract( NumericObject& other ) {
+IntegerObject::subtract( const NumericObject&  other ) {
 #ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
 	Integer oi = other).getIntegerValue();
 	// detect overflow
@@ -829,7 +829,7 @@ IntegerObject::subtract( NumericObject& other ) {
 }
 
 NumericObject*
-IntegerObject::multiply( NumericObject& other ) {
+IntegerObject::multiply( const NumericObject&  other ) {
 #ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
 	Integer oi = other.getIntegerValue();
 	if ( oi < 0 )
@@ -848,7 +848,7 @@ IntegerObject::multiply( NumericObject& other ) {
 }
 
 NumericObject*
-IntegerObject::divide( NumericObject& other ) {
+IntegerObject::divide( const NumericObject&  other ) {
 #ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
 	Integer oi = other.getIntegerValue();
 	if ( oi == 0 ) {
@@ -876,47 +876,47 @@ iszero(
 }
 
 void
-DecimalNumObject::setValue( NumericObject& other ) {
+DecimalNumObject::setValue( const NumericObject&  other ) {
 	value = other.getDecimalValue();
 }
 
 bool
-DecimalNumObject::isEqualTo( NumericObject& other ) {
+DecimalNumObject::isEqualTo( const NumericObject&  other ) {
 	return value == other.getDecimalValue();
 }
 
 bool
-DecimalNumObject::isGreaterThan( NumericObject& other ) {
+DecimalNumObject::isGreaterThan( const NumericObject&  other ) {
 	return value > other.getDecimalValue();
 }
 
 bool
-DecimalNumObject::isGreaterOrEqual( NumericObject& other ) {
+DecimalNumObject::isGreaterOrEqual( const NumericObject&  other ) {
 	return value >= other.getDecimalValue();
 }
 
 NumericObject*
-DecimalNumObject::absValue() {
+DecimalNumObject::absValue() const {
 	return new DecimalNumObject( value >= 0 ? value : -value );
 }
 
 NumericObject*
-DecimalNumObject::add( NumericObject& other ) {
+DecimalNumObject::add( const NumericObject&  other ) {
 	return new DecimalNumObject(value + other.getDecimalValue());
 }
 
 NumericObject*
-DecimalNumObject::subtract( NumericObject& other ) {
+DecimalNumObject::subtract( const NumericObject&  other ) {
 	return new DecimalNumObject(value - other.getDecimalValue());
 }
 
 NumericObject*
-DecimalNumObject::multiply( NumericObject& other ) {
+DecimalNumObject::multiply( const NumericObject&  other ) {
 	return new DecimalNumObject(value * other.getDecimalValue());
 }
 
 NumericObject*
-DecimalNumObject::divide( NumericObject& other ) {
+DecimalNumObject::divide( const NumericObject&  other ) {
 #ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
 	Decimal od = other.getDecimalValue();
 	if ( iszero(od) ) {
@@ -2840,12 +2840,16 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("-"), SystemFunction::_num_subtract);
 	builtinFunctions.insert(String("*"), SystemFunction::_num_multiply);
 	builtinFunctions.insert(String("/"), SystemFunction::_num_divide);
+	builtinFunctions.insert(String("++"), SystemFunction::_num_incr);
+	builtinFunctions.insert(String("--"), SystemFunction::_num_decr);
 #else
 	// Alternative names
 	builtinFunctions.insert(String("add"), SystemFunction::_num_add);
 	builtinFunctions.insert(String("sbtr"), SystemFunction::_num_subtract);
 	builtinFunctions.insert(String("mult"), SystemFunction::_num_multiply);
 	builtinFunctions.insert(String("divd"), SystemFunction::_num_divide);
+	builtinFunctions.insert(String("incr"), SystemFunction::_num_incr);
+	builtinFunctions.insert(String("decr"), SystemFunction::_num_decr);
 #endif
 }
 
@@ -5380,6 +5384,12 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_num_divide:
 		return process_sys_num_chain_num(task, process_sys_num_divide);
 
+	case SystemFunction::_num_incr:
+		return process_sys_solo_num(task, process_sys_num_incr);
+
+	case SystemFunction::_num_decr:
+		return process_sys_solo_num(task, process_sys_num_decr);
+
 	default:
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::setupBuiltinFunctionExecution could not match function");
@@ -5895,7 +5905,7 @@ Engine::process_sys_are_fn(
 	ArgsIter ai = task.args.start();
 	if ( ai.has() )
 	do {
-		result = isObjectFunction(**ai);
+		result = isFunctionObject(**ai);
 	} while ( ai.next() && !result );
 	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
@@ -5912,7 +5922,7 @@ Engine::process_sys_are_empty(
 	ArgsIter ai = task.args.start();
 	if ( ai.has() )
 	do {
-		result = isObjectEmptyFunction(**ai);
+		result = isEmptyFunctionObject(**ai);
 	} while ( ai.next() && result );
 	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
@@ -5954,7 +5964,7 @@ Engine::process_sys_member(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the member sought
-	if ( ! isObjectFunction(**argsIter) ) {
+	if ( ! isFunctionObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::MemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
@@ -5999,7 +6009,7 @@ Engine::process_sys_member_count(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// The only parameter is the parent function of the members
-	if ( ! isObjectFunction(**argsIter) ) {
+	if ( ! isFunctionObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::MemberCountArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
@@ -6030,7 +6040,7 @@ Engine::process_sys_is_member(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the members
-	if ( ! isObjectFunction(**argsIter) ) {
+	if ( ! isFunctionObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::IsMemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
@@ -6068,7 +6078,7 @@ Engine::process_sys_set_member(
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter should be the parent function of the members
-	if ( ! isObjectFunction(**argsIter) ) {
+	if ( ! isFunctionObject(**argsIter) ) {
 		print(LogLevel::error, EngineMessage::SetMemberArg1NotFunction);
 		return FuncExecReturn::ErrorOnRun;
 	}
@@ -6114,7 +6124,7 @@ Engine::process_sys_member_list(
 	FunctionObject* usableFC;
 	Function* usableFunc;
 	do {
-		if ( isObjectFunction(**argsIter) ) {
+		if ( isFunctionObject(**argsIter) ) {
 			usableFC = (FunctionObject*)(*argsIter);
 			if ( usableFC->getFunction(usableFunc) ) {
 				usableFunc->getPersistentScope().appendNamesByInterface(outList);
@@ -6148,7 +6158,7 @@ Engine::process_sys_union(
 	FunctionObject* usableFC;
 	Function* usableFunc;
 	do {
-		if ( isObjectFunction(**argsIter) ) {
+		if ( isFunctionObject(**argsIter) ) {
 			usableFC = (FunctionObject*)(*argsIter);
 			if ( usableFC->getFunction(usableFunc) ) {
 				finalFunc->getPersistentScope().copyMembersFrom( usableFunc->getPersistentScope() );
@@ -6293,7 +6303,7 @@ Engine::process_sys_are_number(
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isIntegerObject(**argsIter) || isDecimalNumObject(**argsIter);
+		out = isNumericObject(**argsIter);
 		if ( !out)
 			break;
 	} while ( argsIter.next() );
@@ -6402,11 +6412,11 @@ Engine::process_sys_execute_with_alt_super(
 	Object* callObject = *argsIter;
 	argsIter.next();
 
-	if ( ! isObjectFunction(*superObject) ) {
+	if ( ! isFunctionObject(*superObject) ) {
 		print(LogLevel::error, EngineMessage::ExecuteWithAltSuperWrongArg1);
 		return FuncExecReturn::ErrorOnRun;
 	}
-	if ( ! isObjectFunction(*callObject) ) {
+	if ( ! isFunctionObject(*callObject) ) {
 		print(LogLevel::error, EngineMessage::ExecuteWithAltSuperWrongArg2);
 		return FuncExecReturn::ErrorOnRun;
 	}
@@ -6862,6 +6872,26 @@ Engine::process_sys_num_chain_num(
 }
 
 FuncExecReturn::Value
+Engine::process_sys_solo_num(
+	FuncFoundTask& task,
+	NumericObject* (*operation)(NumericObject&)
+) {
+	NumericObject*  number;
+	ArgsIter argsIter = task.args.start();
+	if ( argsIter.has() ) {
+		if ( isNumericObject(**argsIter) ) {
+			number = (NumericObject*)*argsIter;
+			number = operation( *number );
+		} else {
+			print(LogLevel::warning, "Numeric processing function was not given a number as the first argument.");
+			return FuncExecReturn::Ran;
+		}
+	}
+	lastObject.setWithoutRef(number);
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
 Engine::process_sys_num_equals( FuncFoundTask& task ) {
 	bool result = true;
 	NumericObject*  first;
@@ -6975,6 +7005,22 @@ Engine::process_sys_num_divide( NumericObject& first, NumericObject& second ) {
 	return first.divide(second);
 }
 
+NumericObject*
+Engine::process_sys_num_incr( NumericObject& base ) {
+	// TODO: Add an increment function to the objects themselves, which is much faster
+	NumericObject* out = base.add(IntegerObject(1));
+	base.setValue(*out);
+	return out;
+}
+
+NumericObject*
+Engine::process_sys_num_decr( NumericObject& base ) {
+	// TODO: Add a decrement function to the objects themselves, which is much faster
+	NumericObject* out = base.subtract(IntegerObject(1));
+	base.setValue(*out);
+	return out;
+}
+
 void
 addNewForeignFunc(
 	Engine& pEngine,
@@ -7044,7 +7090,7 @@ CallbackWrapper::call(
 	Object* obj;
 	if ( ffi.hasMoreArgs() ) {
 		obj = ffi.getNextArg();
-		if ( isObjectFunction(obj) ) {
+		if ( isFunctionObject(obj) ) {
 			callback = (FunctionObject*)obj;
 			callback->ref();
 			callback->changeOwnerTo(this);

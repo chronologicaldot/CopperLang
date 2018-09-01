@@ -52,6 +52,7 @@ public:
 	//String( const int pValue ); // DEPRECATED - use CharList(const int)
 	//String( const float pValue ); // DEPRECATED - use CharList(const float)
 	virtual ~String();
+	void steal( String& pSource ); // Steals the data from the source
 	String& operator= ( const String& pString );
 	String& operator= ( const char* pString );
 	String& operator= ( const CharList& pList );
@@ -72,7 +73,7 @@ public:
 	unsigned char numberType() const; // return 0 for no type, 1 for integer, 2 for decimal
 
 	// Needs an equalsSubString( const String&, start, end )
-	// Needs a getSubString( start, end, String& )
+	// Needs a getSubString( start, end )
 
 	// Creates a key-value to be used for hash-tables
 	uint keyValue() const;

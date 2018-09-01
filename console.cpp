@@ -61,7 +61,7 @@ public:
 		Cu::Object*  obj;
 		if ( ffi.hasMoreArgs() ) {
 			obj = ffi.getNextArg();
-			if ( Cu::isObjectFunction(*obj) ) {
+			if ( Cu::isFunctionObject(*obj) ) {
 				cb = (Cu::FunctionObject*)obj;
 				cb->ref();
 				cb->changeOwnerTo(this);

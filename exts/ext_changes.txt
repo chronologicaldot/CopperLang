@@ -1,4 +1,30 @@
 ===========
+2018/8/31
+
+basicmath
+- Removed foreign functions that are now built-in:
+-- AreEqual
+-- IsGreaterThan
+-- IsGreaterThanOrEqual
+-- IsLessThan
+-- IsLessThanOrEqual
+-- Add
+-- Subtract
+-- Multiply
+-- Divide
+-- Abs
+-- Incr
+-- Decr
+- Modified foreign functions to use only Numeric type:
+-- IntegerCast
+-- DecimalCast
+-- ToString
+-- AreZero
+-- PickMin
+-- PickMax
+-- Avg
+
+===========
 2018/3/10
 
 Deleted Time/clocktime.h and Time/clocktime.cpp. These used outdated approaches and would not compile anyways.

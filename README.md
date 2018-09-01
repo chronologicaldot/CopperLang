@@ -41,7 +41,7 @@ loop {
 
 ## Interpreter Features
 
-This is a tiny, light-weight, cross-platform interpreter (roughly 250kb) providing only certain basic features essential to the language. The bare-bones interpreter includes functions for boolean comparisons but does not include functions for numbers or strings. Some extensions have been provided for numbers. Many features have been deliberately excluded from the engine to keep it small and also to allow users to have more control over the permitted flow of data. For example, basic strings are merely byte strands, but the user may create a separate object type to enforce Unicode.
+This is a tiny, light-weight, cross-platform interpreter (roughly 250kb) providing only certain basic features essential to the language. The bare-bones interpreter includes functions for boolean comparisons and some for numbers and strings. An extension has been provided for useful numeric functions. Many features have been deliberately excluded from the engine to keep it small and also to allow users to have more control over the permitted flow of data. For example, basic strings are merely byte strands, but the user may create a separate object type to enforce Unicode.
 
 The interpreter does not use a garbage collector. The language doesn't require one.
 
@@ -61,7 +61,6 @@ The Premake files are not necessary for the project as it is simply enough to in
 The following files must be included for the basic interpreter (without the printer):
 
 * utilList.h
-* utilPipe.h
 * RRHash.h
 * String.h
 * String.cpp

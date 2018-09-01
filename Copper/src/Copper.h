@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.5
+#define COPPER_INTERPRETER_VERSION 0.51
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -864,6 +864,8 @@ struct SystemFunction {
 	_num_subtract,			// "subtract" or "sbtr" or "-"
 	_num_multiply,			// "multiply" or "mul" or "mult" or "*"
 	_num_divide,			// "divide" or "divd" or "/"
+	_num_incr,				// "incr" or "++"
+	_num_decr,				// "decr" or "--"
 	};
 };
 
@@ -1994,7 +1996,7 @@ struct NumericObject : public Object {
 #endif
 
 	virtual void
-	setValue( NumericObject& ) = 0;
+	setValue( const NumericObject& ) = 0;
 
 	virtual Integer
 	getIntegerValue() const = 0;
@@ -2003,44 +2005,44 @@ struct NumericObject : public Object {
 	getDecimalValue() const = 0;
 
 	virtual bool
-	isEqualTo( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+	isEqualTo(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
 
 	virtual bool
-	isGreaterThan( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+	isGreaterThan(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
 
 	virtual bool
-	isGreaterOrEqual( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+	isGreaterOrEqual(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
 
 	virtual Object*
-	absValue() = 0;
+	absValue() const = 0;
 
 	virtual NumericObject*
-	add( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+	add(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
 
 	virtual NumericObject*
-	subtract( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+	subtract(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
 
 	virtual NumericObject*
-	multiply( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+	multiply(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
 
 	virtual NumericObject*
-	divide( NumericObject& CU_UNUSED_ARG(other) ) = 0;
+	divide(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
 
 /*
 	// Example Settings
 
 	virtual bool
-	isEqualTo( NumericObject& CU_UNUSED_ARG(other) ) {
+	isEqualTo(const NumericObject& CU_UNUSED_ARG(other) ) {
 		return false;
 	}
 
 	virtual bool
-	isGreaterThan( NumericObject& CU_UNUSED_ARG(other) ) {
+	isGreaterThan(const NumericObject& CU_UNUSED_ARG(other) ) {
 		return false;
 	}
 
 	virtual bool
-	isGreaterOrEqual( NumericObject& CU_UNUSED_ARG(other) ) {
+	isGreaterOrEqual(const NumericObject& CU_UNUSED_ARG(other) ) {
 		return false;
 	}
 
@@ -2145,7 +2147,7 @@ public:
 	}
 
 	virtual void
-	setValue( NumericObject& );
+	setValue( const NumericObject&  );
 
 	virtual Integer
 	getIntegerValue() const {
@@ -2158,28 +2160,28 @@ public:
 	}
 
 	virtual bool
-	isEqualTo( NumericObject& CU_UNUSED_ARG(other) );
+	isEqualTo(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual bool
-	isGreaterThan( NumericObject& CU_UNUSED_ARG(other) );
+	isGreaterThan(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual bool
-	isGreaterOrEqual( NumericObject& CU_UNUSED_ARG(other) );
+	isGreaterOrEqual(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual NumericObject*
-	absValue();
+	absValue() const;
 
 	virtual NumericObject*
-	add( NumericObject& CU_UNUSED_ARG(other) );
+	add(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual NumericObject*
-	subtract( NumericObject& CU_UNUSED_ARG(other) );
+	subtract(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual NumericObject*
-	multiply( NumericObject& CU_UNUSED_ARG(other) );
+	multiply(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual NumericObject*
-	divide( NumericObject& CU_UNUSED_ARG(other) );
+	divide(const NumericObject& CU_UNUSED_ARG(other) );
 };
 
 /*
@@ -2254,7 +2256,7 @@ public:
 	}
 
 	virtual void
-	setValue( NumericObject& );
+	setValue( const NumericObject&  );
 
 	virtual Integer
 	getIntegerValue() const {
@@ -2267,28 +2269,28 @@ public:
 	}
 
 	virtual bool
-	isEqualTo( NumericObject& CU_UNUSED_ARG(other) );
+	isEqualTo(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual bool
-	isGreaterThan( NumericObject& CU_UNUSED_ARG(other) );
+	isGreaterThan(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual bool
-	isGreaterOrEqual( NumericObject& CU_UNUSED_ARG(other) );
+	isGreaterOrEqual(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual NumericObject*
-	absValue();
+	absValue() const;
 
 	virtual NumericObject*
-	add( NumericObject& CU_UNUSED_ARG(other) );
+	add(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual NumericObject*
-	subtract( NumericObject& CU_UNUSED_ARG(other) );
+	subtract(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual NumericObject*
-	multiply( NumericObject& CU_UNUSED_ARG(other) );
+	multiply(const NumericObject& CU_UNUSED_ARG(other) );
 
 	virtual NumericObject*
-	divide( NumericObject& CU_UNUSED_ARG(other) );
+	divide(const NumericObject& CU_UNUSED_ARG(other) );
 };
 
 
@@ -3145,14 +3147,14 @@ String addressToString( const VarAddress& address );
 
 
 inline bool
-isObjectFunction(
+isFunctionObject(
 	const Object& pObject
 ) {
 	return ( pObject.getType() == ObjectType::Function );
 }
 
 inline bool
-isObjectEmptyFunction(
+isEmptyFunctionObject(
 	const Object& pObject
 ) {
 	if ( pObject.getType() != ObjectType::Function ) {
@@ -3696,6 +3698,12 @@ protected:
 		NumericObject* (*operation)(NumericObject&, NumericObject&)
 	);
 
+	FuncExecReturn::Value
+	process_sys_solo_num(
+		FuncFoundTask& task,
+		NumericObject* (*operation)(NumericObject&)
+	);
+
 	FuncExecReturn::Value	process_sys_num_equals(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_num_greater_than(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_num_greater_or_equal(	FuncFoundTask& task );
@@ -3704,6 +3712,8 @@ protected:
 	static NumericObject*	process_sys_num_subtract( NumericObject&, NumericObject& );
 	static NumericObject*	process_sys_num_multiply( NumericObject&, NumericObject& );
 	static NumericObject*	process_sys_num_divide( NumericObject&, NumericObject& );
+	static NumericObject*	process_sys_num_incr( NumericObject& );
+	static NumericObject*	process_sys_num_decr( NumericObject& );
 
 #ifdef COPPER_SPEED_PROFILE
 	timeval sp_startTime, sp_endTime;

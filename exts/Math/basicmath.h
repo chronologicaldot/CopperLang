@@ -68,48 +68,6 @@ struct AreZero : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-//! Foreign Function for checking numeric equality of a series of arguments
-/* Precedence for the type goes to the first argument. */
-struct AreEqual : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-// gt(a: b: c:) means is a > b && a > c
-struct IsGreaterThan : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-// lt(a: b: c:) means a < b && a < c
-struct IsLessThan : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-// gte(a: b: c:) means a >= b && a >= c
-struct IsGreaterThanOrEqual : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-// lte(a: b: c:) means a <= b && a <= c
-struct IsLessThanOrEqual : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-struct Add : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-struct Subtract : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-struct Multiply : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-struct Divide : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
 struct Modulus : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
@@ -135,18 +93,6 @@ struct Pick_min : public VariadicFunc {
 };
 
 struct Avg : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-struct Get_abs : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-struct Incr : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-struct Decr : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
