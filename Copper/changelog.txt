@@ -1,5 +1,5 @@
 ====================
-2018/8/17 - 2018/8/31
+2018/8/17 - 2018/9/5
 v 6-0.51
 
 - Now on branch Feldspar.
@@ -17,11 +17,15 @@ v 6-0.51
 -- Changed DecimalObject to inherit NumericObject.
 - Implemented NumericObject interface for IntegerObject. (Ported basicmath.cpp extension.)
 - Implemented NumericObject interface for DecimalNumObject. (Ported basicmath.cpp extension.)
-- Added system functions for numeric operations: _equals, _greater_than, _greater_or_equal, _abs, _add, _subtract, _multipy, _divide, incr, and decr, and implemented processing functions for them in the Engine.
+- Added system functions for numeric operations: _equals, _greater_than, _greater_or_equal, _abs, _add, _subtract, _multiply, _divide, modulus, incr, and decr and implemented processing functions for them in the Engine.
 - Added String::steal().
 - Changed isObjectFunction() to isFunctionObject.
 - Changed isObjectEmptyFunction() to isEmptyFunctionObject.
 - Changed Engine::process_sys_are_number() to use isNumericObject().
+- Added argument support to the engine along with helper method Engine::addForeignFunctionArgsToStackFrame().
+- Changed Engine::runFunctionObject to also set the lastObject before running.
+- Fixed ~CallbackWrapper() to disown callback in destructor.
+- Added Engine::getLastObject().
 
 Printer.h
 - Updated to use Numeric for printing numbers instead of the usual Integer and Decimal types.

@@ -864,6 +864,7 @@ struct SystemFunction {
 	_num_subtract,			// "subtract" or "sbtr" or "-"
 	_num_multiply,			// "multiply" or "mul" or "mult" or "*"
 	_num_divide,			// "divide" or "divd" or "/"
+	_num_modulus,			// "modulus" or "mod" or "%"
 	_num_incr,				// "incr" or "++"
 	_num_decr,				// "decr" or "--"
 	};
@@ -2028,6 +2029,9 @@ struct NumericObject : public Object {
 	virtual NumericObject*
 	divide(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
 
+	virtual NumericObject*
+	modulus(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
+
 /*
 	// Example Settings
 
@@ -2052,16 +2056,7 @@ struct NumericObject : public Object {
 	absValue() { return copy(); }
 
 	virtual NumericObject*
-	add( Object& CU_UNUSED_ARG(other) ) { return copy(); }
-
-	virtual NumericObject*
-	subtract( Object& CU_UNUSED_ARG(other) ) { return copy(); }
-
-	virtual NumericObject*
-	multiply( Object& CU_UNUSED_ARG(other) ) { return copy(); }
-
-	virtual NumericObject*
-	divide( Object& CU_UNUSED_ARG(other) ) { return copy(); }
+	add( NumericObject& CU_UNUSED_ARG(other) ) { return copy(); }
 */
 };
 
@@ -2182,6 +2177,9 @@ public:
 
 	virtual NumericObject*
 	divide(const NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	modulus(const NumericObject& CU_UNUSED_ARG(other) );
 };
 
 /*
@@ -2291,6 +2289,9 @@ public:
 
 	virtual NumericObject*
 	divide(const NumericObject& CU_UNUSED_ARG(other) );
+
+	virtual NumericObject*
+	modulus(const NumericObject& CU_UNUSED_ARG(other) );
 };
 
 
@@ -3589,14 +3590,30 @@ public:
 	*/
 	EngineResult::Value
 	runFunctionObject(
-		FunctionObject*	functionObject
+		FunctionObject*	 functionObject,
+		List<Object*>*  args = REAL_NULL
 	);
+
+	/*
+		This returns the address of the very last object processed by the engine.
+		It is usually (but not always) the return of a function, so if you use runFunctionObject, you
+		can use it to check the return of the function.
+	*/
+	Object*
+	getLastObject() const;
 
 protected:
 	ExecutionResult::Value
 	operate(
 		OpStrandStackIter&	opStrandStackIter,
 		OpStrandIter&		opIter
+	);
+
+	void
+	addForeignFunctionArgsToStackFrame(
+		StackFrame&  stackFrame,
+		const List<String>&  functionParams,
+		List<Object*>&  arguments
 	);
 
 	FuncExecReturn::Value
@@ -3712,6 +3729,7 @@ protected:
 	static NumericObject*	process_sys_num_subtract( NumericObject&, NumericObject& );
 	static NumericObject*	process_sys_num_multiply( NumericObject&, NumericObject& );
 	static NumericObject*	process_sys_num_divide( NumericObject&, NumericObject& );
+	static NumericObject*	process_sys_num_modulus( NumericObject&, NumericObject& );
 	static NumericObject*	process_sys_num_incr( NumericObject& );
 	static NumericObject*	process_sys_num_decr( NumericObject& );
 

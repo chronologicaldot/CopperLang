@@ -865,6 +865,11 @@ IntegerObject::divide( const NumericObject&  other ) {
 	return new IntegerObject(value / other.getIntegerValue());
 }
 
+NumericObject*
+IntegerObject::modulus(const NumericObject&  other ) {
+	return new IntegerObject(value % other.getIntegerValue());
+}
+
 //--------------------------------------
 
 bool
@@ -931,6 +936,11 @@ DecimalNumObject::divide( const NumericObject&  other ) {
 	}
 #endif
 	return new DecimalNumObject(value / other.getDecimalValue());
+}
+
+NumericObject*
+DecimalNumObject::modulus(const NumericObject&  other ) {
+	return new IntegerObject(Integer(value) % other.getIntegerValue());
 }
 
 //--------------------------------------
@@ -2840,6 +2850,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("-"), SystemFunction::_num_subtract);
 	builtinFunctions.insert(String("*"), SystemFunction::_num_multiply);
 	builtinFunctions.insert(String("/"), SystemFunction::_num_divide);
+	builtinFunctions.insert(String("%"), SystemFunction::_num_modulus);
 	builtinFunctions.insert(String("++"), SystemFunction::_num_incr);
 	builtinFunctions.insert(String("--"), SystemFunction::_num_decr);
 #else
@@ -2848,6 +2859,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("sbtr"), SystemFunction::_num_subtract);
 	builtinFunctions.insert(String("mult"), SystemFunction::_num_multiply);
 	builtinFunctions.insert(String("divd"), SystemFunction::_num_divide);
+	builtinFunctions.insert(String("mod"), SystemFunction::_num_modulus);
 	builtinFunctions.insert(String("incr"), SystemFunction::_num_incr);
 	builtinFunctions.insert(String("decr"), SystemFunction::_num_decr);
 #endif
@@ -5079,7 +5091,8 @@ Engine::operate(
 // must be run after them.
 EngineResult::Value
 Engine::runFunctionObject(
-	FunctionObject*  functionObject
+	FunctionObject*  functionObject,
+	util::List<Object*>*  args
 ) {
 	// Slightly-varied version of setupUserFunctionExecution.
 
@@ -5094,6 +5107,9 @@ Engine::runFunctionObject(
 		lastObject.set( function->result.raw() ); // Copy is created when saved to variable
 		return EngineResult::Ok;
 	}
+
+	// Set default result value (required especially for empty functions)
+	lastObject.setWithoutRef(new FunctionObject());
 
 	// Parse function body if not done yet.
 	// If function body contained errors, return error.
@@ -5128,8 +5144,13 @@ Engine::runFunctionObject(
 	stackFrame->getScope().getVariable(CONSTANT_FUNCTION_SELF, callVariable);
 	callVariable->setFunc( functionObject, true );
 
-	// Argument-passing is not yet supported.
-	// See code in setupUserFunctionExecution for how to set args.
+	// Argument-passing
+	Function*  func;
+	functionObject->getFunction(func);
+	bool done = false;
+	if ( notNull(args) ) {
+		addForeignFunctionArgsToStackFrame(*stackFrame, func->params, *args);
+	}
 
 	// Add stack frame
 	stack.push(stackFrame);
@@ -5147,6 +5168,37 @@ Engine::runFunctionObject(
 	return EngineResult::Ok;
 }
 
+void
+Engine::addForeignFunctionArgsToStackFrame(
+	StackFrame&  stackFrame,
+	const List<String>&  functionParams,
+	List<Object*>&  arguments
+) {
+	List<String>::ConstIter  funcParamsIter = functionParams.constStart();
+	List<Object*>::Iter  givenArgsIter = arguments.start();
+	bool done = false;
+
+	if ( funcParamsIter.has() && givenArgsIter.has() ) {
+		do {
+			// Match parameters with parameter list items
+			stackFrame.getScope().setVariableFrom( *funcParamsIter, *givenArgsIter, true );
+			if ( ! funcParamsIter.next() ) {
+				done = true;
+				break;
+			}
+		} while ( givenArgsIter.next() );
+		if ( !done )
+		do {
+			print( LogLevel::warning, EngineMessage::MissingFunctionCallParam );
+		} while ( funcParamsIter.next() );
+	}
+}
+
+Object*
+Engine::
+getLastObject() const {
+	return lastObject.raw();
+}
 
 FuncExecReturn::Value
 Engine::setupFunctionExecution(
@@ -5358,19 +5410,6 @@ Engine::setupBuiltinFunctionExecution(
 
 	case SystemFunction::_num_abs:
 		return process_sys_num_abs(task);
-/*
-	case SystemFunction::_num_add:
-		return process_sys_num_add(task);
-
-	case SystemFunction::_num_subtract:
-		return process_sys_num_subtract(task);
-
-	case SystemFunction::_num_multiply:
-		return process_sys_num_multiply(task);
-
-	case SystemFunction::_num_divide:
-		return process_sys_num_divide(task);
-*/
 
 	case SystemFunction::_num_add:
 		return process_sys_num_chain_num(task, process_sys_num_add);
@@ -5383,6 +5422,9 @@ Engine::setupBuiltinFunctionExecution(
 
 	case SystemFunction::_num_divide:
 		return process_sys_num_chain_num(task, process_sys_num_divide);
+
+	case SystemFunction::_num_modulus:
+		return process_sys_num_chain_num(task, process_sys_num_modulus);
 
 	case SystemFunction::_num_incr:
 		return process_sys_solo_num(task, process_sys_num_incr);
@@ -7006,6 +7048,11 @@ Engine::process_sys_num_divide( NumericObject& first, NumericObject& second ) {
 }
 
 NumericObject*
+Engine::process_sys_num_modulus( NumericObject& first, NumericObject& second ) {
+	return first.modulus(second);
+}
+
+NumericObject*
 Engine::process_sys_num_incr( NumericObject& base ) {
 	// TODO: Add an increment function to the objects themselves, which is much faster
 	NumericObject* out = base.add(IntegerObject(1));
@@ -7052,8 +7099,10 @@ CallbackWrapper::CallbackWrapper(
 }
 
 CallbackWrapper::~CallbackWrapper() {
-	if ( callback )
+	if ( callback ) {
+		callback->disown(this);
 		callback->deref();
+	}
 }
 
 bool
