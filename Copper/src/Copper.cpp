@@ -2841,7 +2841,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("matching"), SystemFunction::_string_match);
 	builtinFunctions.insert(String("concat"), SystemFunction::_string_concat);
 
-	builtinFunctions.insert(String("equals"), SystemFunction::_num_equals);
+	builtinFunctions.insert(String("equal"), SystemFunction::_num_equal);
 	builtinFunctions.insert(String("gt"), SystemFunction::_num_greater_than);
 	builtinFunctions.insert(String("gte"), SystemFunction::_num_greater_or_equal);
 	builtinFunctions.insert(String("abs"), SystemFunction::_num_abs);
@@ -5399,8 +5399,8 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_string_concat:
 		return process_sys_string_concat(task);
 
-	case SystemFunction::_num_equals:
-		return process_sys_num_equals(task);
+	case SystemFunction::_num_equal:
+		return process_sys_num_equal(task);
 
 	case SystemFunction::_num_greater_than:
 		return process_sys_num_greater_than(task);
@@ -6934,7 +6934,7 @@ Engine::process_sys_solo_num(
 }
 
 FuncExecReturn::Value
-Engine::process_sys_num_equals( FuncFoundTask& task ) {
+Engine::process_sys_num_equal( FuncFoundTask& task ) {
 	bool result = true;
 	NumericObject*  first;
 	ArgsIter argsIter = task.args.start();

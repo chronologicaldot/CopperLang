@@ -17,7 +17,7 @@ v 6-0.51
 -- Changed DecimalObject to inherit NumericObject.
 - Implemented NumericObject interface for IntegerObject. (Ported basicmath.cpp extension.)
 - Implemented NumericObject interface for DecimalNumObject. (Ported basicmath.cpp extension.)
-- Added system functions for numeric operations: _equals, _greater_than, _greater_or_equal, _abs, _add, _subtract, _multiply, _divide, modulus, incr, and decr and implemented processing functions for them in the Engine.
+- Added system functions for numeric operations: _equal, _greater_than, _greater_or_equal, _abs, _add, _subtract, _multiply, _divide, modulus, incr, and decr and implemented processing functions for them in the Engine.
 - Added String::steal().
 - Changed isObjectFunction() to isFunctionObject.
 - Changed isObjectEmptyFunction() to isEmptyFunctionObject.

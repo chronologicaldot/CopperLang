@@ -30,9 +30,6 @@ addFunctionsToEngine(
 	addNewForeignFunc( engine, "min", new Pick_min() );
 	addNewForeignFunc( engine, "max", new Pick_max() );
 
-	// Integer-return only
-	addNewForeignFunc( engine, "%", new Modulus() );
-
 	// Decimal return only
 	addNewForeignFunc( engine, "pow", new Power() );
 	addNewForeignFunc( engine, "PI", new PI() );
@@ -175,6 +172,7 @@ AreZero::call(
 	return true;
 }
 
+/*
 bool
 Modulus::call(
 	FFIServices& ffi
@@ -196,6 +194,7 @@ Modulus::call(
 	ffi.setNewResult( new IntegerObject(total) );
 	return true;
 }
+*/
 
 bool
 Power::call(

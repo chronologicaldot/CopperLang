@@ -67,11 +67,11 @@ bool Unimplemented( FFIServices& ffi );
 struct AreZero : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
-
+/*
 struct Modulus : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };
-
+*/
 struct Power : public VariadicFunc {
 	virtual bool call( FFIServices& ffi );
 };

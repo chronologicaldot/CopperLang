@@ -856,7 +856,7 @@ struct SystemFunction {
 	_string_match,	// "matching"
 	_string_concat,	// "concat"
 
-	_num_equals,			// "equals"
+	_num_equal,				// "equal"
 	_num_greater_than,		// "gt"
 	_num_greater_or_equal,	// "gte", greater than or equal
 	_num_abs,				// "abs", absolute value
@@ -3721,7 +3721,7 @@ protected:
 		NumericObject* (*operation)(NumericObject&)
 	);
 
-	FuncExecReturn::Value	process_sys_num_equals(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_num_equal(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_num_greater_than(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_num_greater_or_equal(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_num_abs(			FuncFoundTask& task );
