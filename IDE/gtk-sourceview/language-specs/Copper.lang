@@ -121,7 +121,7 @@ You are free to use, modify and redistribute this code to your heart's content, 
     <keyword>matching</keyword>
     <keyword>concat</keyword>
 
-    <keyword>equals</keyword>
+    <keyword>equal</keyword>
     <keyword>gt</keyword>
     <keyword>gte</keyword>
     <keyword>abs</keyword>

@@ -5880,7 +5880,7 @@ Engine::process_sys_all(
 	if ( ai.has() )
 	do {
 		result = getBoolValue(**ai);
-	} while ( ai.next() && ! result );
+	} while ( ai.next() && result );
 	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }
@@ -5897,7 +5897,7 @@ Engine::process_sys_any(
 	if ( ai.has() )
 	do {
 		result = getBoolValue(**ai);
-	} while ( ai.next() && result );
+	} while ( ai.next() && ! result );
 	lastObject.setWithoutRef(new BoolObject(result));
 	return FuncExecReturn::Ran;
 }

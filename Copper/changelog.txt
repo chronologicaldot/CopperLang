@@ -1,5 +1,5 @@
 ====================
-2018/8/17 - 2018/9/5
+2018/8/17 - 2018/9/7
 v 6-0.51
 
 - Now on branch Feldspar.
@@ -26,6 +26,7 @@ v 6-0.51
 - Changed Engine::runFunctionObject to also set the lastObject before running.
 - Fixed ~CallbackWrapper() to disown callback in destructor.
 - Added Engine::getLastObject().
+- Fixed bugs in Engine::process_sys_func_all() and Engine::process_sys_func_any() that had the conditional belonging to the other method.
 
 Printer.h
 - Updated to use Numeric for printing numbers instead of the usual Integer and Decimal types.
