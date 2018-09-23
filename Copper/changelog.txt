@@ -27,6 +27,7 @@ v 6-0.51
 - Fixed ~CallbackWrapper() to disown callback in destructor.
 - Added Engine::getLastObject().
 - Fixed bugs in Engine::process_sys_func_all() and Engine::process_sys_func_any() that had the conditional belonging to the other method.
+- Fixed null pointer in system support for numeric operations Engine::process_sys_num_chain_num and Engine::process_sys_solo_num.
 
 Printer.h
 - Updated to use Numeric for printing numbers instead of the usual Integer and Decimal types.

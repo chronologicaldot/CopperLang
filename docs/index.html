@@ -1864,16 +1864,16 @@ Foreign functions can be variadic and still require that a certain number of arg
 <p>By default, the feature is disabled and can only be enabled by passing <code>true</code> to <code>Engine::setOwnershipChangingEnabled()</code>.</p>
 <h2 id='benchmarks-how-fast-is-copper'>Benchmarks? How fast is Copper?</h2>
 <p>Tests run on an HP Pavilion AMD-64 Dual-core rated at 2.1~2.3GHz using the Time/sysclock and Math/basicmath extensions.</p>
-<h3 id='first-5000-primes'>First 5000 Primes</h3>
+<h3 id='primes-less-than-5000'>Primes Less Than 5000</h3>
 <blockquote>
-<p>First 5000 Primes</p>
+<p>Primes Less Than 5000</p>
 </blockquote>
-<pre class="highlight copper tab-copper"><code><span class="cm"># First 5000 Primes #</span><span class="w">
+<pre class="highlight copper tab-copper"><code><span class="cm"># Primes Less Than 5000 #</span><span class="w">
 </span><span class="n">isprime</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w">
     </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w">
     </span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">gte</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="n">n</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
-        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">are_zero</span><span class="p">(</span><span class="n">%</span><span class="p">(</span><span class="n">n</span><span class="o">:</span><span class="w"> </span><span class="n">i</span><span class="o">:</span><span class="p">))</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nb">ret</span><span class="p">(</span><span class="k">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">equal</span><span class="p">(</span><span class="n">%</span><span class="p">(</span><span class="n">n</span><span class="o">:</span><span class="w"> </span><span class="n">i</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nb">ret</span><span class="p">(</span><span class="k">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
         </span><span class="n">++</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="p">)</span><span class="w">
     </span><span class="p">}</span><span class="w">
     </span><span class="nb">ret</span><span class="p">(</span><span class="k">true</span><span class="p">)</span><span class="w">
@@ -1913,24 +1913,24 @@ Foreign functions can be variadic and still require that a certain number of arg
 <tr>
 <td>Start</td>
 <td>5</td>
-<td>22452</td>
-<td>44202</td>
+<td>16534</td>
+<td>32879</td>
 </tr>
 <tr>
 <td>End</td>
-<td>22456</td>
-<td>44201</td>
-<td>66206</td>
+<td>16534</td>
+<td>32879</td>
+<td>49199</td>
 </tr>
 <tr>
 <td>Total</td>
-<td>22451</td>
-<td>21749</td>
-<td>22004</td>
+<td>16529</td>
+<td>16345</td>
+<td>16320</td>
 </tr>
 </tbody></table>
 
-<p>Roughly 22 seconds per run.</p>
+<p>Roughly 16 seconds per run.</p>
 <h3 id='first-1000-fibonacci-numbers'>First 1000 Fibonacci Numbers</h3>
 <blockquote>
 <p>First 1000 Fibonacci Numbers</p>
@@ -1974,28 +1974,28 @@ Foreign functions can be variadic and still require that a certain number of arg
 </thead><tbody>
 <tr>
 <td>Start</td>
-<td>176</td>
-<td>366</td>
-<td>492</td>
-<td>602</td>
+<td>5</td>
+<td>108</td>
+<td>200</td>
+<td>296</td>
 </tr>
 <tr>
 <td>End</td>
-<td>267</td>
-<td>491</td>
-<td>602</td>
-<td>726</td>
+<td>108</td>
+<td>200</td>
+<td>296</td>
+<td>401</td>
 </tr>
 <tr>
 <td>Total</td>
-<td>91</td>
-<td>125</td>
-<td>110</td>
-<td>124</td>
+<td>103</td>
+<td>92</td>
+<td>96</td>
+<td>105</td>
 </tr>
 </tbody></table>
 <h2 id='can-i-do-builder-notation'>Can I do builder notation?</h2>
-<p>No. Even though returning a pointer from a function is still safe in Copper, the grammar of Copper dictates that function calls end a statement. This allows for lazy programming because statement-ending tokens are not required.</p>
+<p>No. Even though returning a pointer from a function is still safe in Copper, the grammar of Copper dictates that function calls end a statement. This allows for relaxed programming because statement-ending tokens are not required.</p>
 <h2 id='can-i-use-it-with-c'>Can I use it with C?</h2>
 <p>Sorry, nothing is wrapped in extern &quot;C&quot;, but since there are only a small handful of files, it shouldn&#39;t be hard for you to do this yourself.</p>
 <h2 id='comparison-to-angelscript'>Comparison to AngelScript?</h2><h3 id='intepreter-comparison'>Intepreter Comparison</h3>

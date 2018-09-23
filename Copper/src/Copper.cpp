@@ -6890,8 +6890,8 @@ Engine::process_sys_num_chain_num(
 	FuncFoundTask& task,
 	NumericObject* (*operation)(NumericObject&, NumericObject&)
 ) {
-	NumericObject*  startNumber;
-	NumericObject*  resultNumber;
+	NumericObject*  startNumber = REAL_NULL;
+	NumericObject*  resultNumber = REAL_NULL;
 	ArgsIter argsIter = task.args.start();
 	if ( argsIter.has() ) {
 		if ( isNumericObject(**argsIter) ) {
@@ -6906,10 +6906,14 @@ Engine::process_sys_num_chain_num(
 				resultNumber = operation(*startNumber, *((NumericObject*)*argsIter));
 				startNumber->deref();
 				startNumber = resultNumber;
+			} else {
+				print(LogLevel::warning, "Numeric processing function given non-number as second or more argument.");
 			}
 		}
 	}
-	lastObject.setWithoutRef(resultNumber);
+	if ( resultNumber ) {
+		lastObject.setWithoutRef(resultNumber);
+	}
 	return FuncExecReturn::Ran;
 }
 
@@ -6918,7 +6922,7 @@ Engine::process_sys_solo_num(
 	FuncFoundTask& task,
 	NumericObject* (*operation)(NumericObject&)
 ) {
-	NumericObject*  number;
+	NumericObject*  number = REAL_NULL;
 	ArgsIter argsIter = task.args.start();
 	if ( argsIter.has() ) {
 		if ( isNumericObject(**argsIter) ) {
@@ -6929,7 +6933,9 @@ Engine::process_sys_solo_num(
 			return FuncExecReturn::Ran;
 		}
 	}
-	lastObject.setWithoutRef(number);
+	if ( number ) {
+		lastObject.setWithoutRef(number);
+	}
 	return FuncExecReturn::Ran;
 }
 
