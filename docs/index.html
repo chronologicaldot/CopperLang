@@ -464,7 +464,7 @@ Members of an object in Copper cannot be deleted. However, their contents can be
 </blockquote>
 <pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">
 </span></code></pre>
-<p>An assignment to a variable occurs via the assignment operator, &quot;=&quot;. The variable to the left receives the data from the right. Both raw data (such as integers) and functions can be assigned to a variable, but data is saved as the return of the function that already exists in the variable. All assignments from one variable to another are copy actions, whereby the object-function and all of its members are copied from the giving variable into the receiving variable. The same action takes place when an object-function or data is returned from a function call.</p>
+<p>An assignment to a variable occurs via the assignment operator, &quot;=&quot;. The variable to the left receives the data from the right. Both raw data (such as integers) and functions can be assigned to a variable. All assignments from one variable to another are copy actions, whereby the object-function and all of its members are copied from the giving variable into the receiving variable. The same action takes place when an object-function or data is returned from a function call.</p>
 
 <p>Assigning data directly to a variable results in the function body being given a direct-return value. Whenever the function is called, this value is returned immediately. Consequently, it is faster than the equivalent function body.</p>
 
@@ -484,12 +484,6 @@ Members of an object in Copper cannot be deleted. However, their contents can be
 </span></code></pre>
 <p>When a function is pointed to by a variable, the members of that function can all be accessed via the member-access operator. Members can also be created this way. The function&#39;s direct return can also be set this way.</p>
 
-<blockquote>
-<p>Replacement vs Retaining</p>
-</blockquote>
-<pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="cm"># Returns 10. Replaces original function in "a". #</span><span class="w">
-</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="cm"># Returns 10. Retains original function in "a". #</span><span class="w">
-</span></code></pre>
 <aside class="notice">
 When assigning a new function to a variable or creating a pointer to a function, the current function of the variable is simply dropped (not overwritten) in favor of the new one.
 </aside>
