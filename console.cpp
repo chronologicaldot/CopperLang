@@ -118,6 +118,7 @@ int main() {
 	engine.setLogger(&streamLogger);
 	engine.addForeignFunction(util::String("print"), &printer);
 	engine.setStackTracePrintingEnabled(true);
+	engine.setPrintTokensWhenParsing(true);
 
 	//Cu::Numeric::Sizes::addFunctionsToEngine(engine);
 	//Cu::ManagedList::addFunctionsToEngine(engine, true);
@@ -125,13 +126,13 @@ int main() {
 	Cu::Numeric::addFunctionsToEngine(engine);
 	Cu::Time::addFunctionsToEngine(engine);
 
-	Cu_cb_receiver  ccr(engine);
-	engine.addForeignFunction(util::String("set_callback"), &ccr);
+	//Cu_cb_receiver  ccr(engine);
+	//engine.addForeignFunction(util::String("set_callback"), &ccr);
 
-	Cu::CallbackWrapper ccw(engine, util::String("set_wrapper"));
+	//Cu::CallbackWrapper ccw(engine, util::String("set_wrapper"));
 
-	MethodSource ms;
-	Cu::addForeignMethodInstance( engine, util::String("method"), &ms, &MethodSource::run );
+	//MethodSource ms;
+	//Cu::addForeignMethodInstance( engine, util::String("method"), &ms, &MethodSource::run );
 
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
@@ -168,8 +169,9 @@ int main() {
 			err = 1;
 		}
 	}
+/*
 	if ( err != 1 ) {
-		std::printf("\nTesting the callback...\n");
+		std::printf("Testing the callback...\n");
 		switch( ccr.test() )
 		{
 		case Cu::EngineResult::Error:
@@ -178,14 +180,15 @@ int main() {
 		}
 	}
 	if ( err != 1 ) {
-		std::printf("\nTesting second callback...\n");
+		std::printf("Testing second callback...\n");
 		if ( ! ccw.run() ) {
-			std::printf("\nError in second callback.\n");
+			std::printf("Error in second callback.\n");
 			// err = 1;
 		} else {
-			std::printf("\nSecond callback finished.\n");
+			std::printf("Second callback finished.\n");
 		}
 	}
-
+*/
+	std::printf("\n");
 	return err;
 }

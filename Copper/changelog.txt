@@ -1,6 +1,6 @@
 ====================
-2018/8/17 - 2018/9/7
-v 6-0.51
+2018/8/17 - 2018/10/13
+v 6-0.511
 
 - Now on branch Feldspar.
 - Changed " != REAL_NULL " to "notNull" usages.
@@ -28,9 +28,14 @@ v 6-0.51
 - Added Engine::getLastObject().
 - Fixed bugs in Engine::process_sys_func_all() and Engine::process_sys_func_any() that had the conditional belonging to the other method.
 - Fixed null pointer in system support for numeric operations Engine::process_sys_num_chain_num and Engine::process_sys_solo_num.
+- Removed class RandomNullByteInStream and usage.
+- Added debugging tool ability to Engine to print body tokens while parsing. Extends Logger interface.
 
 Printer.h
 - Updated to use Numeric for printing numbers instead of the usual Integer and Decimal types.
+
+InStreamLogger.h
+- Added ability to print tokens.
 
 
 ====================

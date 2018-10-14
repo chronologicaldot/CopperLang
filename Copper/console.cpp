@@ -35,6 +35,7 @@ int main() {
 	engine.setLogger(&streamLogger);
 	engine.addForeignFunction(util::String("print"), &printer);
 	//engine.setStackTracePrintingEnabled(true);
+	engine.setPrintTokensWhenParsing(true);
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
 	std::printf("\33[92m\n \t\tCOPPER LANGUAGE\n\t\tConsole Application\n\t\t(c) 2016-2018 Nicolaus Anderson\n\33[4m                                                              \33[0m\n");

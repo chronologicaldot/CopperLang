@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.51
+#define COPPER_INTERPRETER_VERSION 0.511
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -144,8 +144,6 @@ class UnimplementedFunction {};
 
 template<typename T>
 class BadParameterException {};
-
-class RandomNullByteInStream {};
 
 
 // ******* System includes *******
@@ -903,10 +901,12 @@ struct LogLevel {
 
 // Interface for a logger
 struct Logger {
+	~Logger() {}
 	virtual void print(const LogLevel::Value  logLevel, const char*  msg)=0;
 	virtual void print(const LogLevel::Value  logLevel, const EngineMessage::Value  msg)=0;
 	virtual void printTaskTrace( TaskType::Value  taskType, const String&  taskName, UInteger  taskNumber )=0;
 	virtual void printStackTrace( const String&  frameName, UInteger  frameNumber )=0;
+	virtual void printToken( const Token& ) {} // Optional. Used for debugging
 };
 
 //----------
@@ -3265,6 +3265,7 @@ class Engine {
 	bool ignoreBadForeignFunctionCalls;
 	bool ownershipChangingEnabled;
 	bool stackTracePrintingEnabled;
+	bool printTokensWhenParsing;
 	bool (* nameFilter)(const String& pName);
 
 public:
@@ -3297,6 +3298,11 @@ public:
 		stackTracePrintingEnabled = on;
 	}
 
+	// Set printing tokens when parsing
+	void setPrintTokensWhenParsing( bool on ) {
+		printTokensWhenParsing = on;
+	}
+
 	/* Set the filter used for checking the validity of names.
 	The filter should return true if the name is valid.
 	Such a filter can be used to check for different Unicode formats. */
@@ -3322,6 +3328,10 @@ public:
 	void
 	printGlobalStrand();
 #endif
+
+	/* Debugging feature, used for printing tokens when parsing. */
+	void
+	printTokens( TokenQueue& );
 
 	void clearGlobals();
 

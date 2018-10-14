@@ -337,6 +337,8 @@ Body::isEmpty() const {
 
 bool
 Body::compile_internal(Engine* engine) {
+	engine->printTokens(tokens);
+
 	ParserContext context;
 	context.setCodeStrand(codes);
 	context.setTokenSource(tokens);
@@ -2142,6 +2144,7 @@ Engine::Engine()
 	, ignoreBadForeignFunctionCalls(false)
 	, ownershipChangingEnabled(false)
 	, stackTracePrintingEnabled(false)
+	, printTokensWhenParsing(false)
 	, nameFilter(REAL_NULL)
 {
 	setupSystemFunctions();
@@ -2266,6 +2269,16 @@ Engine::printGlobalStrand() {
 }
 #endif
 
+void
+Engine::printTokens( TokenQueue& tokenQueue ) {
+	TokenQueueIter  tokenIter = tokenQueue.start();
+	if ( printTokensWhenParsing && notNull(logger) && tokenIter.has() ) {
+		do {
+			logger->printToken(tokenIter.getItem());
+		} while ( tokenIter.next() );
+	}
+}
+
 ParseResult::Value
 Engine::lexAndParse(
 	ByteStream& stream,
@@ -2282,8 +2295,10 @@ Engine::lexAndParse(
 	while ( ! stream.atEOS() ) {
 		c = stream.getNextByte();
 
-		if ( c == '\0' )
-			throw RandomNullByteInStream();
+		if ( c == '\0' ) {
+			print(LogLevel::error, "Random null byte in stream");
+			return ParseResult::Error;
+		}
 
 		if ( isWhitespace(c) ) {
 			if ( tokenValue.size() == 0 ) {

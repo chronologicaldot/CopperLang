@@ -28,6 +28,7 @@ public:
 	bool showInfo;
 	bool showWarnings;
 	bool showErrors;
+	bool printNaturalTokens;
 
 	InStreamLogger()
 		: inFile(stdin)
@@ -42,6 +43,7 @@ public:
 		, showInfo(true)
 		, showWarnings(true)
 		, showErrors(true)
+		, printNaturalTokens(true)
 	{}
 
 	// Stream functions
@@ -217,6 +219,21 @@ public:
 			fprintf(outFile, "\33[44m STACK TRACE %u \33[0m \33[94m %s\33[0m\n", frameNumber, frameName.c_str());
 		else
 			fprintf(outFile, " STACK TRACE %u : %s\n", frameNumber, frameName.c_str());
+	}
+
+	virtual void printToken( const Cu::Token&  token ) {
+
+		if ( printNaturalTokens ) {
+			if ( outFile == stdout )
+				fprintf(outFile, "\33[45m%s \33[0m", token.name.c_str());
+			else
+				fprintf(outFile, "%s ", token.name.c_str());
+		} else {
+			if ( outFile == stdout )
+				fprintf(outFile, "\33[45m Type = %u\33 [0m", (UInteger)token.type);
+			else
+				fprintf(outFile, " Type = %u ", (UInteger)token.type);
+		}
 	}
 
 };
