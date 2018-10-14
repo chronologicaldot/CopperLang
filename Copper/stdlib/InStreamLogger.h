@@ -3,6 +3,7 @@
 #include "../src/Copper.h"
 #include "EngMsgToStr.h"
 #include <cstdio>
+#include <cstring> // For strlen
 
 namespace CuStd {
 
@@ -10,6 +11,7 @@ using Cu::UInteger;
 using Cu::LogLevel;
 using Cu::EngineMessage;
 using Cu::EngineErrorLevel;
+using Cu::LogMessage;
 
 class InStreamLogger : public Cu::Logger, public Cu::ByteStream {
 
@@ -200,7 +202,79 @@ public:
 		print(logLevel, Cu::getStringFromEngineMessage(msg, errLevel));
 	}
 
+	virtual void print(LogMessage  logMsg)
+	{
+		if ( !enabled || !willShow(logMsg.level) )
+			return;
+
+		const char*  msg = Cu::getStringFromEngineMessage(logMsg.messageId, errLevel);
+		Cu::String  format = "Function %s, arg %u of %u: %s";
+		size_t  msgSize = 0;
+
+		if ( logMsg.functionName.size() == 0 ) {
+			if ( logMsg.systemFunctionId != Cu::SystemFunction::_unset ) {
+				logMsg.functionName = Cu::getSystemFunctionDefaultName(logMsg.systemFunctionId);
+			} else {
+				logMsg.functionName = "global";
+			}
+		}
+
+		if ( logMsg.givenArgType.size() > 0 ) {
+			format = "Function %s, arg %u of %u: %s\nExpected: %s, Given: %s";
+			msgSize = (size_t)format.size()
+					+ (size_t)logMsg.functionName.size()
+					+ strlen(msg)
+					+ (size_t)logMsg.givenArgType.size()
+					+ (size_t)logMsg.expectedArgType.size()
+					+ sizeof(Cu::UInteger)*2;
+		}
+		else {
+			msgSize = (size_t)format.size()
+					+ (size_t)logMsg.functionName.size()
+					+ strlen(msg)
+					+ sizeof(Cu::UInteger)*2;
+		}
+
+		char msgFull[ msgSize ];
+
+		if ( logMsg.givenArgType.size() > 0 ) {
+			snprintf(msgFull, msgSize, format.c_str(),
+					logMsg.functionName.c_str(), logMsg.argIndex, logMsg.argCount, msg,
+					logMsg.expectedArgType.c_str(), logMsg.givenArgType.c_str());
+		} else {
+			snprintf(msgFull, msgSize, format.c_str(),
+					logMsg.functionName.c_str(), logMsg.argIndex, logMsg.argCount, msg);
+		}
+
+		switch ( logMsg.level ) {
+		case LogLevel::info:
+			//fprintf(outFile, "In %s, arg %u: %s\n", logMsg.functionName.c_str(), logMsg.argIndex, msg);
+			printInfo(msgFull);
+			break;
+
+		case LogLevel::warning:
+			//fprintf(outFile, "WARNING: In %s, arg %u: %s\n", logMsg.functionName.c_str(), logMsg.argIndex, msg);
+			printWarning(msgFull);
+			break;
+
+		case LogLevel::error:
+			//fprintf(outFile, "ERROR: In %s, arg %u: %s\n", logMsg.functionName.c_str(), logMsg.argIndex, msg);
+			printError(msgFull);
+			break;
+
+		case LogLevel::debug:
+			//fprintf(outFile, "DEBUG: In %s, arg %u: %s\n", logMsg.functionName.c_str(), logMsg.argIndex, msg);
+			printDebug(msgFull);
+			break;
+
+		default: break;
+		}
+	}
+
 	virtual void printTaskTrace( Cu::TaskType::Value  taskType, const Cu::String&  taskName, UInteger  taskNumber ) {
+		if ( !enabled )
+			return;
+
 		if ( taskType == Cu::TaskType::FuncFound ) {
 			if ( outFile == stdout )
 				fprintf(outFile, "\33[46m TASK TRACE %u \33[0m \33[96m[CALL] %s\33[0m\n", taskNumber, taskName.c_str());
@@ -215,6 +289,9 @@ public:
 	}
 
 	virtual void printStackTrace( const Cu::String&  frameName, UInteger  frameNumber ) {
+		if ( !enabled )
+			return;
+
 		if ( outFile == stdout )
 			fprintf(outFile, "\33[44m STACK TRACE %u \33[0m \33[94m %s\33[0m\n", frameNumber, frameName.c_str());
 		else
@@ -222,6 +299,8 @@ public:
 	}
 
 	virtual void printToken( const Cu::Token&  token ) {
+		if ( !enabled )
+			return;
 
 		if ( printNaturalTokens ) {
 			if ( outFile == stdout )

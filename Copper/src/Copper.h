@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.511
+#define COPPER_INTERPRETER_VERSION 0.52
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -461,105 +461,25 @@ struct EngineMessage {
 	AssertionFailed,
 
 	// ERROR
-	// An incorrect number of args was passed to a system function.
-	SystemFunctionWrongArgCount,
+	// Wrong number of arguments passed to a function
+	WrongArgCount,
 
 	// ERROR
-	// An incorrect arg was passed to a system function.
+	// Wrong argument type of argument passed to a function
+	WrongArgType,
+
+	// ERROR
+	// Destroyed function as argument
+	DestroyedFuncAsArg,
+
+	// ERROR
+	// An argument was excluded. Though processing could continue, it is unlikely the user would want it to.
+	MissingArg,
+
+	// ERROR
+	// An invalid arg was passed to a system function.
+	// Could have a number of causes.
 	SystemFunctionBadArg,
-
-	// ERROR
-	// member() was given the wrong number of parameters.
-	MemberWrongArgCount,
-
-	// ERROR
-	// First parameter passed to member() was not a function.
-	MemberArg1NotFunction,
-
-	// SYSTEM ERROR
-	// Destroyed function passed to member() function. Parameter was probably a pointer.
-	// Unlikely to happen. If it does, there is now most-likely a system error.
-	DestroyedFuncAsMemberArg,
-
-	// ERROR
-	// Second parameter passed to member() was not a string.
-	MemberArg2NotString,
-
-	// ERROR
-	// Invalid member name passed to member() function.
-	MemberFunctionInvalidNameArg,
-
-	// ERROR
-	// member_count() was given the wrong number of parameters.
-	MemberCountWrongArgCount,
-
-	// ERROR
-	// First parameter passed to member_count() was not a function.
-	MemberCountArg1NotFunction,
-
-	// ERROR
-	// Destroyed function passed to member_count() function. Parameter was probably a pointer.
-	DestroyedFuncAsMemberCountArg,
-
-	// ERROR
-	// is_member() was given the wrong number of parameters.
-	IsMemberWrongArgCount,
-
-	// ERROR
-	// First parameter passed to is_member() was not a function.
-	IsMemberArg1NotFunction,
-
-	// ERROR
-	// Destroyed function passed to is_member() function. Parameter was probably a pointer.
-	DestroyedFuncAsIsMemberArg,
-
-	// ERROR
-	// Second parameter passed to is_member() was not a string.
-	IsMemberArg2NotString,
-
-	// ERROR
-	// set_member() was given the wrong number of parameters.
-	SetMemberWrongArgCount,
-
-	// ERROR
-	// First parameter passed to set_member() was not a function.
-	SetMemberArg1NotFunction,
-
-	// ERROR
-	// Destroyed function passed to set_member() function. Parameter was probably a pointer.
-	DestroyedFuncAsSetMemberArg,
-
-	// ERROR
-	// Second parameter passed to set_member() was not a string.
-	SetMemberArg2NotString,
-
-	// WARNING
-	// Destroyed function passed to member_list. Parameter was probably a pointer.
-	DestroyedFuncAsMemberListArg,
-
-	// WARNING
-	// member_list was given an arg that is not a function.
-	NonFunctionAsMemberListArg,
-
-	// WARNING
-	// Destroyed function passed to union() function. Parameter was probably a pointer.
-	DestroyedFuncAsUnionArg,
-
-	// WARNING
-	// A parameter passed to the union() function was not a function.
-	NonFunctionAsUnionArg,
-
-	// ERROR
-	// Wrong number of arguments passed to Execute With Alternate Super function.
-	ExecuteWithAltSuperWrongArgCount,
-
-	// ERROR
-	// Wrong argument given to Execute With Alternate Super function for super variable.
-	ExecuteWithAltSuperWrongArg1,
-
-	// ERROR
-	// Wrong argument given to Execute With Alternate Super function for call variable.
-	ExecuteWithAltSuperWrongArg2,
 
 	// ERROR
 	// The wrong number of arguments was passed to a foreign function.
@@ -573,57 +493,6 @@ struct EngineMessage {
 	// The user-function contains errors.
 	// Usually, the other error will be printed. This just indicates that the problem is within a function body.
 	UserFunctionBodyError,
-
-	// ERROR
-	ListSizeFunctionGivenNonList,
-
-	// ERROR
-	// List function began with non-list.
-	ListAppendFunctionGivenNonList,
-
-	// ERROR
-	// List function began with non-list.
-	ListPrependFunctionGivenNonList,
-
-	// ERROR
-	// List function began with non-list.
-	ListInsertFunctionGivenNonList,
-
-	// ERROR
-	// List function began with non-list.
-	ListGetItemFunctionGivenNonList,
-
-	// ERROR
-	// List function began with non-list.
-	ListRemoveFunctionGivenNonList,
-
-	// ERROR
-	// List function began with non-list.
-	ListClearFunctionGivenNonList,
-
-	// ERROR
-	// List function began with non-list.
-	ListSwapFunctionGivenNonList,
-
-	// ERROR
-	// List function missing an argument.
-	ListSwapFunctionMissingArg,
-
-	// ERROR
-	// List function began with non-list.
-	ListReplaceFunctionGivenNonList,
-
-	// ERROR
-	// List function missing an argument.
-	ListReplaceFunctionMissingArg,
-
-	// ERROR
-	// List function began with non-list.
-	ListSublistFunctionGivenNonList,
-
-	// WARNING
-	// An argument passed to the string match function was not a string. It is ignored.
-	StringMatchGivenNonStringArg,
 
 	// Total number of engine messages
 	COUNT
@@ -890,6 +759,7 @@ struct Token {
 
 //--------------
 
+// Log Levels for filtering information to be printed
 struct LogLevel {
 	enum Value {
 	info,
@@ -899,11 +769,86 @@ struct LogLevel {
 	};
 };
 
+// Information pertaining to log messages
+// Example Usage in the engine:
+// print( LogMessage.create(LogLevel::error).MessageId(EngineMessage::WrongArgCount) )
+struct LogMessage {
+	LogLevel::Value  level;
+	EngineMessage::Value  messageId;
+	String  functionName;
+	SystemFunction::Value  systemFunctionId;
+	UInteger  argIndex;
+	UInteger  argCount;
+	String  givenArgType;
+	String  expectedArgType;
+
+	LogMessage(
+		LogLevel::Value  pLevel
+	)
+		: level(pLevel)
+		, messageId(EngineMessage::Running)
+		, functionName()
+		, systemFunctionId(SystemFunction::_unset)
+		, argIndex(0)
+		, argCount(0)
+		, givenArgType()
+		, expectedArgType()
+	{}
+
+	static LogMessage
+	create(LogLevel::Value  pLevel) {
+		return LogMessage(pLevel);
+	}
+
+	LogMessage&
+	Message( EngineMessage::Value  m ) {
+		messageId = m;
+		return *this;
+	}
+
+	LogMessage&
+	FunctionName( const char*  n ) {
+		functionName = n;
+		return *this;
+	}
+
+	LogMessage&
+	SystemFunctionId( SystemFunction::Value  v ) {
+		systemFunctionId = v;
+		return *this;
+	}
+
+	LogMessage&
+	ArgIndex( UInteger  i ) {
+		argIndex = i;
+		return *this;
+	}
+
+	LogMessage&
+	ArgCount( UInteger  i ) {
+		argCount = i;
+		return *this;
+	}
+
+	LogMessage&
+	GivenArgType( const char*  v ) {
+		givenArgType = v;
+		return *this;
+	}
+
+	LogMessage&
+	ExpectedArgType( const char*  v ) {
+		expectedArgType = v;
+		return *this;
+	}
+};
+
 // Interface for a logger
 struct Logger {
 	~Logger() {}
-	virtual void print(const LogLevel::Value  logLevel, const char*  msg)=0;
-	virtual void print(const LogLevel::Value  logLevel, const EngineMessage::Value  msg)=0;
+	virtual void print(const LogLevel::Value, const char*)=0;
+	virtual void print(const LogLevel::Value, const EngineMessage::Value)=0;
+	virtual void print(LogMessage) = 0;
 	virtual void printTaskTrace( TaskType::Value  taskType, const String&  taskName, UInteger  taskNumber )=0;
 	virtual void printStackTrace( const String&  frameName, UInteger  frameNumber )=0;
 	virtual void printToken( const Token& ) {} // Optional. Used for debugging
@@ -1977,9 +1922,19 @@ struct NumericObject : public Object {
 
 	virtual ~NumericObject();
 
+	static const char*
+	StaticTypeName() {
+		return "number";
+	}
+
 	static ObjectType::Value
 	StaticType() {
 		return ObjectType::Numeric;
+	}
+
+	virtual const char*
+	typeName() const {
+		return StaticTypeName();
 	}
 
 	virtual SubType::Value
@@ -3278,6 +3233,7 @@ private:
 	// Print functions. Both of these call the logger (if it exists) or print to stdout (if enabled).
 	void print( const LogLevel::Value logLevel, const char* msg ) const;
 	void print( const LogLevel::Value logLevel, const EngineMessage::Value msg ) const;
+	void print( LogMessage ) const;
 
 public:
 	// WARNING: endMainCallback is never referenced or dropped, so don't delete it before the Engine!
@@ -3721,14 +3677,16 @@ protected:
 	// Numeric functions
 	FuncExecReturn::Value
 	process_sys_num_chain_num(
-		FuncFoundTask& task,
-		NumericObject* (*operation)(NumericObject&, NumericObject&)
+		FuncFoundTask&  task,
+		NumericObject*  (*operation)(NumericObject&, NumericObject&),
+		SystemFunction::Value  functionId
 	);
 
 	FuncExecReturn::Value
 	process_sys_solo_num(
-		FuncFoundTask& task,
-		NumericObject* (*operation)(NumericObject&)
+		FuncFoundTask&  task,
+		NumericObject*  (*operation)(NumericObject&),
+		SystemFunction::Value  functionId
 	);
 
 	FuncExecReturn::Value	process_sys_num_equal(			FuncFoundTask& task );

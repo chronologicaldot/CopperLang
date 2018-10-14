@@ -112,7 +112,6 @@ CharList::CharList( const float pValue )
 	// Furthermore, float values can be huge, causing this function to take a very long time to complete.
 	// The accurate alternatives are C++11's stod(), string's to_string(float) (semi-accurate),
 	// and std::ostringstream ostr; ostr << number;
-	// TODO: Remove dependencies on this function.
 	float v = pValue;
 	bool flip = false;
 	if ( v < 0 ) {
@@ -153,7 +152,6 @@ CharList::CharList( const double pValue )
 	// Furthermore, double values can be huge, causing this function to take a very long time to complete.
 	// The accurate alternatives are C++11's stod(), string's to_string(double) (semi-accurate),
 	// and std::ostringstream ostr; ostr << number;
-	// TODO: Remove dependencies on this function.
 	double v = pValue;
 	bool flip = false;
 	if ( v < 0 ) {
@@ -194,6 +192,8 @@ CharList::~CharList()
 
 CharList& CharList::operator= ( const CharList& pOther )
 {
+	if ( pOther.head == this->head )
+		return *this;
 	clear();
 	ConstIter i = pOther.constStart();
 	if ( i.atEnd() ) return *this;
@@ -372,6 +372,9 @@ String::~String()
 
 void
 String::steal( String& pSource ) {
+	if ( pSource.str == str )
+		return;
+
 	if ( str )
 		delete str;
 	str = pSource.str;
@@ -382,6 +385,9 @@ String::steal( String& pSource ) {
 
 String& String::operator= ( const String& pString )
 {
+	if ( pString.str == str )
+		return *this;
+
 	len = 0;
 	delete[] str;
 	str = new char[pString.len+1];
@@ -400,6 +406,9 @@ String& String::operator= ( const String& pString )
 
 String& String::operator= ( const char* pString )
 {
+	if ( pString == str )
+		return *this;
+
 	len = 0;
 	delete[] str;
 	while ( pString[len] != '\0' )

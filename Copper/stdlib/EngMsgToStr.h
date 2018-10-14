@@ -23,6 +23,11 @@ getStringFromEngineMessage(
 	EngineErrorLevel::Value&		errLevel
 );
 
+const char*
+getSystemFunctionDefaultName(
+	SystemFunction::Value
+);
+
 }
 
 #endif

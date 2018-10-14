@@ -1,6 +1,6 @@
 ====================
 2018/8/17 - 2018/10/13
-v 6-0.511
+v 6-0.52
 
 - Now on branch Feldspar.
 - Changed " != REAL_NULL " to "notNull" usages.
@@ -30,12 +30,18 @@ v 6-0.511
 - Fixed null pointer in system support for numeric operations Engine::process_sys_num_chain_num and Engine::process_sys_solo_num.
 - Removed class RandomNullByteInStream and usage.
 - Added debugging tool ability to Engine to print body tokens while parsing. Extends Logger interface.
+- Added LogMessage.
+- Fixed lack of checking for identical pointer in String operators for assignment. (No assignment occurs if the given point is the same as the stored one.)
+- Fixed bounds checking on indexes used in Engine::process_sys_list_sublist().
+- Added Numeric::StaticTypeName() and Numeric::typeName().
+- Changed all system function error logging and foreign function error logging to use print(LogMessage).
 
 Printer.h
 - Updated to use Numeric for printing numbers instead of the usual Integer and Decimal types.
 
 InStreamLogger.h
 - Added ability to print tokens.
+- Added ability to print(LogMessage).
 
 
 ====================

@@ -329,150 +329,33 @@ getStringFromEngineMessage(
 		return "Assertion failed!";
 
 	// ERROR
-	// An incorrect number of args (!=2) was passed to a system function.
-	case EngineMessage::SystemFunctionWrongArgCount:
+	// Wrong number of arguments passed to a function
+	case EngineMessage::WrongArgCount:
 		errLevel = EngineErrorLevel::error;
-		return "Wrong number of arguments passed to a system function.";
+		return "Wrong argument count.";
+
+	// ERROR
+	// Wrong argument type of argument passed to a function
+	case EngineMessage::WrongArgType:
+		errLevel = EngineErrorLevel::error;
+		return "Wrong argument type.";
+
+	// ERROR
+	// Destroyed function as argument
+	case EngineMessage::DestroyedFuncAsArg:
+		errLevel = EngineErrorLevel::error;
+		return "Argument was a destroyed function.";
+
+	// ERROR
+	case EngineMessage::MissingArg:
+		errLevel = EngineErrorLevel::error;
+		return "Missing argument.";
 
 	// ERROR
 	// An incorrect arg was passed to a system function.
 	case EngineMessage::SystemFunctionBadArg:
 		errLevel = EngineErrorLevel::error;
 		return "Bad argument passed to a system function.";
-
-	// ERROR
-	// member() was given the wrong number of parameters.
-	case EngineMessage::MemberWrongArgCount:
-		errLevel = EngineErrorLevel::error;
-		return "Wrong number of arguments passed to member(). Should be 2.";
-
-	// ERROR
-	// First parameter passed to member() was not a function.
-	case EngineMessage::MemberArg1NotFunction:
-		errLevel = EngineErrorLevel::error;
-		return "First argument of member() was not a function.";
-
-	// ERROR
-	// Destroyed function passed to member() function. Parameter was probably a pointer.
-	case EngineMessage::DestroyedFuncAsMemberArg:
-		errLevel = EngineErrorLevel::error;
-		return "Destroyed function passed to member().";
-
-	// ERROR
-	// Second parameter passed to member() was not a string.
-	case EngineMessage::MemberArg2NotString:
-		errLevel = EngineErrorLevel::error;
-		return "Second argument passed to member() was not a string.";
-
-	// ERROR
-	// Invalid name passed to member() function.
-	case EngineMessage::MemberFunctionInvalidNameArg:
-		errLevel = EngineErrorLevel::error;
-		return "Invalid name passed as second argument to member().";
-
-	// ERROR
-	// member_count() was given the wrong number of parameters.
-	case EngineMessage::MemberCountWrongArgCount:
-		errLevel = EngineErrorLevel::error;
-		return "No arguments passed to member_count(). Default return is zero.";
-
-	// ERROR
-	// First parameter passed to member_count() was not a function.
-	case EngineMessage::MemberCountArg1NotFunction:
-		errLevel = EngineErrorLevel::error;
-		return "First argument of member_count() was not a function.";
-
-	// ERROR
-	// Destroyed function passed to member_count() function. Parameter was probably a pointer.
-	case EngineMessage::DestroyedFuncAsMemberCountArg:
-		errLevel = EngineErrorLevel::error;
-		return "Destroyed function passed to member_count().";
-
-	// ERROR
-	// is_member() was given the wrong number of parameters.
-	case EngineMessage::IsMemberWrongArgCount:
-		errLevel = EngineErrorLevel::error;
-		return "Wrong number of arguments passed to is_member(). Should be 2.";
-
-	// ERROR
-	// First parameter passed to is_member() was not a function.
-	case EngineMessage::IsMemberArg1NotFunction:
-		errLevel = EngineErrorLevel::error;
-		return "First argument of is_member() was not a function.";
-
-	// ERROR
-	// Destroyed function passed to is_member() function. Parameter was probably a pointer.
-	case EngineMessage::DestroyedFuncAsIsMemberArg:
-		errLevel = EngineErrorLevel::error;
-		return "Destroyed function passed to is_member().";
-
-	// ERROR
-	// Second parameter passed to is_member() was not a string.
-	case EngineMessage::IsMemberArg2NotString:
-		errLevel = EngineErrorLevel::error;
-		return "Second argument of is_member() was not a string.";
-
-	// ERROR
-	// set_member() was given the wrong number of parameters.
-	case EngineMessage::SetMemberWrongArgCount:
-		errLevel = EngineErrorLevel::error;
-		return "Wrong number of arguments passed to set_member(). Should be 3.";
-
-	// ERROR
-	// First parameter passed to set_member() was not a function.
-	case EngineMessage::SetMemberArg1NotFunction:
-		errLevel = EngineErrorLevel::error;
-		return "First argument of set_member() was not a function.";
-
-	// ERROR
-	// Second parameter passed to set_member() was not a string.
-	case EngineMessage::SetMemberArg2NotString:
-		errLevel = EngineErrorLevel::error;
-		return "Second argument of set_member() was not a string.";
-
-	// ERROR
-	// Destroyed function passed to set_member() function. Parameter was probably a pointer.
-	case EngineMessage::DestroyedFuncAsSetMemberArg:
-		errLevel = EngineErrorLevel::error;
-		return "Destroyed function passed to set_member().";
-
-	// WARNING
-	// Destroyed function passed to member_list. Parameter was probably a pointer.
-	case EngineMessage::DestroyedFuncAsMemberListArg:
-		return "Destroyed function passed to member_list().";
-
-	// WARNING
-	// member_list was given an arg that is not a function.
-	case EngineMessage::NonFunctionAsMemberListArg:
-		return "Non-function passed to member_list().";
-
-	// WARNING
-	// Destroyed function passed to union() function. Parameter was probably a pointer.
-	case EngineMessage::DestroyedFuncAsUnionArg:
-		return "Destroyed function passed to union().";
-
-	// WARNING
-	// A parameter passed to the union() function was not a function.
-	case EngineMessage::NonFunctionAsUnionArg:
-		return "Argument passed to union() was not a function.";
-
-	// ERROR
-	// Wrong number of arguments passed to Execute With Alternate Super function.
-	case EngineMessage::ExecuteWithAltSuperWrongArgCount:
-		errLevel = EngineErrorLevel::error;
-		return "Wrong number of arguments passed to execute-with-super-variable function (xwsv).";
-
-	// ERROR
-	// Wrong argument given to Execute With Alternate Super function for super variable.
-	case EngineMessage::ExecuteWithAltSuperWrongArg1:
-		errLevel = EngineErrorLevel::error;
-		return "Wrong first argument passed to execute-with-super-variable function (xwsv).";
-
-	// ERROR
-	// Wrong argument given to Execute With Alternate Super function for call variable.
-	case EngineMessage::ExecuteWithAltSuperWrongArg2:
-		errLevel = EngineErrorLevel::error;
-		return "Wrong second argument passed to execute-with-super-variable function (xwsv).";
 
 	// ERROR
 	// The wrong number of arguments was passed to a foreign function.
@@ -495,88 +378,178 @@ getStringFromEngineMessage(
 		errLevel = EngineErrorLevel::error;
 		return "Function body contains errors.";
 
-	// ERROR
-	case EngineMessage::ListSizeFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List size function given non-list argument.";
-
-	// ERROR
-	// List function began with non-list.
-	case EngineMessage::ListAppendFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List append function given non-list argument.";
-
-	// ERROR
-	// List function began with non-list.
-	case EngineMessage::ListPrependFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List prepend function given non-list argument.";
-
-	// ERROR
-	// List function began with non-list.
-	case EngineMessage::ListInsertFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List insert function given non-list argument.";
-
-	// ERROR
-	// List function began with non-list.
-	case EngineMessage::ListGetItemFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List get-item function given non-list argument.";
-
-	// ERROR
-	// List function began with non-list.
-	case EngineMessage::ListRemoveFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List remove function given non-list argument.";
-
-	// ERROR
-	// List function began with non-list.
-	case EngineMessage::ListClearFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List clear function given non-list argument.";
-
-	// ERROR
-	// List function began with non-list.
-	case EngineMessage::ListSwapFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List swap function given non-list argument.";
-
-	// ERROR
-	// List function missing an argument.
-	case EngineMessage::ListSwapFunctionMissingArg:
-		errLevel = EngineErrorLevel::error;
-		return "List swap function is missing an argument.";
-
-	// ERROR
-	// List function began with non-list.
-	case EngineMessage::ListReplaceFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List replace function given non-list argument.";
-
-	// ERROR
-	// List function missing an argument.
-	case EngineMessage::ListReplaceFunctionMissingArg:
-		errLevel = EngineErrorLevel::error;
-		return "List replace function is missing an argument.";
-
-	// ERROR
-	// List function began with non-list.
-	case EngineMessage::ListSublistFunctionGivenNonList:
-		errLevel = EngineErrorLevel::error;
-		return "List sub-list function is missing an argument.";
-
-	// WARNING
-	// An argument passed to the string match function was not a string. It is ignored.
-	case EngineMessage::StringMatchGivenNonStringArg:
-		errLevel = EngineErrorLevel::error;
-		return "String match function given non-string argument.";
-
 	case EngineMessage::COUNT:
 		return "INFO: tick.";
 		break;
 
 	default: return "";
+	}
+}
+
+const char*
+getSystemFunctionDefaultName(
+	SystemFunction::Value  v
+) {
+	switch( v ) {
+
+	case SystemFunction::_unset:
+		return "[unset]";
+
+	case SystemFunction::_return:
+		return "ret";
+
+	case SystemFunction::_not:
+		return "not";
+
+	case SystemFunction::_all:
+		return "all";
+
+	case SystemFunction::_any:
+		return "any";
+
+	case SystemFunction::_nall:
+		return "nall";
+
+	case SystemFunction::_none:
+		return "none";
+
+	case SystemFunction::_are_fn:
+		return "are_fn";
+
+	case SystemFunction::_are_empty:
+		return "are_empty";
+
+	case SystemFunction::_are_same:
+		return "are_same";
+
+	case SystemFunction::_member:
+		return "member";
+
+	case SystemFunction::_member_count:
+		return "member_count";
+
+	case SystemFunction::_is_member:
+		return "is_member";
+
+	case SystemFunction::_set_member:
+		return "set_member";
+
+	case SystemFunction::_member_list:
+		return "member_list";
+
+	case SystemFunction::_union:
+		return "union";
+
+	case SystemFunction::_type:
+		return "type_of";
+
+	case SystemFunction::_are_same_type:
+		return "are_same_type";
+
+	case SystemFunction::_are_bool:
+		return "are_bool";
+
+	case SystemFunction::_are_string:
+		return "are_string";
+
+	case SystemFunction::_are_list:
+		return "are_list";
+
+	case SystemFunction::_are_number:
+		return "are_number";
+
+	case SystemFunction::_are_integer:
+		return "are_int";
+
+	case SystemFunction::_are_decimal:
+		return "are_deci";
+
+	case SystemFunction::_assert:
+		return "assert";
+
+	case SystemFunction::_copy:
+		return "copy";
+
+	case SystemFunction::_execute_with_alt_super:
+		return "xwsv";
+
+
+	case SystemFunction::_make_list:
+		return "list";
+
+	case SystemFunction::_list_size:
+		return "length";
+
+	case SystemFunction::_list_append:
+		return "append";
+
+	case SystemFunction::_list_prepend:
+		return "prepend";
+
+	case SystemFunction::_list_insert:
+		return "insert";
+
+	case SystemFunction::_list_get_item:
+		return "item_at";
+
+	case SystemFunction::_list_remove:
+		return "erase";
+
+	case SystemFunction::_list_clear:
+		return "dump";
+
+	case SystemFunction::_list_swap:
+		return "swap";
+
+	case SystemFunction::_list_replace:
+		return "replace";
+
+	case SystemFunction::_list_sublist:
+		return "sublist";
+
+
+	case SystemFunction::_string_match:
+		return "matching";
+
+	case SystemFunction::_string_concat:
+		return "concat";
+
+
+	case SystemFunction::_num_equal:
+		return "equal";
+
+	case SystemFunction::_num_greater_than:
+		return "gt";
+
+	case SystemFunction::_num_greater_or_equal:
+		return "gte";
+
+	case SystemFunction::_num_abs:
+		return "abs";
+
+	case SystemFunction::_num_add:
+		return "+"; // "add";
+
+	case SystemFunction::_num_subtract:
+		return "-"; // "subtract";
+
+	case SystemFunction::_num_multiply:
+		return "*"; // "multiply";
+
+	case SystemFunction::_num_divide:
+		return "/"; // "divide";
+
+	case SystemFunction::_num_modulus:
+		return "%"; // "modulus";
+
+	case SystemFunction::_num_incr:
+		return "++"; // "increment";
+
+	case SystemFunction::_num_decr:
+		return "--"; // "decrement";
+
+	default:
+		return "";
 	}
 }
 
