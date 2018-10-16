@@ -64,9 +64,9 @@ public:
 		prev_lines = lines;
 		prev_columns = columns;
 		if ( c != EOF ) {
-			columns++;
+			++columns;
 			if ( c == '\n' ) {
-				lines++;
+				++lines;
 				columns = 0;
 				// Addendum
 				if ( inFile == stdin )

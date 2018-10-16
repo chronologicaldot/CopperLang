@@ -2270,6 +2270,10 @@ Engine::run(
 		return EngineResult::Error;
 
 	case ParseResult::More:
+		if ( stream.atEOS() ) {
+			print(LogLevel::error, "Stream ended before parsing.");
+			return EngineResult::Error;
+		}
 		return EngineResult::Ok;
 
 	// to get -Wall to stop griping:

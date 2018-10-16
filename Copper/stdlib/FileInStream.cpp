@@ -5,34 +5,46 @@
 namespace Cu {
 
 FileInStream::FileInStream( const char*  filename )
-	: stream()
-	, index(0)
+	: rfile(REAL_NULL)
+	, atEOF(false)
 	, line(1)
 	, column(0)
 {
-	stream.open(filename);
+	if ( filename ) {
+		rfile = fopen(filename, "r");
+		if ( !rfile )
+			atEOF = true;
+	}
+}
+
+FileInStream::~FileInStream() {
+	if ( rfile ) {
+		fclose(rfile);
+	}
 }
 
 char
 FileInStream::getNextByte() {
-	int c = ' ';
-	if ( stream.is_open() && stream.good() && ! stream.eof() ) {
-		c = stream.get();
-		if ( c == '\n' ) {
-			++line;
-			column = 0;
-		}
-		++index;
-		++column;
-	}
-	if ( c < 0 ) // End of file
+	if ( ! rfile ) {
+		atEOF = true;
 		return ' ';
-	return (char)c;
+	}
+	int c = fgetc(rfile);
+	if ( c == EOF  ) {
+		atEOF = true;
+		return ' ';
+	}
+	if ( c == '\n' ) {
+		++line;
+		column = 0;
+	}
+	++column;
+	return char(c);
 }
 
 bool
 FileInStream::atEOS() {
-	return stream.eof() || stream.fail();
+	return atEOF;
 }
 
 UInteger
