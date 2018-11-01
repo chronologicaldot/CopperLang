@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.52
+#define COPPER_INTERPRETER_VERSION 0.521
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -726,6 +726,8 @@ struct SystemFunction {
 	_num_equal,				// "equal"
 	_num_greater_than,		// "gt"
 	_num_greater_or_equal,	// "gte", greater than or equal
+	_num_less_than,			// "lt"
+	_num_less_or_equal,		// "lte", less than or equal
 	_num_abs,				// "abs", absolute value
 	_num_add,				// "add" or "+"
 	_num_subtract,			// "subtract" or "sbtr" or "-"
@@ -733,7 +735,9 @@ struct SystemFunction {
 	_num_divide,			// "divide" or "divd" or "/"
 	_num_modulus,			// "modulus" or "mod" or "%"
 	_num_incr,				// "incr" or "++"
+	_num_incr_2,			// "incr" or "++" with 2 or more arguments
 	_num_decr,				// "decr" or "--"
+	_num_decr_2,			// "decr" or "--" with 2 or more arguments
 	};
 };
 
@@ -3689,10 +3693,10 @@ protected:
 		SystemFunction::Value  functionId
 	);
 
-	FuncExecReturn::Value	process_sys_num_equal(			FuncFoundTask& task );
-	FuncExecReturn::Value	process_sys_num_greater_than(	FuncFoundTask& task );
-	FuncExecReturn::Value	process_sys_num_greater_or_equal(	FuncFoundTask& task );
-	FuncExecReturn::Value	process_sys_num_abs(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_num_equal(FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_num_greater_than(FuncFoundTask& task, bool flip );
+	FuncExecReturn::Value	process_sys_num_greater_or_equal( FuncFoundTask& task, bool flip );
+	FuncExecReturn::Value	process_sys_num_abs( FuncFoundTask& task );
 	static NumericObject*	process_sys_num_add( NumericObject&, NumericObject& );
 	static NumericObject*	process_sys_num_subtract( NumericObject&, NumericObject& );
 	static NumericObject*	process_sys_num_multiply( NumericObject&, NumericObject& );
@@ -3700,6 +3704,8 @@ protected:
 	static NumericObject*	process_sys_num_modulus( NumericObject&, NumericObject& );
 	static NumericObject*	process_sys_num_incr( NumericObject& );
 	static NumericObject*	process_sys_num_decr( NumericObject& );
+	static NumericObject*	process_sys_num_incr2( NumericObject&, NumericObject& );
+	static NumericObject*	process_sys_num_decr2( NumericObject&, NumericObject& );
 
 #ifdef COPPER_SPEED_PROFILE
 	timeval sp_startTime, sp_endTime;

@@ -2889,6 +2889,8 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("equal"), SystemFunction::_num_equal);
 	builtinFunctions.insert(String("gt"), SystemFunction::_num_greater_than);
 	builtinFunctions.insert(String("gte"), SystemFunction::_num_greater_or_equal);
+	builtinFunctions.insert(String("lt"), SystemFunction::_num_less_than);
+	builtinFunctions.insert(String("lte"), SystemFunction::_num_less_or_equal);
 	builtinFunctions.insert(String("abs"), SystemFunction::_num_abs);
 #ifdef COPPER_ENABLE_EXTENDED_NAME_SET
 	builtinFunctions.insert(String("+"), SystemFunction::_num_add);
@@ -5448,10 +5450,16 @@ Engine::setupBuiltinFunctionExecution(
 		return process_sys_num_equal(task);
 
 	case SystemFunction::_num_greater_than:
-		return process_sys_num_greater_than(task);
+		return process_sys_num_greater_than(task, false);
 
 	case SystemFunction::_num_greater_or_equal:
-		return process_sys_num_greater_or_equal(task);
+		return process_sys_num_greater_or_equal(task, false);
+
+	case SystemFunction::_num_less_than:
+		return process_sys_num_greater_than(task, true);
+
+	case SystemFunction::_num_less_or_equal:
+		return process_sys_num_greater_or_equal(task, true);
 
 	case SystemFunction::_num_abs:
 		return process_sys_num_abs(task);
@@ -5472,10 +5480,18 @@ Engine::setupBuiltinFunctionExecution(
 		return process_sys_num_chain_num(task, process_sys_num_modulus, SystemFunction::_num_modulus);
 
 	case SystemFunction::_num_incr:
-		return process_sys_solo_num(task, process_sys_num_incr, SystemFunction::_num_incr);
+		if ( task.args.size() > 1 ) {
+			return process_sys_num_chain_num(task, process_sys_num_incr2, SystemFunction::_num_incr_2);
+		} else {
+			return process_sys_solo_num(task, process_sys_num_incr, SystemFunction::_num_incr);
+		}
 
 	case SystemFunction::_num_decr:
-		return process_sys_solo_num(task, process_sys_num_decr, SystemFunction::_num_decr);
+		if ( task.args.size() > 1 ) {
+			return process_sys_num_chain_num(task, process_sys_num_decr2, SystemFunction::_num_decr_2);
+		} else {
+			return process_sys_solo_num(task, process_sys_num_decr, SystemFunction::_num_decr);
+		}
 
 	default:
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
@@ -7305,7 +7321,7 @@ Engine::process_sys_num_equal( FuncFoundTask& task ) {
 }
 
 FuncExecReturn::Value
-Engine::process_sys_num_greater_than( FuncFoundTask& task ) {
+Engine::process_sys_num_greater_than( FuncFoundTask& task, bool flip ) {
 	bool result = true;
 	NumericObject*  first;
 	ArgsIter argsIter = task.args.start();
@@ -7316,7 +7332,7 @@ Engine::process_sys_num_greater_than( FuncFoundTask& task ) {
 			first = (NumericObject*)*argsIter;
 		} else {
 			print( LogMessage::create(LogLevel::warning)
-				.SystemFunctionId( SystemFunction::_num_greater_than )
+				.SystemFunctionId( flip ? SystemFunction::_num_less_or_equal : SystemFunction::_num_greater_than )
 				.Message(EngineMessage::WrongArgType)
 				.ArgIndex(1)
 				.GivenArgType((*argsIter)->typeName())
@@ -7327,13 +7343,22 @@ Engine::process_sys_num_greater_than( FuncFoundTask& task ) {
 		while ( argsIter.next() ) {
 			++argIndex;
 			if ( isNumericObject(**argsIter) ) {
-				if ( ! first->isGreaterThan(*((NumericObject*)*argsIter)) ) {
-					result = false;
-					break;
+				if ( flip ) {
+					// Less than or equal
+					if ( first->isGreaterOrEqual(*((NumericObject*)*argsIter)) ) {
+						result = false;
+						break;
+					}
+				} else {
+					// Greater than
+					if ( ! first->isGreaterThan(*((NumericObject*)*argsIter)) ) {
+						result = false;
+						break;
+					}
 				}
 			} else {
 				print( LogMessage::create(LogLevel::warning)
-					.SystemFunctionId( SystemFunction::_num_greater_than )
+					.SystemFunctionId( flip ? SystemFunction::_num_less_or_equal : SystemFunction::_num_greater_than )
 					.Message(EngineMessage::WrongArgType)
 					.ArgIndex(argIndex)
 					.GivenArgType((*argsIter)->typeName())
@@ -7347,7 +7372,7 @@ Engine::process_sys_num_greater_than( FuncFoundTask& task ) {
 }
 
 FuncExecReturn::Value
-Engine::process_sys_num_greater_or_equal( FuncFoundTask& task ) {
+Engine::process_sys_num_greater_or_equal( FuncFoundTask& task, bool flip ) {
 	bool  result = true;
 	NumericObject*  first;
 	ArgsIter  argsIter = task.args.start();
@@ -7358,7 +7383,7 @@ Engine::process_sys_num_greater_or_equal( FuncFoundTask& task ) {
 			first = (NumericObject*)*argsIter;
 		} else {
 			print( LogMessage::create(LogLevel::warning)
-				.SystemFunctionId( SystemFunction::_num_greater_or_equal )
+				.SystemFunctionId( flip ? SystemFunction::_num_less_than : SystemFunction::_num_greater_or_equal )
 				.Message(EngineMessage::WrongArgType)
 				.ArgIndex(1)
 				.GivenArgType((*argsIter)->typeName())
@@ -7369,13 +7394,22 @@ Engine::process_sys_num_greater_or_equal( FuncFoundTask& task ) {
 		while ( argsIter.next() ) {
 			++argIndex;
 			if ( isNumericObject(**argsIter) ) {
-				if ( ! first->isGreaterOrEqual(*((NumericObject*)*argsIter)) ) {
-					result = false;
-					break;
+				if ( flip ) {
+					// Less than
+					if ( first->isGreaterThan(*((NumericObject*)*argsIter)) ) {
+						result = false;
+						break;
+					}
+				} else {
+					// Greater than or equal
+					if ( ! first->isGreaterOrEqual(*((NumericObject*)*argsIter)) ) {
+						result = false;
+						break;
+					}
 				}
 			} else {
 				print( LogMessage::create(LogLevel::warning)
-					.SystemFunctionId( SystemFunction::_num_greater_or_equal )
+					.SystemFunctionId( flip ? SystemFunction::_num_less_than : SystemFunction::_num_greater_or_equal )
 					.Message(EngineMessage::WrongArgType)
 					.ArgIndex(argIndex)
 					.GivenArgType((*argsIter)->typeName())
@@ -7446,6 +7480,24 @@ Engine::process_sys_num_decr( NumericObject& base ) {
 	NumericObject* out = base.subtract(IntegerObject(1));
 	base.setValue(*out);
 	return out;
+}
+
+NumericObject*
+Engine::process_sys_num_incr2( NumericObject& first, NumericObject& second ) {
+	NumericObject* result = first.add(second);
+	first.setValue(*result);
+	result->deref();
+	first.ref();
+	return &first;
+}
+
+NumericObject*
+Engine::process_sys_num_decr2( NumericObject& first, NumericObject& second ) {
+	NumericObject* result = first.subtract(second);
+	first.setValue(*result);
+	result->deref();
+	first.ref();
+	return &first;
 }
 
 void

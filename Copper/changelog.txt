@@ -1,6 +1,6 @@
 ====================
-2018/8/17 - 2018/10/16
-v 6-0.52
+2018/8/17 - 2018/10/31
+v 6-0.521
 
 - Now on branch Feldspar.
 - Changed " != REAL_NULL " to "notNull" usages.
@@ -36,6 +36,8 @@ v 6-0.52
 - Added Numeric::StaticTypeName() and Numeric::typeName().
 - Changed all system function error logging and foreign function error logging to use print(LogMessage).
 - Fixed bug in Engine::run() that failed to check for end-of-stream when the parsing return requested more.
+- Added numeric operations to allow incr and decr system functions to accept multiple args. Methods are: process_sys_num_incr2() and process_sys_num_decr2().
+- Added less-than ("lt") and less-than-or-equal ("lte") system functions.
 
 Printer.h
 - Updated to use Numeric for printing numbers instead of the usual Integer and Decimal types.
