@@ -5522,7 +5522,6 @@ Engine::setupForeignFunctionExecution(
 	if ( ! foreignFunc->isVariadic() && ((uint)foreignFunc->getParameterCount() != task.args.size()) ) {
 		// Language specification says this should optionally be a warning
 		//print(LogLevel::error, "Argument count does not match foreign function header.");
-		//print(LogLevel::error, EngineMessage::ForeignFunctionWrongArgCount);
 		print( LogMessage::create(LogLevel::error)
 			.FunctionName( task.getAddress().first().c_str() )
 			.Message(EngineMessage::WrongArgCount)
@@ -5552,7 +5551,6 @@ Engine::setupForeignFunctionExecution(
 		{
 			// Language specification says this should optionally be a warning
 			//print(LogLevel::error, "Argument types do not match foreign function header.");
-			//print(LogLevel::error, EngineMessage::ForeignFunctionBadArg);
 			print( LogMessage::create(LogLevel::error)
 				.FunctionName( task.getAddress().first().c_str() )
 				.Message(EngineMessage::WrongArgType)
@@ -5575,25 +5573,8 @@ Engine::setupForeignFunctionExecution(
 	}
 
 	FFIServices ffi(*this, task.args.start());
-/*
-#ifdef COPPER_SPEED_PROFILE
-	double elapsedTime = 0;
-	timespec startTime, endTime;
-
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &startTime);
-#endif
-*/
 	bool result = foreignFunc->call( ffi );
-/*
-#ifdef COPPER_SPEED_PROFILE
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &endTime);
-	elapsedTime = (endTime.tv_sec - startTime.tv_sec) * 1000000.0 + (endTime.tv_nsec - startTime.tv_nsec);
-	fullTime += elapsedTime;
-	static int cycle = 1;
-	cycle++;
-	std::printf("time sec(%ld) ns(%ld), \t%s", (endTime.tv_sec - startTime.tv_sec), (endTime.tv_nsec - startTime.tv_nsec), (cycle % 6 == 0 ? "\n":"") );
-#endif
-*/
+
 	// lastObject is set by setResult() or setNewResult() of the FFI.
 	return result ?
 		FuncExecReturn::Ran :
