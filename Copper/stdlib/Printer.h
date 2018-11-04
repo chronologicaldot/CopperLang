@@ -1,3 +1,4 @@
+// (C) 2018 Nicolaus Anderson
 #include "../src/Copper.h"
 #include <cstdio>
 
@@ -49,23 +50,15 @@ public:
 				case ObjectType::Numeric:
 					switch ( ((NumericObject*)arg)->getSubType() ) {
 					case NumericObject::SubType::Integer:
-						std::fprintf(writeFile, "\33[96m%ld\33[0m", arg->getIntegerValue());
+						std::fprintf(writeFile, "\33[96m%ld\33[0m", ((NumericObject*)arg)->getIntegerValue());
 						break;
 					case NumericObject::SubType::DecimalNum:
 					default:
-						std::fprintf(writeFile, "\33[95m%lf\33[0m", arg->getDecimalValue());
+						std::fprintf(writeFile, "\33[95m%lf\33[0m", ((NumericObject*)arg)->getDecimalValue());
 						break;
 					}
 					break;
-/*
-				case ObjectType::Integer:
-					std::fprintf(writeFile, "\33[96m%ld\33[0m", arg->getIntegerValue());
-					break;
 
-				case ObjectType::Decimal:
-					std::fprintf(writeFile, "\33[95m%lf\33[0m", arg->getDecimalValue());
-					break;
-*/
 				default:
 					arg->writeToString(out);
 					std::fprintf(writeFile, "\33[93m%s\33[0m", out.c_str());
@@ -82,23 +75,15 @@ public:
 				case ObjectType::Numeric:
 					switch ( ((NumericObject*)arg)->getSubType() ) {
 					case NumericObject::SubType::Integer:
-						std::fprintf(writeFile, "%ld", arg->getIntegerValue());
+						std::fprintf(writeFile, "%ld", ((NumericObject*)arg)->getIntegerValue());
 						break;
 					case NumericObject::SubType::DecimalNum:
 					default:
-						std::fprintf(writeFile, "%lf", arg->getDecimalValue());
+						std::fprintf(writeFile, "%lf", ((NumericObject*)arg)->getDecimalValue());
 						break;
 					}
 					break;
-/*
-				case ObjectType::Integer:
-					std::fprintf(writeFile, "%ld", arg->getIntegerValue());
-					break;
 
-				case ObjectType::Decimal:
-					std::fprintf(writeFile, "%lf", arg->getDecimalValue());
-					break;
-*/
 				default:
 					arg->writeToString(out);
 					std::fprintf(writeFile, "%s", out.c_str());

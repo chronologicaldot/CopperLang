@@ -1,4 +1,10 @@
 ===========
+2018/11/4
+
+basicmath
+- Changed Object::getIntegerValue() and getDecimalValue() dependencies to NumericObject::getIntegerValue() and getDecimalValue().
+
+===========
 2018/8/31
 
 basicmath

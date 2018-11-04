@@ -351,6 +351,10 @@ getStringFromEngineMessage(
 		errLevel = EngineErrorLevel::error;
 		return "Missing argument.";
 
+	// WARNING
+	case EngineMessage::IndexOutOfBounds:
+		return "Index out of bounds. A valid value will substitute.";
+
 	// ERROR
 	// An incorrect arg was passed to a system function.
 	case EngineMessage::SystemFunctionBadArg:

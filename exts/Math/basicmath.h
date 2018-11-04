@@ -17,6 +17,12 @@ addFunctionsToEngine(
 	Engine&		engine
 );
 
+Integer
+getIntegerValue( Object& );
+
+Decimal
+getDecimalValue( Object& );
+
 bool
 iszero(
 	Decimal		p

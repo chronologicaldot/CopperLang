@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.521
+#define COPPER_INTERPRETER_VERSION 0.522
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -476,6 +476,10 @@ struct EngineMessage {
 	// An argument was excluded. Though processing could continue, it is unlikely the user would want it to.
 	MissingArg,
 
+	// WARNING
+	// The provided index (for a list) was out of bounds. The index will be substituted by a valid value.
+	IndexOutOfBounds,
+
 	// ERROR
 	// An invalid arg was passed to a system function.
 	// Could have a number of causes.
@@ -783,8 +787,10 @@ struct LogMessage {
 	SystemFunction::Value  systemFunctionId;
 	UInteger  argIndex;
 	UInteger  argCount;
-	String  givenArgType;
-	String  expectedArgType;
+	ObjectType::Value  givenArgType;
+	ObjectType::Value  expectedArgType;
+	String  givenArgTypeName;
+	String  expectedArgTypeName;
 
 	LogMessage(
 		LogLevel::Value  pLevel
@@ -795,8 +801,8 @@ struct LogMessage {
 		, systemFunctionId(SystemFunction::_unset)
 		, argIndex(0)
 		, argCount(0)
-		, givenArgType()
-		, expectedArgType()
+		, givenArgType(ObjectType::UnknownData)
+		, expectedArgType(ObjectType::UnknownData)
 	{}
 
 	static LogMessage
@@ -835,14 +841,26 @@ struct LogMessage {
 	}
 
 	LogMessage&
-	GivenArgType( const char*  v ) {
+	GivenArgType( ObjectType::Value  v ) {
 		givenArgType = v;
 		return *this;
 	}
 
 	LogMessage&
-	ExpectedArgType( const char*  v ) {
+	ExpectedArgType( ObjectType::Value  v ) {
 		expectedArgType = v;
+		return *this;
+	}
+
+	LogMessage&
+	GivenArgTypeName( const char*  v ) {
+		givenArgTypeName = v;
+		return *this;
+	}
+
+	LogMessage&
+	ExpectedArgTypeName( const char*  v ) {
+		expectedArgTypeName = v;
 		return *this;
 	}
 };
@@ -1036,16 +1054,6 @@ public:
 	virtual void
 	writeToString(String& out) const {
 		out = "{object}";
-	}
-
-	virtual Integer
-	getIntegerValue() const {
-		return 0;
-	}
-
-	virtual Decimal
-	getDecimalValue() const {
-		return 0;
 	}
 
 	// Meant to return the whether or not the internally-stored data is the same.
@@ -1635,6 +1643,8 @@ class FunctionObject : public Object {
 	UInteger ID;
 
 public:
+	static const ObjectType::Value object_type = ObjectType::Function;
+
 	explicit FunctionObject(Function* pFunction, UInteger id=0);
 
 	FunctionObject();
@@ -1776,8 +1786,10 @@ public:
 class BoolObject : public Object {
 	bool value;
 public:
+	static const ObjectType::Value object_type = ObjectType::Bool;
+
 	explicit BoolObject(bool b)
-		: Object(ObjectType::Bool)
+		: Object( BoolObject::object_type )
 		, value(b)
 	{}
 
@@ -1813,7 +1825,7 @@ public:
 
 	static ObjectType::Value
 	StaticType() {
-		return ObjectType::Bool;
+		return BoolObject::object_type;
 	}
 
 	virtual void
@@ -1833,8 +1845,10 @@ class StringObject : public Object {
 	String value;
 
 public:
+	static const ObjectType::Value object_type = ObjectType::String;
+
 	StringObject()
-		: Object( ObjectType::String )
+		: Object( StringObject::object_type )
 		, value()
 	{}
 
@@ -1865,7 +1879,7 @@ public:
 
 	static ObjectType::Value
 	StaticType() {
-		return ObjectType::String;
+		return StringObject::object_type;
 	}
 
 	String&
@@ -1914,6 +1928,8 @@ public:
 */
 struct NumericObject : public Object {
 
+	static const ObjectType::Value object_type = ObjectType::Numeric;
+
 	// Please extend
 	struct SubType {
 	enum Value {
@@ -1933,7 +1949,7 @@ struct NumericObject : public Object {
 
 	static ObjectType::Value
 	StaticType() {
-		return ObjectType::Numeric;
+		return NumericObject::object_type;
 	}
 
 	virtual const char*
@@ -2404,6 +2420,8 @@ class ListObject : public Object, public AppendObjectInterface {
 	ListObject( const ListObject&  pOther );
 
 public:
+
+	static const ObjectType::Value object_type = ObjectType::List;
 
 	ListObject();
 
@@ -3634,6 +3652,21 @@ protected:
 		const VarAddress& address
 	);
 
+	void printSystemFunctionWrongArgCount(
+		SystemFunction::Value  function,
+		UInteger  argsGiven,
+		UInteger  argCount
+	);
+
+	void printSystemFunctionWrongArg(
+		SystemFunction::Value  function,
+		UInteger  argIndex,
+		UInteger  argCount,
+		ObjectType::Value  given,
+		ObjectType::Value  expected,
+		bool isError = true
+	);
+
 	FuncExecReturn::Value	process_sys_return(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_not(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_all(			FuncFoundTask& task );
@@ -3713,6 +3746,7 @@ protected:
 #endif
 };
 
+
 // Function for automatically creating foreign function instances and assigning them to the engine
 // NOTE: Must be after the definition of Engine.
 // WARNING: The typename MUST be of a type inheriting ForeignFunc.
@@ -3732,12 +3766,12 @@ addNewForeignFunc(
 );
 
 // Class for wrapping variadic functions
-class FuncWrapper : public ForeignFunc {
+class ForeignFuncWrapper : public ForeignFunc {
 
 	bool (*func)( FFIServices& );
 
 public:
-	FuncWrapper( bool (*f)( FFIServices& ) )
+	ForeignFuncWrapper( bool (*f)( FFIServices& ) )
 		: func(f)
 	{}
 

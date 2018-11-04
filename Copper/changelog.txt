@@ -1,6 +1,6 @@
 ====================
-2018/8/17 - 2018/10/31
-v 6-0.521
+2018/8/17 - 2018/11/4
+v 6-0.522
 
 - Now on branch Feldspar.
 - Changed " != REAL_NULL " to "notNull" usages.
@@ -38,16 +38,29 @@ v 6-0.521
 - Fixed bug in Engine::run() that failed to check for end-of-stream when the parsing return requested more.
 - Added numeric operations to allow incr and decr system functions to accept multiple args. Methods are: process_sys_num_incr2() and process_sys_num_decr2().
 - Added less-than ("lt") and less-than-or-equal ("lte") system functions.
+- FuncWrapper is now ForeignFuncWrapper.
+- Changed Object implementations to use a static const ObjectType::Value object_type instead of directly using the enum constant, thereby keeping usage of the constant internally the same in each class.
+- All system functions for processing lists ("length", "sublist", ...) now return an error for wrong arg count if not given arguments. 
+- Simplified error and warning message printing for system functions processing lists, strings, numbers, and execute-with-alt-super.
+- Added EngineMessage::IndexOutOfBounds.
+- Removed Object::getIntegerValue() and Object::getDecimalValue().
+
 
 Printer.h
 - Updated to use Numeric for printing numbers instead of the usual Integer and Decimal types.
+- Removed dependency on Object::getIntegerValue() and Object::getDecimalValue().
 
 InStreamLogger.h
 - Added ability to print tokens.
 - Added ability to print(LogMessage).
+- Changed printing to convert from ObjectType::Value to string.
+- Moved implementations of functions to a .cpp file.
 
 FileInStream
 - Changed implementation to use std::FILE insteam of std::fstream.
+
+EngMsgToStr.cpp
+- Updated to handle EngineMessage::IndexOutOfBounds case.
 
 
 ====================

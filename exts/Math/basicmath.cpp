@@ -8,9 +8,25 @@
 namespace Cu {
 namespace Numeric {
 
+Integer
+getIntegerValue( Object&  object ) {
+	if ( isNumericObject(object) ) {
+		return ((NumericObject&)object).getIntegerValue();
+	}
+	return 0;
+}
+
+Decimal
+getDecimalValue( Object&  object ) {
+	if ( isNumericObject(object) ) {
+		return ((NumericObject&)object).getDecimalValue();
+	}
+	return 0;
+}
+
 bool
 iszero(
-	Decimal		p
+	Decimal  p
 ) {
 	// Check based on rounding error
 	return p < DECIMAL_ROUNDING_ERROR && p > - DECIMAL_ROUNDING_ERROR;
@@ -18,7 +34,7 @@ iszero(
 
 void
 addFunctionsToEngine(
-	Engine&		engine
+	Engine&  engine
 ) {
 	addNewForeignFunc( engine, "int", new IntegerCast() );
 	addNewForeignFunc( engine, "dcml", new DecimalCast() );
@@ -63,7 +79,7 @@ IntegerCast::call(
 	Integer  value = 0;
 	if ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
-		value = arg->getIntegerValue();
+		value = getIntegerValue(*arg);
 	}
 	ffi.setNewResult( new IntegerObject(value) );
 	return true;
@@ -78,7 +94,7 @@ DecimalCast::call(
 	Decimal  value = 0;
 	if ( ffi.hasMoreArgs() ) {
 		arg = ffi.getNextArg();
-		value = arg->getDecimalValue();
+		value = getDecimalValue(*arg);
 	}
 	ffi.setNewResult( new DecimalNumObject(value) );
 	return true;
@@ -95,10 +111,10 @@ bool ToString(
 		case ObjectType::Numeric:
 			switch ( ((NumericObject*)arg)->getSubType() ) {
 			case NumericObject::SubType::Integer:
-				sstream << arg->getIntegerValue();
+				sstream << ((NumericObject*)arg)->getIntegerValue();
 				break;
 			case NumericObject::SubType::DecimalNum:
-				sstream << arg->getDecimalValue();
+				sstream << ((NumericObject*)arg)->getDecimalValue();
 				break;
 			default:
 				ffi.printWarning("Could not cast number to string.");
@@ -147,13 +163,13 @@ AreZero::call(
 		case ObjectType::Numeric:
 			switch ( ((NumericObject*)arg)->getSubType() ) {
 			case NumericObject::SubType::Integer:
-				is_zero = ( 0 == arg->getIntegerValue() );
+				is_zero = ( 0 == ((NumericObject*)arg)->getIntegerValue() );
 				break;
 			case NumericObject::SubType::DecimalNum:
-				is_zero = iszero( arg->getDecimalValue() );
+				is_zero = iszero( ((NumericObject*)arg)->getDecimalValue() );
 				break;
 			default:
-				is_zero = ( 0 == arg->getIntegerValue() );
+				is_zero = ( 0 == ((NumericObject*)arg)->getIntegerValue() );
 				break;
 			}
 			break;
@@ -201,11 +217,15 @@ Power::call(
 	FFIServices& ffi
 ) {
 	Decimal  base;
+	Object* arg;
 
 	if ( ffi.hasMoreArgs() ) {
-		base = ffi.getNextArg()->getDecimalValue();
+		base = getDecimalValue(*(ffi.getNextArg()));
 		while ( ffi.hasMoreArgs() ) {
-			base = pow( base, ffi.getNextArg()->getDecimalValue() );
+			arg = ffi.getNextArg();
+			if ( isNumericObject(*arg) ) {
+				base = pow( base, ((NumericObject*)arg)->getDecimalValue() );
+			}
 		}
 	}
 	ffi.setNewResult( new DecimalNumObject(base) );
@@ -236,21 +256,21 @@ bool
 Pick_min::call(
 	FFIServices& ffi
 ) {
-	Object*  obj;
+	Object*  arg;
 	IntDeciUnion  minValue;
 	IntDeciUnion  nextValue;
 
 	if ( ffi.hasMoreArgs() ) {
-		obj = ffi.getNextArg();
-		switch( obj->getType() )
+		arg = ffi.getNextArg();
+		switch( arg->getType() )
 		{
 		case ObjectType::Numeric:
-			switch ( ((NumericObject*)obj)->getSubType() ) {
+			switch ( ((NumericObject*)arg)->getSubType() ) {
 
 			case NumericObject::SubType::DecimalNum:
-				minValue.d_val = obj->getDecimalValue();
+				minValue.d_val = getDecimalValue(*arg);
 				while ( ffi.hasMoreArgs() ) {
-					nextValue.d_val = ffi.getNextArg()->getDecimalValue();
+					nextValue.d_val = getDecimalValue(*(ffi.getNextArg()));
 					minValue.d_val = ( minValue.d_val <= nextValue.d_val ) ? minValue.d_val : nextValue.d_val;
 				}
 				ffi.setNewResult( new DecimalNumObject(minValue.d_val) );
@@ -258,9 +278,9 @@ Pick_min::call(
 
 			case NumericObject::SubType::Integer:
 			default:
-				minValue.i_val = obj->getIntegerValue();
+				minValue.i_val = getIntegerValue(*arg);
 				while ( ffi.hasMoreArgs() ) {
-					nextValue.i_val = ffi.getNextArg()->getIntegerValue();
+					nextValue.i_val = getIntegerValue(*(ffi.getNextArg()));
 					minValue.i_val = ( minValue.i_val <= nextValue.i_val ) ? minValue.i_val : nextValue.i_val;
 				}
 				ffi.setNewResult( new IntegerObject(minValue.i_val) );
@@ -280,21 +300,21 @@ bool
 Pick_max::call(
 	FFIServices& ffi
 ) {
-	Object*  obj;
+	Object*  arg;
 	IntDeciUnion  maxValue;
 	IntDeciUnion  nextValue;
 
 	if ( ffi.hasMoreArgs() ) {
-		obj = ffi.getNextArg();
-		switch( obj->getType() )
+		arg = ffi.getNextArg();
+		switch( arg->getType() )
 		{
 		case ObjectType::Numeric:
-			switch ( ((NumericObject*)obj)->getSubType() ) {
+			switch ( ((NumericObject*)arg)->getSubType() ) {
 
 			case NumericObject::SubType::DecimalNum:
-				maxValue.d_val = obj->getDecimalValue();
+				maxValue.d_val = getDecimalValue(*arg);
 				while ( ffi.hasMoreArgs() ) {
-					nextValue.d_val = ffi.getNextArg()->getDecimalValue();
+					nextValue.d_val = getDecimalValue(*(ffi.getNextArg()));
 					maxValue.d_val = ( maxValue.d_val >= nextValue.d_val ) ? maxValue.d_val : nextValue.d_val;
 				}
 				ffi.setNewResult( new DecimalNumObject(maxValue.d_val) );
@@ -302,9 +322,9 @@ Pick_max::call(
 
 			case NumericObject::SubType::Integer:
 			default:
-				maxValue.i_val = obj->getIntegerValue();
+				maxValue.i_val = getIntegerValue(*arg);
 				while ( ffi.hasMoreArgs() ) {
-					nextValue.i_val = ffi.getNextArg()->getIntegerValue();
+					nextValue.i_val = getIntegerValue(*(ffi.getNextArg()));
 					maxValue.i_val = ( maxValue.i_val >= nextValue.i_val ) ? maxValue.i_val : nextValue.i_val;
 				}
 				ffi.setNewResult( new IntegerObject(maxValue.i_val) );
@@ -324,24 +344,24 @@ bool
 Avg::call(
 	FFIServices& ffi
 ) {
-	Object*  obj;
+	Object*  arg;
 	Integer  valueCount = 0;
 	IntDeciUnion  avgValue;
 	IntDeciUnion  nextValue;
 
 	if ( ffi.hasMoreArgs() ) {
-		obj = ffi.getNextArg();
-		switch( obj->getType() )
+		arg = ffi.getNextArg();
+		switch( arg->getType() )
 		{
 		case ObjectType::Numeric:
-			switch ( ((NumericObject*)obj)->getSubType() ) {
+			switch ( ((NumericObject*)arg)->getSubType() ) {
 
 			case NumericObject::SubType::DecimalNum:
 				++valueCount;
-				avgValue.d_val = obj->getDecimalValue();
+				avgValue.d_val = getDecimalValue(*arg);
 				while ( ffi.hasMoreArgs() ) {
 					++valueCount;
-					nextValue.d_val = ffi.getNextArg()->getDecimalValue();
+					nextValue.d_val = getDecimalValue(*(ffi.getNextArg()));
 					avgValue.d_val += nextValue.d_val;
 				}
 				ffi.setNewResult( new DecimalNumObject(avgValue.d_val / (Decimal)valueCount) );
@@ -350,10 +370,10 @@ Avg::call(
 			case NumericObject::SubType::Integer:
 			default:
 				++valueCount;
-				avgValue.i_val = obj->getIntegerValue();
+				avgValue.i_val = getIntegerValue(*arg);
 				while ( ffi.hasMoreArgs() ) {
 					++valueCount;
-					nextValue.i_val = ffi.getNextArg()->getIntegerValue();
+					nextValue.i_val = getIntegerValue(*(ffi.getNextArg()));
 					avgValue.i_val += nextValue.i_val;
 				}
 				ffi.setNewResult( new IntegerObject(avgValue.i_val / valueCount) );
@@ -374,7 +394,7 @@ Sine::call(
 	FFIServices&  ffi
 ) {
 	ffi.setNewResult(
-		new DecimalNumObject( sin( ffi.getNextArg()->getDecimalValue() ) )
+		new DecimalNumObject( sin( getDecimalValue(*(ffi.getNextArg())) ) )
 	);
 	return true;
 }
@@ -384,7 +404,7 @@ Cosine::call(
 	FFIServices&  ffi
 ) {
 	ffi.setNewResult(
-		new DecimalNumObject( cos( ffi.getNextArg()->getDecimalValue() ) )
+		new DecimalNumObject( cos( getDecimalValue(*(ffi.getNextArg())) ) )
 	);
 	return true;
 }
@@ -394,7 +414,7 @@ Tangent::call(
 	FFIServices&  ffi
 ) {
 	ffi.setNewResult(
-		new DecimalNumObject( tan( ffi.getNextArg()->getDecimalValue() ) )
+		new DecimalNumObject( tan( getDecimalValue(*(ffi.getNextArg())) ) )
 	);
 	return true;
 }
@@ -404,7 +424,7 @@ Ceiling::call(
 	FFIServices&  ffi
 ) {
 	ffi.setNewResult(
-		new DecimalNumObject( ceil( ffi.getNextArg()->getDecimalValue() ) )
+		new DecimalNumObject( ceil( getDecimalValue(*(ffi.getNextArg())) ) )
 	);
 	return true;
 }
@@ -414,7 +434,7 @@ Floor::call(
 	FFIServices&  ffi
 ) {
 	ffi.setNewResult(
-		new DecimalNumObject( floor( ffi.getNextArg()->getDecimalValue() ) )
+		new DecimalNumObject( floor( getDecimalValue(*(ffi.getNextArg())) ) )
 	);
 	return true;
 }

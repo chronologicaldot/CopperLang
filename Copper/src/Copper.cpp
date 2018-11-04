@@ -444,7 +444,7 @@ Function::addParam( const String pName ) {
 //--------------------------------------
 
 FunctionObject::FunctionObject(Function* pFunction, UInteger id)
-	: Object(ObjectType::Function)
+	: Object(FunctionObject::object_type)
 	, funcBox()
 	, owner(REAL_NULL)
 	, ID(id)
@@ -457,7 +457,7 @@ FunctionObject::FunctionObject(Function* pFunction, UInteger id)
 }
 
 FunctionObject::FunctionObject()
-	: Object(ObjectType::Function)
+	: Object(FunctionObject::object_type)
 	, funcBox()
 	, owner(REAL_NULL)
 	, ID(0)
@@ -470,7 +470,7 @@ FunctionObject::FunctionObject()
 }
 
 FunctionObject::FunctionObject(const FunctionObject& pOther)
-	: Object(ObjectType::Function)
+	: Object(FunctionObject::object_type)
 	, funcBox()
 	, owner(REAL_NULL)
 	, ID(pOther.ID)
@@ -761,7 +761,7 @@ Variable::getCopy() {
 // Defined here for the sake of the linker
 
 NumericObject::NumericObject()
-	: Object(ObjectType::Numeric)
+	: Object(NumericObject::object_type)
 {}
 
 NumericObject::~NumericObject()
@@ -948,7 +948,7 @@ DecimalNumObject::modulus(const NumericObject&  other ) {
 //--------------------------------------
 
 ListObject::ListObject()
-	: Object( ObjectType::List )
+	: Object( ListObject::object_type )
 	, nodeCount(0)
 	, selectorIndex(0)
 	, selector()
@@ -5558,8 +5558,8 @@ Engine::setupForeignFunctionExecution(
 				.Message(EngineMessage::WrongArgType)
 				.ArgIndex(ffhIndex + 1)
 				.ArgCount(foreignFunc->getParameterCount())
-				//.GivenArgType((*taskArgsIter)->typeName())
-				//.ExpectedArgType( foreignFunc->getParameterType(ffhIndex) ) // No way to convert ObjectType to string
+				.GivenArgType((*taskArgsIter)->getType())
+				.ExpectedArgType(foreignFunc->getParameterType(ffhIndex))
 			);
 
 			if ( ignoreBadForeignFunctionCalls ) {
@@ -5916,6 +5916,39 @@ Engine::run_Is_ptr(
 	return ExecutionResult::Ok;
 }
 
+void
+Engine::printSystemFunctionWrongArgCount(
+	SystemFunction::Value  function,
+	UInteger  argsGiven,
+	UInteger  argCount
+) {
+	print( LogMessage::create(LogLevel::error)
+		.SystemFunctionId( function )
+		.Message(EngineMessage::WrongArgCount)
+		.ArgIndex(argsGiven)
+		.ArgCount(argCount)
+	);
+}
+
+void
+Engine::printSystemFunctionWrongArg(
+	SystemFunction::Value  function,
+	UInteger  argIndex,
+	UInteger  argCount,
+	ObjectType::Value  given,
+	ObjectType::Value  expected,
+	bool isError
+) {
+	print( LogMessage::create( isError? LogLevel::error : LogLevel::warning )
+		.SystemFunctionId( function )
+		.Message(EngineMessage::WrongArgType)
+		.ArgIndex(argIndex)
+		.ArgCount(argCount)
+		.GivenArgType(given)
+		.ExpectedArgType(expected)
+	);
+}
+
 FuncExecReturn::Value
 Engine::process_sys_return(
 	FuncFoundTask& task
@@ -6079,23 +6112,12 @@ Engine::process_sys_member(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 2 ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_member )
-			.Message(EngineMessage::WrongArgCount)
-			.ArgIndex(task.args.size())
-			.ArgCount(2)
-		);
+		printSystemFunctionWrongArgCount( SystemFunction::_member, task.args.size(), 2 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the member sought
 	if ( ! isFunctionObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_member )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1).ArgCount(2)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(FunctionObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_member, 1, 2, (*argsIter)->getType(), ObjectType::Function );
 		return FuncExecReturn::ErrorOnRun;
 	}
 	FunctionObject* parentFc = (FunctionObject*)*argsIter;
@@ -6113,13 +6135,7 @@ Engine::process_sys_member(
 	// Second parameter is the name of the member
 	argsIter.next();
 	if ( !isStringObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_member )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(2).ArgCount(2)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(StringObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_member, 2, 2, (*argsIter)->getType(), ObjectType::String );
 		return FuncExecReturn::ErrorOnRun;
 	}
 	StringObject* objStr = (StringObject*)(*argsIter);
@@ -6129,8 +6145,9 @@ Engine::process_sys_member(
 			.SystemFunctionId( SystemFunction::_member )
 			.Message(EngineMessage::SystemFunctionBadArg)
 			.ArgIndex(1).ArgCount(2)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType("[name]")
+			.GivenArgType((*argsIter)->getType())
+			.ExpectedArgType(ObjectType::String)
+			.ExpectedArgTypeName("[name]")
 		);
 		return FuncExecReturn::ErrorOnRun;
 	}
@@ -6150,25 +6167,15 @@ Engine::process_sys_member_count(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 1 ) {
-		print( LogMessage::create(LogLevel::warning)
-			.SystemFunctionId( SystemFunction::_member_count )
-			.Message(EngineMessage::WrongArgCount)
-			.ArgIndex(task.args.size())
-			.ArgCount(1)
-		);
+		printSystemFunctionWrongArgCount( SystemFunction::_member_count, task.args.size(), 1 );
 		lastObject.setWithoutRef(new IntegerObject(0));
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// The only parameter is the parent function of the members
 	if ( ! isFunctionObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_member_count )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(1)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(FunctionObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_member_count, 1, 1,
+			(*argsIter)->getType(), FunctionObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Obtain the actual function (which is the parent of the member of interest)
@@ -6199,25 +6206,15 @@ Engine::process_sys_is_member(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 2 ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_is_member )
-			.Message(EngineMessage::WrongArgCount)
-			.ArgIndex(task.args.size())
-			.ArgCount(2)
-		);
+		printSystemFunctionWrongArgCount( SystemFunction::_is_member, task.args.size(), 2 );
 		lastObject.setWithoutRef(new BoolObject(false));
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter is the parent function of the members
 	if ( ! isFunctionObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_is_member )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(2)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(FunctionObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_is_member, 1, 2,
+			(*argsIter)->getType(), FunctionObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Obtain the actual function (which is the parent of the member of interest)
@@ -6236,14 +6233,9 @@ Engine::process_sys_is_member(
 	argsIter.next();
 	bool result = false;
 	if ( ! isStringObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_is_member )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(2)
-			.ArgCount(2)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(StringObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_is_member, 2, 2,
+			(*argsIter)->getType(), StringObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	const String& memberName = ((StringObject*)*argsIter)->getString();
@@ -6262,25 +6254,16 @@ Engine::process_sys_set_member(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( task.args.size() != 3 ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_set_member )
-			.Message(EngineMessage::WrongArgCount)
-			.ArgIndex(task.args.size())
-			.ArgCount(3)
-		);
+		printSystemFunctionWrongArgCount( SystemFunction::_set_member, task.args.size(), 3 );
+
 		lastObject.setWithoutRef(new FunctionObject());
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter should be the parent function of the members
 	if ( ! isFunctionObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_set_member )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(3)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(FunctionObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_set_member, 1, 3,
+			(*argsIter)->getType(), FunctionObject::object_type);
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// Obtain the actual function (which is the parent of the member of interest)
@@ -6298,14 +6281,9 @@ Engine::process_sys_set_member(
 	// Second parameter should be a string
 	argsIter.next();
 	if ( ! isStringObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_set_member )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(2)
-			.ArgCount(3)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(StringObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_set_member, 2, 3,
+			(*argsIter)->getType(), StringObject::object_type);
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	String& memberName = ((StringObject*)*argsIter)->getString();
@@ -6315,8 +6293,8 @@ Engine::process_sys_set_member(
 			.Message(EngineMessage::SystemFunctionBadArg)
 			.ArgIndex(2)
 			.ArgCount(3)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType("[name]")
+			.GivenArgType((*argsIter)->getType())
+			.ExpectedArgType(ObjectType::String)
 		);
 		return FuncExecReturn::ErrorOnRun;
 	}
@@ -6358,13 +6336,8 @@ Engine::process_sys_member_list(
 				);
 			}
 		} else {
-			print( LogMessage::create(LogLevel::warning)
-				.SystemFunctionId( SystemFunction::_member_list )
-				.Message(EngineMessage::WrongArgType)
-				.ArgIndex(argIndex)
-				.GivenArgType((*argsIter)->typeName())
-				.ExpectedArgType(FunctionObject::StaticTypeName())
-			);
+			printSystemFunctionWrongArg( SystemFunction::_member_list, argIndex, 0,
+				(*argsIter)->getType(), FunctionObject::object_type, false );
 		}
 		++argIndex;
 	} while ( argsIter.next() );
@@ -6404,13 +6377,8 @@ Engine::process_sys_union(
 				);
 			}
 		} else {
-			print( LogMessage::create(LogLevel::warning)
-				.SystemFunctionId( SystemFunction::_union )
-				.Message(EngineMessage::WrongArgType)
-				.ArgIndex(argIndex)
-				.GivenArgType((*argsIter)->typeName())
-				.ExpectedArgType(FunctionObject::StaticTypeName())
-			);
+			printSystemFunctionWrongArg( SystemFunction::_union, argIndex, 0,
+				(*argsIter)->getType(), FunctionObject::object_type, false );
 		}
 		++argIndex;
 	} while( argsIter.next() );
@@ -6450,14 +6418,17 @@ Engine::process_sys_are_same_type(
 	// First parameter, to which all other parameters are compared
 	ObjectType::Value firstType = (*argsIter)->getType();
 	String first( (*argsIter)->typeName() );
+
 	bool same = true;
 	do {
 		same = firstType == (*argsIter)->getType();
-		if ( same ) {
-			same = first.equals( (*argsIter)->typeName() );
-		}
 		if ( !same )
 			break;
+
+		same = first.equals( (*argsIter)->typeName() );
+		if ( !same )
+			break;
+
 	} while( argsIter.next() );
 	// Get only the first parameter
 	lastObject.setWithoutRef(new BoolObject(same));
@@ -6646,12 +6617,7 @@ Engine::process_sys_execute_with_alt_super(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_execute_with_alt_super");
 #endif
 	if ( task.args.size() < 2 ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_execute_with_alt_super )
-			.Message(EngineMessage::WrongArgCount)
-			.ArgIndex(task.args.size())
-			.ArgCount(2)
-		);
+		printSystemFunctionWrongArgCount( SystemFunction::_execute_with_alt_super, task.args.size(), 2 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -6662,25 +6628,15 @@ Engine::process_sys_execute_with_alt_super(
 	argsIter.next();
 
 	if ( ! isFunctionObject(*superObject) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_execute_with_alt_super )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(2)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(FunctionObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_execute_with_alt_super, 1, 2,
+			(*argsIter)->getType(), FunctionObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	if ( ! isFunctionObject(*callObject) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_execute_with_alt_super )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(2)
-			.ArgCount(2)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(FunctionObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_execute_with_alt_super, 2, 2,
+			(*argsIter)->getType(), FunctionObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -6789,19 +6745,17 @@ Engine::process_sys_list_size(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_size");
 #endif
+	if ( task.args.size() != 1 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_size, 0, 1 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_size )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(1)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_size, 1, 1,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
@@ -6819,19 +6773,17 @@ Engine::process_sys_list_append(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_append");
 #endif
+	if ( task.args.size() < 2 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_append, 0, 2 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_append )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(1)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_append, 1, 2,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
@@ -6849,19 +6801,17 @@ Engine::process_sys_list_prepend(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_prepend");
 #endif
+	if ( task.args.size() < 2 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_prepend, 0, 2 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_prepend )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(1)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_prepend, 1, 2,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
@@ -6879,26 +6829,31 @@ Engine::process_sys_list_insert(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_insert");
 #endif
+	if ( task.args.size() >= 3 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_insert, 0, 3 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_insert )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_insert, 1, 3,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
 
-	if ( ! argsIter.next() )
-		return FuncExecReturn::Ran;
+	argsIter.next();
 
-	Integer index = (*argsIter)->getIntegerValue();
+	if ( ! isNumericObject(**argsIter) ) {
+		printSystemFunctionWrongArg( SystemFunction::_list_insert, 2, 3,
+			(*argsIter)->getType(), NumericObject::object_type );
+
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	Integer index = ((NumericObject*)(*argsIter))->getIntegerValue();
 
 	while ( argsIter.next() ) {
 		listPtr->insert(index, *argsIter);
@@ -6913,27 +6868,31 @@ Engine::process_sys_list_get_item(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_get_item");
 #endif
+	if ( task.args.size() != 2 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_get_item, 0, 2 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_get_item )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(3)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_get_item, 1, 2,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
 
-	if ( ! argsIter.next() )
-		return FuncExecReturn::Ran;
+	argsIter.next();
 
-	Integer index = (*argsIter)->getIntegerValue();
+	if ( ! isNumericObject(**argsIter) ) {
+		printSystemFunctionWrongArg( SystemFunction::_list_get_item, 2, 2,
+			(*argsIter)->getType(), NumericObject::object_type );
+
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	Integer index = ((NumericObject*)(*argsIter))->getIntegerValue();
 
 	Object* out = listPtr->getItem(index);
 	if ( notNull(out) )
@@ -6948,27 +6907,31 @@ Engine::process_sys_list_remove(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_remove");
 #endif
+	if ( task.args.size() != 2 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_remove, 0, 2 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_remove )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(2)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_remove, 1, 2,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
 
-	if ( ! argsIter.next() )
-		return FuncExecReturn::Ran;
+	argsIter.next();
 
-	Integer index = (*argsIter)->getIntegerValue();
+	if ( ! isNumericObject(**argsIter) ) {
+		printSystemFunctionWrongArg( SystemFunction::_list_remove, 2, 2,
+			(*argsIter)->getType(), NumericObject::object_type );
+
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	Integer index = ((NumericObject*)(*argsIter))->getIntegerValue();
 	listPtr->remove(index);
 	return FuncExecReturn::Ran;
 }
@@ -6980,19 +6943,17 @@ Engine::process_sys_list_clear(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_clear");
 #endif
+	if ( task.args.size() != 1 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_clear, 0, 1 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_clear )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(1)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_clear, 1, 1,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	((ListObject*)*argsIter)->clear();
@@ -7006,41 +6967,42 @@ Engine::process_sys_list_swap(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_swap");
 #endif
+	if ( task.args.size() != 3 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_swap, 0, 3 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_swap )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(3)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_swap, 1, 3,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
 
-	if ( ! argsIter.next() )
-		return FuncExecReturn::Ran;
+	argsIter.next();
 
-	Integer index1 = (*argsIter)->getIntegerValue();
+	if ( ! isNumericObject(**argsIter) ) {
+		printSystemFunctionWrongArg( SystemFunction::_list_swap, 2, 3,
+			(*argsIter)->getType(), NumericObject::object_type );
 
-	if ( ! argsIter.next() ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_swap )
-			.Message(EngineMessage::MissingArg)
-			.ArgIndex(1)
-			.ArgCount(3)
-			.GivenArgType("[none]")
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
 		return FuncExecReturn::ErrorOnRun;
 	}
 
-	Integer index2 = (*argsIter)->getIntegerValue();
+	Integer index1 = ((NumericObject*)(*argsIter))->getIntegerValue();
+
+	argsIter.next();
+
+	if ( ! isNumericObject(**argsIter) ) {
+		printSystemFunctionWrongArg( SystemFunction::_list_swap, 3, 3,
+			(*argsIter)->getType(), NumericObject::object_type );
+
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	Integer index2 = ((NumericObject*)(*argsIter))->getIntegerValue();
 	listPtr->swap(index1, index2);
 	return FuncExecReturn::Ran;
 }
@@ -7052,19 +7014,17 @@ Engine::process_sys_list_replace(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_replace");
 #endif
+	if ( task.args.size() != 3 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_replace, 0, 3 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_replace )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(3)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_replace, 1, 3,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
@@ -7072,17 +7032,14 @@ Engine::process_sys_list_replace(
 	if ( ! argsIter.next() )
 		return FuncExecReturn::Ran;
 
-	Integer index = (*argsIter)->getIntegerValue();
+	if ( ! isNumericObject(**argsIter) ) {
+		printSystemFunctionWrongArg( SystemFunction::_list_replace, 2, 3,
+			(*argsIter)->getType(), NumericObject::object_type );
 
-	if ( ! argsIter.next() ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_replace )
-			.Message(EngineMessage::MissingArg)
-			.ArgIndex(1)
-			.ArgCount(3)
-		);
 		return FuncExecReturn::ErrorOnRun;
 	}
+
+	Integer index = ((NumericObject*)(*argsIter))->getIntegerValue();
 
 	listPtr->replace(index, *argsIter);
 	return FuncExecReturn::Ran;
@@ -7095,19 +7052,17 @@ Engine::process_sys_list_sublist(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_sublist");
 #endif
+	if ( task.args.size() != 3 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_sublist, 0, 3 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
 	ArgsIter argsIter = task.args.start();
-	if ( !argsIter.has() )
-		return FuncExecReturn::Ran;
 
 	if ( ! isListObject(**argsIter) ) {
-		print( LogMessage::create(LogLevel::error)
-			.SystemFunctionId( SystemFunction::_list_sublist )
-			.Message(EngineMessage::WrongArgType)
-			.ArgIndex(1)
-			.ArgCount(3)
-			.GivenArgType((*argsIter)->typeName())
-			.ExpectedArgType(ListObject::StaticTypeName())
-		);
+		printSystemFunctionWrongArg( SystemFunction::_list_sublist, 1, 3,
+			(*argsIter)->getType(), ListObject::object_type );
+
 		return FuncExecReturn::ErrorOnRun;
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
@@ -7115,19 +7070,42 @@ Engine::process_sys_list_sublist(
 	Integer endIndex = listPtr->size();
 	ListObject* newList = new ListObject();
 
-	if ( argsIter.next() ) {
-		startIndex = (*argsIter)->getIntegerValue();
-	}
+	argsIter.next();
 
-	if ( argsIter.next() ) {
-		endIndex = (*argsIter)->getIntegerValue();
-	}
+	if ( ! isNumericObject(**argsIter) ) {
+		printSystemFunctionWrongArg( SystemFunction::_list_sublist, 2, 3,
+			(*argsIter)->getType(), NumericObject::object_type );
 
-	// TODO Should show a warning when the index size is greater than the list size.
-	if ( startIndex > listPtr->size() )
+		return FuncExecReturn::ErrorOnRun;
+	}
+	startIndex = ((NumericObject*)(*argsIter))->getIntegerValue();
+
+	argsIter.next();
+
+	if ( ! isNumericObject(**argsIter) ) {
+		printSystemFunctionWrongArg( SystemFunction::_list_sublist, 3, 3,
+			(*argsIter)->getType(), NumericObject::object_type );
+
+		return FuncExecReturn::ErrorOnRun;
+	}
+	endIndex = ((NumericObject*)(*argsIter))->getIntegerValue();
+
+	if ( startIndex > listPtr->size() ) {
+		print( LogMessage::create(LogLevel::warning)
+				.SystemFunctionId( SystemFunction::_list_sublist )
+				.Message( EngineMessage::IndexOutOfBounds )
+				.ArgIndex(2).ArgCount(3)
+		);
 		startIndex = listPtr->size();
-	if ( endIndex > listPtr->size() )
+	}
+	if ( endIndex > listPtr->size() ) {
+		print( LogMessage::create(LogLevel::warning)
+				.SystemFunctionId( SystemFunction::_list_sublist )
+				.Message( EngineMessage::IndexOutOfBounds )
+				.ArgIndex(3).ArgCount(3)
+		);
 		endIndex = listPtr->size();
+	}
 
 	// Copy items from starting index to end of list
 	for (; startIndex < endIndex && startIndex < listPtr->size(); ++startIndex) {
@@ -7160,13 +7138,7 @@ Engine::process_sys_string_match(
 			} else {
 				// DO NOT CONVERT TO STRING USING writeToString.
 				// _string_match is reserved for true string comparison only!
-				print( LogMessage::create(LogLevel::warning)
-					.SystemFunctionId( SystemFunction::_string_match )
-					.Message(EngineMessage::WrongArgType)
-					.ArgIndex(argIndex)
-					.GivenArgType((*argsIter)->typeName())
-					.ExpectedArgType(StringObject::StaticTypeName())
-				);
+				printSystemFunctionWrongArg( SystemFunction::_string_match, argIndex, 0, (*argsIter)->getType(), StringObject::object_type, false );
 			}
 			++argIndex;
 		} while ( argsIter.next() && matches );
@@ -7216,13 +7188,7 @@ Engine::process_sys_num_chain_num(
 			startNumber = (NumericObject*)*argsIter;
 			startNumber->ref(); // Treat as new
 		} else {
-			print( LogMessage::create(LogLevel::warning)
-				.SystemFunctionId( functionId )
-				.Message(EngineMessage::WrongArgType)
-				.ArgIndex(1)
-				.GivenArgType((*argsIter)->typeName())
-				.ExpectedArgType(NumericObject::StaticTypeName())
-			);
+			printSystemFunctionWrongArg( functionId, 1, 0, (*argsIter)->getType(), NumericObject::object_type, false );
 			return FuncExecReturn::Ran;
 		}
 		while ( argsIter.next() ) {
@@ -7232,13 +7198,7 @@ Engine::process_sys_num_chain_num(
 				startNumber->deref();
 				startNumber = resultNumber;
 			} else {
-				print( LogMessage::create(LogLevel::warning)
-					.SystemFunctionId( functionId )
-					.Message(EngineMessage::WrongArgType)
-					.ArgIndex(argIndex)
-					.GivenArgType((*argsIter)->typeName())
-					.ExpectedArgType(NumericObject::StaticTypeName())
-				);
+				printSystemFunctionWrongArg( functionId, argIndex, 0, (*argsIter)->getType(), NumericObject::object_type, false );
 			}
 		}
 	}
@@ -7261,14 +7221,7 @@ Engine::process_sys_solo_num(
 			number = (NumericObject*)*argsIter;
 			number = operation( *number );
 		} else {
-			print( LogMessage::create(LogLevel::warning)
-				.SystemFunctionId( functionId )
-				.Message(EngineMessage::WrongArgType)
-				.ArgIndex(1)
-				.ArgCount(1)
-				.GivenArgType((*argsIter)->typeName())
-				.ExpectedArgType(NumericObject::StaticTypeName())
-			);
+			printSystemFunctionWrongArg( functionId, 1, 1, (*argsIter)->getType(), NumericObject::object_type, false );
 			return FuncExecReturn::Ran;
 		}
 	}
@@ -7289,13 +7242,9 @@ Engine::process_sys_num_equal( FuncFoundTask& task ) {
 		if ( isNumericObject(**argsIter) ) {
 			first = (NumericObject*)*argsIter;
 		} else {
-			print( LogMessage::create(LogLevel::warning)
-				.SystemFunctionId( SystemFunction::_num_equal )
-				.Message(EngineMessage::WrongArgType)
-				.ArgIndex(1)
-				.GivenArgType((*argsIter)->typeName())
-				.ExpectedArgType(NumericObject::StaticTypeName())
-			);
+			printSystemFunctionWrongArg( SystemFunction::_num_equal, 1, 0,
+				(*argsIter)->getType(), NumericObject::object_type, false );
+
 			return FuncExecReturn::Ran;
 		}
 		while ( argsIter.next() ) {
@@ -7306,13 +7255,8 @@ Engine::process_sys_num_equal( FuncFoundTask& task ) {
 					break;
 				}
 			} else {
-				print( LogMessage::create(LogLevel::warning)
-					.SystemFunctionId( SystemFunction::_num_equal )
-					.Message(EngineMessage::WrongArgType)
-					.ArgIndex(argIndex)
-					.GivenArgType((*argsIter)->typeName())
-					.ExpectedArgType(NumericObject::StaticTypeName())
-				);
+				printSystemFunctionWrongArg( SystemFunction::_num_equal, argIndex, 0,
+					(*argsIter)->getType(), NumericObject::object_type, false );
 			}
 		}
 	}
@@ -7335,8 +7279,8 @@ Engine::process_sys_num_greater_than( FuncFoundTask& task, bool flip ) {
 				.SystemFunctionId( flip ? SystemFunction::_num_less_or_equal : SystemFunction::_num_greater_than )
 				.Message(EngineMessage::WrongArgType)
 				.ArgIndex(1)
-				.GivenArgType((*argsIter)->typeName())
-				.ExpectedArgType(NumericObject::StaticTypeName())
+				.GivenArgType((*argsIter)->getType())
+				.ExpectedArgType(NumericObject::object_type)
 			);
 			return FuncExecReturn::Ran;
 		}
@@ -7361,8 +7305,8 @@ Engine::process_sys_num_greater_than( FuncFoundTask& task, bool flip ) {
 					.SystemFunctionId( flip ? SystemFunction::_num_less_or_equal : SystemFunction::_num_greater_than )
 					.Message(EngineMessage::WrongArgType)
 					.ArgIndex(argIndex)
-					.GivenArgType((*argsIter)->typeName())
-					.ExpectedArgType(NumericObject::StaticTypeName())
+					.GivenArgType((*argsIter)->getType())
+					.ExpectedArgType(NumericObject::object_type)
 				);
 			}
 		}
@@ -7386,8 +7330,8 @@ Engine::process_sys_num_greater_or_equal( FuncFoundTask& task, bool flip ) {
 				.SystemFunctionId( flip ? SystemFunction::_num_less_than : SystemFunction::_num_greater_or_equal )
 				.Message(EngineMessage::WrongArgType)
 				.ArgIndex(1)
-				.GivenArgType((*argsIter)->typeName())
-				.ExpectedArgType(NumericObject::StaticTypeName())
+				.GivenArgType((*argsIter)->getType())
+				.ExpectedArgType(NumericObject::object_type)
 			);
 			return FuncExecReturn::Ran;
 		}
@@ -7412,8 +7356,8 @@ Engine::process_sys_num_greater_or_equal( FuncFoundTask& task, bool flip ) {
 					.SystemFunctionId( flip ? SystemFunction::_num_less_than : SystemFunction::_num_greater_or_equal )
 					.Message(EngineMessage::WrongArgType)
 					.ArgIndex(argIndex)
-					.GivenArgType((*argsIter)->typeName())
-					.ExpectedArgType(NumericObject::StaticTypeName())
+					.GivenArgType((*argsIter)->getType())
+					.ExpectedArgType(NumericObject::object_type)
 				);
 			}
 		}
@@ -7429,13 +7373,8 @@ Engine::process_sys_num_abs( FuncFoundTask& task ) {
 		if ( isNumericObject(**argsIter) ) {
 			lastObject.setWithoutRef( ((NumericObject*)*argsIter)->absValue() );
 		} else {
-			print( LogMessage::create(LogLevel::warning)
-				.SystemFunctionId( SystemFunction::_num_abs )
-				.Message(EngineMessage::WrongArgType)
-				.ArgIndex(1)
-				.GivenArgType((*argsIter)->typeName())
-				.ExpectedArgType(NumericObject::StaticTypeName())
-			);
+			printSystemFunctionWrongArg( SystemFunction::_num_abs, 1, 1,
+				(*argsIter)->getType(), NumericObject::object_type, false );
 		}
 	}
 	return FuncExecReturn::Ran;
@@ -7515,7 +7454,7 @@ void addForeignFuncInstance(
 	const String&  pName,
 	bool (*pFunction)( FFIServices& )
 ) {
-	ForeignFunc* ff = new FuncWrapper(pFunction);
+	ForeignFunc* ff = new ForeignFuncWrapper(pFunction);
 	pEngine.addForeignFunction(pName, ff);
 	ff->deref();
 }
@@ -7586,9 +7525,9 @@ CallbackWrapper::isVadiadic() const {
 	return false;
 }
 
-Cu::ObjectType::Value
-CallbackWrapper::getParameterType( Cu::UInteger CU_UNUSED_ARG(i) ) const {
-	return Cu::ObjectType::Function;
+ObjectType::Value
+CallbackWrapper::getParameterType( UInteger CU_UNUSED_ARG(i) ) const {
+	return ObjectType::Function;
 }
 
 Cu::UInteger
