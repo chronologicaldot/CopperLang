@@ -37,65 +37,68 @@ public:
 	virtual bool call( FFIServices& ffi ) {
 		Object*  arg;
 		util::String  out;
-		while ( ffi.hasMoreArgs() ) {
-			arg = ffi.getNextArg();
-			if ( writeFile == stdout ) {
-				switch( arg->getType() )
-				{
-				case ObjectType::Bool:
-					arg->writeToString(out);
-					std::fprintf(writeFile, "\33[92m%s\33[0m", out.c_str());
-					break;
+		Cu::UInteger  i = 0;
+		for (; i < ffi.getArgCount(); ++i) {
+			arg = ffi.arg(i);
+			switch( arg->getType() )
+			{
+			case ObjectType::Bool:
+				arg->writeToString(out);
+				printBooleanString(out);
+				break;
 
-				case ObjectType::Numeric:
-					switch ( ((NumericObject*)arg)->getSubType() ) {
-					case NumericObject::SubType::Integer:
-						std::fprintf(writeFile, "\33[96m%ld\33[0m", ((NumericObject*)arg)->getIntegerValue());
-						break;
-					case NumericObject::SubType::DecimalNum:
-					default:
-						std::fprintf(writeFile, "\33[95m%lf\33[0m", ((NumericObject*)arg)->getDecimalValue());
-						break;
-					}
+			case ObjectType::Numeric:
+				switch ( ((NumericObject*)arg)->getSubType() ) {
+				case NumericObject::SubType::Integer:
+					printInteger( ((NumericObject*)arg)->getIntegerValue() );
 					break;
-
+				case NumericObject::SubType::DecimalNum:
 				default:
-					arg->writeToString(out);
-					std::fprintf(writeFile, "\33[93m%s\33[0m", out.c_str());
+					printDecimalNum( ((NumericObject*)arg)->getDecimalValue() );
 					break;
 				}
-			} else {
-				switch( arg->getType() )
-				{
-				case ObjectType::Bool:
-					arg->writeToString(out);
-					std::fprintf(writeFile, "%s", out.c_str());
-					break;
+				break;
 
-				case ObjectType::Numeric:
-					switch ( ((NumericObject*)arg)->getSubType() ) {
-					case NumericObject::SubType::Integer:
-						std::fprintf(writeFile, "%ld", ((NumericObject*)arg)->getIntegerValue());
-						break;
-					case NumericObject::SubType::DecimalNum:
-					default:
-						std::fprintf(writeFile, "%lf", ((NumericObject*)arg)->getDecimalValue());
-						break;
-					}
-					break;
-
-				default:
-					arg->writeToString(out);
-					std::fprintf(writeFile, "%s", out.c_str());
-					break;
-				}
+			default:
+				arg->writeToString(out);
+				printString(out);
+				break;
 			}
 		}
 		return true;
 	}
 
-	virtual bool isVariadic() const {
-		return true;
+protected:
+	void printBooleanString( const util::String&  value ) {
+		if ( writeFile == stdout ) {
+			std::fprintf(writeFile, "\33[92m%s\33[0m", value.c_str());
+		} else {
+			std::fprintf(writeFile, "%s", value.c_str());
+		}
+	}
+
+	void printInteger( Cu::Integer value ) {
+		if ( writeFile == stdout ) {
+			std::fprintf(writeFile, "\33[96m%ld\33[0m", value);
+		} else {
+			std::fprintf(writeFile, "%ld", value);
+		}
+	}
+
+	void printDecimalNum( Cu::Decimal value ) {
+		if ( writeFile == stdout ) {
+			std::fprintf(writeFile, "\33[95m%lf\33[0m", value);
+		} else {
+			std::fprintf(writeFile, "%lf", value);
+		}
+	}
+
+	void printString( const util::String&  value ) {
+		if ( writeFile == stdout ) {
+			std::fprintf(writeFile, "\33[93m%s\33[0m", value.c_str());
+		} else {
+			std::fprintf(writeFile, "%s", value.c_str());
+		}
 	}
 };
 

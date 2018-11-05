@@ -2013,28 +2013,140 @@ LoopStructureParseTask::finalizeGotos(
 
 FFIServices::FFIServices(
 	Engine&			enginePtr,
-	ArgsIter		paramsStart
+	ArgsList&		args,
+	String			foreignFuncName
 )
 	: engine(enginePtr)
-	, argsIter(paramsStart)
-	, done( ! argsIter.has() )
-{}
+	, argsArray(REAL_NULL)
+	, numArgs(0)
+	, who()
+{
+	who.steal(foreignFuncName); // Cheat the copy
+	ArgsIter  argsIter = args.start();
+	numArgs = args.size();
+	argsArray = new RefPtr<Object>[numArgs];
+	UInteger i = 0;
+	for(; i < numArgs; ++i) {
+		argsArray[i].set( *argsIter );
+		argsIter.next();
+	}
+}
 
-// returns each successive parameter sent to the function
-Object*
-FFIServices::getNextArg() {
-	Object* out;
-	if ( done )
-		throw FFIMisuseException(); // Prevents accidental misuse
+FFIServices::~FFIServices() {
+	if ( argsArray ) {
+		delete[] argsArray;
+		numArgs = 0;
+	}
+}
 
-	out = *argsIter;
-	done = ! argsIter.next();
-	return out;
+UInteger
+FFIServices::getArgCount() const {
+	return numArgs;
 }
 
 bool
-FFIServices::hasMoreArgs() {
-	return !done;
+FFIServices::demandArgCount( UInteger  count, bool  imperative ) {
+	if ( numArgs == count )
+		return true;
+
+	engine.print( LogMessage::create( imperative? LogLevel::error : LogLevel::warning )
+		.FunctionName(who)
+		.Message( EngineMessage::WrongArgCount )
+		.ArgIndex(numArgs)
+		.ArgCount(count)
+	);
+
+	return false;
+}
+
+bool
+FFIServices::demandArgCountRange( UInteger  min, UInteger  max, bool  imperative ) {
+	if ( numArgs >= min && numArgs <= max )
+		return true;
+
+	engine.print( LogMessage::create( imperative? LogLevel::error : LogLevel::warning )
+		.FunctionName(who)
+		.Message( EngineMessage::WrongArgCount )
+		.ArgIndex(numArgs)
+		.ArgCount(min)
+	);
+
+	return false;
+}
+
+bool
+FFIServices::demandMinArgCount( UInteger  min, bool  imperative ) {
+	if ( numArgs >= min )
+		return true;
+
+	engine.print( LogMessage::create( imperative? LogLevel::error : LogLevel::warning )
+		.FunctionName(who)
+		.Message( EngineMessage::WrongArgCount )
+		.ArgIndex(numArgs)
+		.ArgCount(min)
+	);
+
+	return false;
+}
+
+bool
+FFIServices::demandArgType( UInteger  index, ObjectType::Value  type ) {
+	if ( index >= numArgs ) {
+		engine.print( LogMessage::create( LogLevel::error )
+			.FunctionName(who)
+			.Message( EngineMessage::BadArgIndexInForeignFunc )
+			.ArgIndex(index)
+			.ArgCount(numArgs)
+			.ExpectedArgType(type)
+		);
+		return false;
+	}
+
+	ObjectType::Value  givenType = argsArray[index].raw()->getType();
+
+	if ( givenType == type )
+		return true;
+
+	engine.print( LogMessage::create( LogLevel::error )
+		.FunctionName(who)
+		.Message( EngineMessage::WrongArgType )
+		.ArgIndex(index)
+		.ArgCount(numArgs)
+		.GivenArgType(givenType)
+		.ExpectedArgType(type)
+	);
+
+	return false;
+}
+
+bool
+FFIServices::demandAllArgsType( ObjectType::Value  type, bool  imperative ) {
+	ObjectType::Value  givenType;
+	UInteger index = 0;
+
+	for (; index < numArgs; ++index) {
+		givenType = argsArray[index].raw()->getType();
+		if ( givenType != type ) {
+			engine.print( LogMessage::create( imperative? LogLevel::error : LogLevel::warning )
+				.FunctionName(who)
+				.Message( EngineMessage::WrongArgType )
+				.ArgIndex(index)
+				.ArgCount(numArgs)
+				.GivenArgType(givenType)
+				.ExpectedArgType(type)
+			);
+			return false;
+		}
+	}
+	return true;
+}
+
+Object&
+FFIServices::arg( UInteger  index ) {
+	if ( index >= numArgs )
+		throw FFIMisuseException();
+
+	return *( argsArray[index].raw() );
 }
 
 void
@@ -2056,6 +2168,30 @@ FFIServices::printError(
 	const char* message
 ) {
 	engine.print(LogLevel::error, message);
+}
+
+void
+FFIServices::printCustomInfoCode( UInteger  code ) {
+	engine.print( LogMessage::create(LogLevel::info)
+		.Message(EngineMessage::CustomMessage)
+		.CustomCode(code)
+	);
+}
+
+void
+FFIServices::printCustomWarningCode( UInteger  code ) {
+	engine.print( LogMessage::create(LogLevel::warning)
+		.Message(EngineMessage::CustomMessage)
+		.CustomCode(code)
+	);
+}
+
+void
+FFIServices::printCustomErrorCode( UInteger  code ) {
+	engine.print( LogMessage::create(LogLevel::error)
+		.Message(EngineMessage::CustomMessage)
+		.CustomCode(code)
+	);
 }
 
 void
@@ -5236,7 +5372,7 @@ Engine::addForeignFunctionArgsToStackFrame(
 		} while ( givenArgsIter.next() );
 		if ( !done )
 		do {
-			print( LogLevel::warning, EngineMessage::MissingFunctionCallParam );
+			print( LogLevel::warning, EngineMessage::MissingFunctionCallArg );
 		} while ( funcParamsIter.next() );
 	}
 }
@@ -5519,60 +5655,7 @@ Engine::setupForeignFunctionExecution(
 
 	ForeignFunc* foreignFunc = bucketData->item.getForeignFunction();
 
-	if ( ! foreignFunc->isVariadic() && ((uint)foreignFunc->getParameterCount() != task.args.size()) ) {
-		// Language specification says this should optionally be a warning
-		//print(LogLevel::error, "Argument count does not match foreign function header.");
-		print( LogMessage::create(LogLevel::error)
-			.FunctionName( task.getAddress().first().c_str() )
-			.Message(EngineMessage::WrongArgCount)
-			.ArgIndex(task.args.size())
-			.ArgCount((uint)foreignFunc->getParameterCount())
-		);
-
-		if ( ignoreBadForeignFunctionCalls ) {
-			return FuncExecReturn::Ran; // Leaves the return as empty function
-		} else {
-			return FuncExecReturn::ErrorOnRun;
-		}
-	}
-
-	UInteger ffhIndex = 0;
-	ArgsIter taskArgsIter = task.args.start();
-	// This is for non-variadic functions. Variadic functions should only return a parameter count
-	// when they have a specific number of parameters that MUST be a certain type for any call.
-	// For example, a list function might be Top(List, Iter, Iter...) so it's constant parameter is
-	// the first one: Top(List...) meaning it should return a parameter count of 1 and have
-	// getParameterName() return the typename for the List.
-	while ( ffhIndex < foreignFunc->getParameterCount() ) {
-		if ( ! taskArgsIter.has() ) {
-			break; // For variadic functions
-		}
-		if ( ! foreignFunc->getParameterType(ffhIndex) == (*taskArgsIter)->getType() )
-		{
-			// Language specification says this should optionally be a warning
-			//print(LogLevel::error, "Argument types do not match foreign function header.");
-			print( LogMessage::create(LogLevel::error)
-				.FunctionName( task.getAddress().first().c_str() )
-				.Message(EngineMessage::WrongArgType)
-				.ArgIndex(ffhIndex + 1)
-				.ArgCount(foreignFunc->getParameterCount())
-				.GivenArgType((*taskArgsIter)->getType())
-				.ExpectedArgType(foreignFunc->getParameterType(ffhIndex))
-			);
-
-			if ( ignoreBadForeignFunctionCalls ) {
-				return FuncExecReturn::Ran; // Leaves the return as empty function
-			} else {
-				return FuncExecReturn::ErrorOnRun;
-			}
-		}
-		++ffhIndex;
-		if ( ! taskArgsIter.next() ) {
-			break;
-		}
-	}
-
-	FFIServices ffi(*this, task.args.start());
+	FFIServices ffi(*this, task.args, task.getAddress().first());
 	bool result = foreignFunc->call( ffi );
 
 	// lastObject is set by setResult() or setNewResult() of the FFI.
@@ -5729,7 +5812,7 @@ Engine::setupUserFunctionExecution(
 		} while ( givenArgsIter.next() );
 		if ( !done )
 		do {
-			print( LogLevel::warning, EngineMessage::MissingFunctionCallParam );
+			print( LogLevel::warning, EngineMessage::MissingFunctionCallArg );
 			// Default remaining parameters to empty function.
 			stackFrame->getScope().addVariable( *funcParamsIter );
 		} while ( funcParamsIter.next() );
@@ -6684,7 +6767,7 @@ Engine::process_sys_execute_with_alt_super(
 		} while ( argsIter.next() );
 		if ( !done )
 		do {
-			print( LogLevel::warning, EngineMessage::MissingFunctionCallParam );
+			print( LogLevel::warning, EngineMessage::MissingFunctionCallArg );
 			// Default remaining parameters to empty function.
 			stackFrame->getScope().addVariable( *funcParamsIter );
 		} while ( funcParamsIter.next() );
@@ -7476,44 +7559,13 @@ bool
 CallbackWrapper::call(
 	FFIServices&  ffi
 ) {
-	callback = (FunctionObject*)(ffi.getNextArg());
-	callback->ref();
-	callback->changeOwnerTo(this);
-	return true;
-}
-
-/*
-bool
-CallbackWrapper::call(
-	FFISevices&  ffi
-) {
-	// Variadic version
-	Object* obj;
-	if ( ffi.hasMoreArgs() ) {
-		obj = ffi.getNextArg();
-		if ( isFunctionObject(obj) ) {
-			callback = (FunctionObject*)obj;
-			callback->ref();
-			callback->changeOwnerTo(this);
-		}
+	if ( ffi.demandArgCount(1) && ffi.demandArgType(0, ObjectType::Function) ) {
+		callback = (FunctionObject*)&(ffi.arg(0));
+		callback->ref();
+		callback->changeOwnerTo(this);
+		return true;
 	}
-	return true;
-}
-*/
-
-bool
-CallbackWrapper::isVadiadic() const {
 	return false;
-}
-
-ObjectType::Value
-CallbackWrapper::getParameterType( UInteger CU_UNUSED_ARG(i) ) const {
-	return ObjectType::Function;
-}
-
-Cu::UInteger
-CallbackWrapper::getParameterCount() const {
-	return 1;
 }
 
 

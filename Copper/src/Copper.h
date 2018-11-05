@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.522
+#define COPPER_INTERPRETER_VERSION 0.6
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -366,13 +366,13 @@ struct EngineMessage {
 	ArgBodyIncomplete,
 
 	// ERROR
-	// Invalid arguments passed to a function.
+	// Invalid arguments passed to a function. (Parsing stage ONLY)
 	InvalidFunctionArguments,
 
 	// WARNING
 	/* Missing parameter for a function call.
 	This results in a default value (of empty function) for the parameter. */
-	MissingFunctionCallParam,
+	MissingFunctionCallArg,
 
 	// ERROR
 	// Attempting to treat a built-in function like a variable.
@@ -473,7 +473,7 @@ struct EngineMessage {
 	DestroyedFuncAsArg,
 
 	// ERROR
-	// An argument was excluded. Though processing could continue, it is unlikely the user would want it to.
+	// An critical argument was excluded, making the results of the function meaningless.
 	MissingArg,
 
 	// WARNING
@@ -481,22 +481,21 @@ struct EngineMessage {
 	IndexOutOfBounds,
 
 	// ERROR
+	// Accessing non-existent argument for a foreign function
+	BadArgIndexInForeignFunc,
+
+	// ERROR
 	// An invalid arg was passed to a system function.
 	// Could have a number of causes.
 	SystemFunctionBadArg,
 
 	// ERROR
-	// The wrong number of arguments was passed to a foreign function.
-	ForeignFunctionWrongArgCount,
-
-	// ERROR
-	// An argument passed to a foreign function did not match the requested type.
-	ForeignFunctionBadArg,
-
-	// ERROR
 	// The user-function contains errors.
 	// Usually, the other error will be printed. This just indicates that the problem is within a function body.
 	UserFunctionBodyError,
+
+	// UNKNOWN
+	CustomMessage,
 
 	// Total number of engine messages
 	COUNT
@@ -791,6 +790,7 @@ struct LogMessage {
 	ObjectType::Value  expectedArgType;
 	String  givenArgTypeName;
 	String  expectedArgTypeName;
+	UInteger  customCode; // For user applications and foreign functions
 
 	LogMessage(
 		LogLevel::Value  pLevel
@@ -803,10 +803,11 @@ struct LogMessage {
 		, argCount(0)
 		, givenArgType(ObjectType::UnknownData)
 		, expectedArgType(ObjectType::UnknownData)
+		, customCode(0)
 	{}
 
 	static LogMessage
-	create(LogLevel::Value  pLevel) {
+	create( LogLevel::Value  pLevel ) {
 		return LogMessage(pLevel);
 	}
 
@@ -817,8 +818,8 @@ struct LogMessage {
 	}
 
 	LogMessage&
-	FunctionName( const char*  n ) {
-		functionName = n;
+	FunctionName( const String  name ) {
+		functionName = name;
 		return *this;
 	}
 
@@ -861,6 +862,12 @@ struct LogMessage {
 	LogMessage&
 	ExpectedArgTypeName( const char*  v ) {
 		expectedArgTypeName = v;
+		return *this;
+	}
+
+	LogMessage&
+	CustomCode( UInteger  code ) {
+		customCode = code;
 		return *this;
 	}
 };
@@ -1934,7 +1941,8 @@ struct NumericObject : public Object {
 	struct SubType {
 	enum Value {
 		Integer = 0,	// Integer class
-		DecimalNum = 1,	// Decimal Number class
+		DecimalNum,		// Decimal Number class
+		COUNT,
 		FORCE32 = 0x7fffffff // Allows extensions
 	};};
 
@@ -1989,7 +1997,7 @@ struct NumericObject : public Object {
 	virtual bool
 	isGreaterOrEqual(const NumericObject& CU_UNUSED_ARG(other) ) = 0;
 
-	virtual Object*
+	virtual NumericObject*
 	absValue() const = 0;
 
 	virtual NumericObject*
@@ -2028,7 +2036,7 @@ struct NumericObject : public Object {
 	// These functions are meant to return heap-created objects or objects with at least
 	// 1 extra reference count since the object may be dropped.
 	virtual NumericObject*
-	absValue() { return copy(); }
+	absValue() { return (NumericObject*)copy(); }
 
 	virtual NumericObject*
 	add( NumericObject& CU_UNUSED_ARG(other) ) { return copy(); }
@@ -2517,21 +2525,6 @@ public:
 
 	// Calls the function. Return "false" on error.
 	virtual bool call( FFIServices& ffi )=0;
-
-	virtual bool
-	isVariadic() const {
-		return false;
-	}
-
-	virtual ObjectType::Value
-	getParameterType( UInteger CU_UNUSED_ARG(index) ) const {
-		return ObjectType::UnknownData;
-	}
-
-	virtual UInteger
-	getParameterCount() const {
-		return 0;
-	}
 
 	//operator ForeignFunc* () {
 	//	return (ForeignFunc*)(*this);
@@ -3078,24 +3071,68 @@ class EmptyTaskStackException {};
 
 //----------- Foreign Function Interface -------------
 
-// Exceptions usually occur for things like calling getNextParam() too much.
+// Exceptions usually occur for things like calling arg() with a bad index.
 class FFIMisuseException {};
 
 // class Engine was declared before this
 
 class FFIServices {
 	Engine&			engine;
-	ArgsIter		argsIter;
-	bool			done;		// Indicates parameter/arguments iteration is complete
+	RefPtr<Object>*	argsArray;
+	UInteger		numArgs;
+	String			who;
 
 public:
-	FFIServices( Engine& enginePtr, ArgsIter paramsStart );
+	FFIServices( Engine& enginePtr, ArgsList& argsList, String  foreignFuncName );
 
-	// Returns each successive argument sent to the function
-	Object* getNextArg();
+	~FFIServices();
 
-	// Indicates more arguments are available (which is useful for variadic functions)
-	bool hasMoreArgs();
+	//! Get the total number of arguments
+	UInteger getArgCount() const;
+
+	//! Demand a specific number of args
+	/*
+		Prints an error if the number of args does not match the given.
+		\param imperative - Indicates whether not matching would cause an error.
+		\return - true if the number of args matches the given.
+	*/
+	bool demandArgCount( UInteger  count, bool  imperative = true );
+
+	//! Demand min and max number of args
+	/*
+		Demands a minimum and maximum number of args. Prints an error if the number of
+		args does not fit in the range.
+		\param imperative - Indicates whether not being in range would cause an error.
+		\return - true if the number of args is in range.
+	*/
+	bool demandArgCountRange( UInteger  min, UInteger  max, bool  imperative = true );
+
+	//! Demand min number of args
+	/*
+		Demands a minimum number of args. Prints an error if there are fewer args.
+		\param imperative - Indicates whether not being in range would cause an error.
+		\return - true if the number of args is in range.
+	*/
+	bool demandMinArgCount( UInteger  min, bool  imperative = true );
+
+	//! Demand argument be of type
+	/*
+		Prints an error if the argument at the given index doesn't match a specific type.
+		\return - true if the given argument matches the required type.
+	*/
+	bool demandArgType( UInteger  index, ObjectType::Value  type );
+
+	//! Demand all args are of the given type
+	/*
+		Prints an error if at least one argument doesn't match the given type.
+	*/
+	bool demandAllArgsType( ObjectType::Value  type, bool  imperative = true );
+
+	//! Get the arg at the given index
+	//! throws an error if out-of-bounds
+	Object& arg( UInteger  index );
+
+		// Methods for printing miscellaneous messages
 
 	// Wrapper for Engine::print(LogLevel::info, const char*)
 	void printInfo(const char* message);
@@ -3106,10 +3143,15 @@ public:
 	// Wrapper for Engine::print(LogLevel::error, const char*)
 	void printError(const char* message);
 
-	// Sets the Engine lastObject.
+	//! Print custom message code
+	void printCustomInfoCode( UInteger );
+	void printCustomWarningCode( UInteger );
+	void printCustomErrorCode( UInteger );
+
+	//! Sets the Engine lastObject.
 	void setResult(Object* obj);
 
-	// Sets the Engine lastObject with a new Object (calls deref)
+	//! Sets the Engine lastObject with a new Object (calls deref)
 	void setNewResult(Object* obj);
 };
 
@@ -3765,7 +3807,13 @@ addNewForeignFunc(
 	ForeignFunc*  pFunction
 );
 
-// Class for wrapping variadic functions
+//! Macro for creating foreign function structs.
+#define CuForeignFuncStruct(name) \
+struct name : public ::Cu::ForeignFunc { \
+	virtual bool call( ::Cu::FFIServices& ); \
+};
+
+//! Class for wrapping variadic functions
 class ForeignFuncWrapper : public ForeignFunc {
 
 	bool (*func)( FFIServices& );
@@ -3779,11 +3827,6 @@ public:
 	call( FFIServices& ffi ) {
 		return func(ffi);
 	}
-
-	virtual bool
-	isVariadic() const {
-		return true;
-	}
 };
 
 void
@@ -3793,7 +3836,7 @@ addForeignFuncInstance(
 	bool (*pFunction)( FFIServices& )
 );
 
-// Class for wrapping callback functions and using them
+//! Class for wrapping callback functions and using them
 class CallbackWrapper : public ForeignFunc, public Owner {
 
 	Engine& engine;
@@ -3812,15 +3855,6 @@ public:
 
 	virtual bool
 	call( FFIServices&  ffi );
-
-	virtual bool
-	isVadiadic() const;
-
-	virtual UInteger
-	getParameterCount() const;
-
-	virtual ObjectType::Value
-	getParameterType( UInteger CU_UNUSED_ARG(i) ) const;
 };
 
 //! Class for adding foreign methods
@@ -3847,11 +3881,6 @@ public:
 	virtual bool
 	call( FFIServices& ffi ) {
 		return (base->*method)(ffi); // Calling the method
-	}
-
-	virtual bool
-	isVariadic() const {
-		return true;
 	}
 };
 

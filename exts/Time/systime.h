@@ -12,22 +12,26 @@
 namespace Cu {
  namespace Time {
 
+#define CU_CLOCK_TIME_TYPE 1
+
 	// You should really just use me. :)
 void
 addFunctionsToEngine(
 	Engine&		engine
 );
 
-class ClockTime : public Object {
+class ClockTime : public NumericObject {
 
 	timespec  data;
 
 public:
+
 	ClockTime()
-		: data()
+		: NumericObject()
+		, data()
 	{}
 
-	ClockTime( timespec&  pData )
+	ClockTime( const timespec&  pData ) // was there some reason timespec was supposed to be non const?
 		: data( pData )
 	{}
 
@@ -41,14 +45,24 @@ public:
 		out = "{time}";
 	}
 
-	Integer
-	getIntegerValue() const {
-		return (Integer) (data.tv_sec);
+	static const char*
+	StaticTypeName() {
+		return "time";
 	}
 
-	Decimal
-	getDecimalValue() const {
-		return (Decimal)data.tv_sec + (Decimal)data.tv_nsec/1000000000;
+	virtual const char*
+	typeName() const {
+		return StaticTypeName();
+	}
+
+	static const NumericObject::SubType::Value
+	StaticClockTimeType() {
+		return static_cast<NumericObject::SubType::Value>(NumericObject::SubType::COUNT + CU_CLOCK_TIME_TYPE);
+	}
+
+	virtual NumericObject::SubType::Value
+	getSubType() const {
+		return StaticClockTimeType();
 	}
 
 	Decimal
@@ -66,20 +80,53 @@ public:
 		return (Integer)data.tv_sec;
 	}
 
-	virtual const char*
-	typeName() const {
-		return StaticTypeName();
+	void
+	setValue( timespec  newValue ) {
+		data.tv_sec = newValue.tv_sec;
+		data.tv_nsec = newValue.tv_nsec;
 	}
 
-	static const char*
-	StaticTypeName() {
-		return "time";
+		// NumericObject methods
+
+	virtual void
+	setValue( const NumericObject& );
+
+	virtual Integer
+	getIntegerValue() const {
+		return (Integer) (data.tv_sec);
 	}
 
-	static bool
-	isSameType( const char* pTypeName ) {
-		return util::equals( StaticTypeName(), pTypeName );
+	virtual Decimal
+	getDecimalValue() const {
+		return (Decimal)data.tv_sec + (Decimal)data.tv_nsec/1000000000;
 	}
+
+	virtual bool
+	isEqualTo(const NumericObject&  other );
+
+	virtual bool
+	isGreaterThan(const NumericObject&  other );
+
+	virtual bool
+	isGreaterOrEqual(const NumericObject&  other );
+
+	virtual NumericObject*
+	absValue() const;
+
+	virtual NumericObject*
+	add(const NumericObject&  other );
+
+	virtual NumericObject*
+	subtract(const NumericObject&  other );
+
+	virtual NumericObject*
+	multiply(const NumericObject&  other );
+
+	virtual NumericObject*
+	divide(const NumericObject&  other );
+
+	virtual NumericObject*
+	modulus(const NumericObject&  other );
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char*
@@ -87,6 +134,12 @@ public:
 		return "ClockTime";
 	}
 #endif
+protected:
+	bool isEqualTo(const timespec&);
+	bool isGreaterThan(const timespec&);
+	bool isGreaterOrEqual(const timespec&);
+	NumericObject* add(const timespec&);
+	NumericObject* subtract(const timespec&);
 };
 
 struct GetClockTime : public ForeignFunc {

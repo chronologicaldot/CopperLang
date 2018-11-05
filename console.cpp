@@ -10,14 +10,6 @@
 #include "Copper/stdlib/Printer.h"
 #include "Copper/stdlib/InStreamLogger.h"
 
-//#include "exts/Math/intmath.h"
-//#include "exts/Math/ulongmath.h"
-//#include "exts/Math/floatmath.h"
-//#include "exts/Math/doublemath.h"
-//#include "exts/Math/BasicPrimitiveSizes.h"
-//#include "exts/Iterable/ManagedList.h"
-//#include "exts/Time/timemath.h"
-
 #include "exts/Math/basicmath.h"
 #include "exts/Time/systime.h"
 
@@ -35,65 +27,6 @@ void handler(int sig) {
   backtrace_symbols_fd(array, size, STDERR_FILENO);
   exit(1);
 }
-
-class Cu_cb_receiver : public Cu::ForeignFunc, public Cu::Owner {
-	Cu::Engine&  engine;
-	Cu::FunctionObject*  cb;
-
-public:
-	Cu_cb_receiver(Cu::Engine& e)
-		: engine(e)
-		, cb(REAL_NULL)
-	{}
-
-	~Cu_cb_receiver() {
-		if ( cb )
-			cb->deref();
-	}
-
-	virtual bool
-	owns( Cu::FunctionObject*  container ) const {
-		return cb == container;
-	}
-
-	virtual bool
-	call( Cu::FFIServices& ffi ) {
-		Cu::Object*  obj;
-		if ( ffi.hasMoreArgs() ) {
-			obj = ffi.getNextArg();
-			if ( Cu::isFunctionObject(*obj) ) {
-				cb = (Cu::FunctionObject*)obj;
-				cb->ref();
-				cb->changeOwnerTo(this);
-				ffi.printInfo("Callback is set");
-			}
-		}
-		return true;
-	}
-/*
-	virtual bool
-	isVariadic() const {
-		return true;
-	}
-*/
-	virtual Cu::ObjectType::Value
-	getParameterType( Cu::UInteger index ) const {
-		return Cu::ObjectType::Function;
-	}
-
-	virtual Cu::UInteger
-	getParameterCount() const {
-		return 1;
-	}
-
-	Cu::EngineResult::Value
-	test() {
-		if ( cb ) {
-			return engine.runFunctionObject(cb);
-		}
-		return Cu::EngineResult::Ok;
-	}
-};
 
 struct MethodSource {
 	char a;
@@ -120,14 +53,8 @@ int main() {
 	engine.setStackTracePrintingEnabled(true);
 	engine.setPrintTokensWhenParsing(true);
 
-	//Cu::Numeric::Sizes::addFunctionsToEngine(engine);
-	//Cu::ManagedList::addFunctionsToEngine(engine, true);
-
 	Cu::Numeric::addFunctionsToEngine(engine);
 	Cu::Time::addFunctionsToEngine(engine);
-
-	//Cu_cb_receiver  ccr(engine);
-	//engine.addForeignFunction(util::String("set_callback"), &ccr);
 
 	//Cu::CallbackWrapper ccw(engine, util::String("set_wrapper"));
 
@@ -156,7 +83,8 @@ int main() {
 			std::printf("\nEngine terminated with error.");
 			break;
 		case Cu::EngineResult::Done:
-			std::printf("\nEngine finished.");
+		default:
+			//std::printf("\nEngine finished.");
 			break;
 		}
 	}
@@ -169,26 +97,6 @@ int main() {
 			err = 1;
 		}
 	}
-/*
-	if ( err != 1 ) {
-		std::printf("Testing the callback...\n");
-		switch( ccr.test() )
-		{
-		case Cu::EngineResult::Error:
-			//err = 1;
-		default: break;
-		}
-	}
-	if ( err != 1 ) {
-		std::printf("Testing second callback...\n");
-		if ( ! ccw.run() ) {
-			std::printf("Error in second callback.\n");
-			// err = 1;
-		} else {
-			std::printf("Second callback finished.\n");
-		}
-	}
-*/
 	std::printf("\n");
 	return err;
 }

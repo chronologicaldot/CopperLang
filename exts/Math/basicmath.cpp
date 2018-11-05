@@ -75,13 +75,14 @@ IntegerCast::call(
 	FFIServices&  ffi
 ) {
 	// Only accepts at most 1 arg, but may have zero
-	Object*  arg;
+	if ( ! ffi.demandArgCountRange(0,1) )
+		return false;
+
 	Integer  value = 0;
-	if ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		value = getIntegerValue(*arg);
-	}
-	ffi.setNewResult( new IntegerObject(value) );
+	if ( ffi.getArgCount() == 1 )
+		value = getIntegerValue(ffi.arg(1));
+
+	ffi.setNewResult( new IntegerObject( value ) );
 	return true;
 }
 
@@ -90,41 +91,36 @@ DecimalCast::call(
 	FFIServices&  ffi
 ) {
 	// Only accepts at most 1 arg, but may have zero
-	Object*  arg;
+	if ( ! ffi.demandArgCountRange(0,1) )
+		return false;
+
 	Decimal  value = 0;
-	if ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		value = getDecimalValue(*arg);
-	}
-	ffi.setNewResult( new DecimalNumObject(value) );
+	if ( ffi.getArgCount() == 1 )
+		value = getDecimalValue(ffi.arg(1));
+
+	ffi.setNewResult( new DecimalNumObject( value ) );
 	return true;
 }
 
 bool ToString(
 	FFIServices& ffi
 ) {
-	Object*  arg;
-	std::stringstream  sstream;
-	if ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		switch( arg->getType() ) {
-		case ObjectType::Numeric:
-			switch ( ((NumericObject*)arg)->getSubType() ) {
-			case NumericObject::SubType::Integer:
-				sstream << ((NumericObject*)arg)->getIntegerValue();
-				break;
-			case NumericObject::SubType::DecimalNum:
-				sstream << ((NumericObject*)arg)->getDecimalValue();
-				break;
-			default:
-				ffi.printWarning("Could not cast number to string.");
-			}
-			break;
+	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
+		return false;
 
-		default:
-			ffi.printWarning("Attempted to use numeric to-string function on incompatible type.");
-			break;
-		}
+	std::stringstream  sstream;
+	NumericObject& arg = (NumericObject&) ffi.arg(0);
+	switch ( arg.getSubType() )
+	{
+	case NumericObject::SubType::Integer:
+		sstream << arg.getIntegerValue();
+		break;
+	case NumericObject::SubType::DecimalNum:
+		sstream << arg.getDecimalValue();
+		break;
+	default:
+		sstream << arg.getIntegerValue();
+		break;
 	}
 	ffi.setNewResult(
 		new StringObject(sstream.str().c_str())
@@ -143,90 +139,46 @@ DecimalInfinity(
 }
 
 bool
-Unimplemented(
-	FFIServices&  ffi
-) {
-	ffi.printError("Unimplemented function for number type.");
-	return false;
-}
-
-bool
 AreZero::call(
 	FFIServices&  ffi
 ) {
-	Object*  arg;
+	if ( ! ffi.demandAllArgsType( ObjectType::Numeric ) )
+		return false;
+
+	NumericObject*  arg;
 	bool  is_zero = true;
-	while ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		switch( arg->getType() )
+	UInteger  index = 0;
+	for (; index < ffi.getArgCount(); ++index) {
+		arg = (NumericObject*)&(ffi.arg(index));
+		switch( arg->getSubType() )
 		{
-		case ObjectType::Numeric:
-			switch ( ((NumericObject*)arg)->getSubType() ) {
-			case NumericObject::SubType::Integer:
-				is_zero = ( 0 == ((NumericObject*)arg)->getIntegerValue() );
-				break;
-			case NumericObject::SubType::DecimalNum:
-				is_zero = iszero( ((NumericObject*)arg)->getDecimalValue() );
-				break;
-			default:
-				is_zero = ( 0 == ((NumericObject*)arg)->getIntegerValue() );
-				break;
-			}
-			break;
-
+		case NumericObject::SubType::DecimalNum:
+			is_zero = iszero( arg->getDecimalValue() );
 		default:
-			// Default return is an empty function
-			// Should this be a warning and default to true? Doesn't seem right.
-			ffi.printError("are_zero was not given a built-in number type.");
-			return false;
+			is_zero = ( 0 == arg->getIntegerValue() );
+			break;
 		}
-		if ( !is_zero ) break;
+		if ( ! is_zero ) break;
 	}
-	ffi.setNewResult(
-		new BoolObject(is_zero)
-	);
+	ffi.setNewResult( new BoolObject(is_zero) );
 	return true;
 }
-
-/*
-bool
-Modulus::call(
-	FFIServices& ffi
-) {
-	Integer  total = 0;
-	Integer  nextValue = 0;
-
-	if ( ffi.hasMoreArgs() ) {
-		total = ffi.getNextArg()->getIntegerValue();
-		while ( ffi.hasMoreArgs() ) {
-			nextValue = ffi.getNextArg()->getIntegerValue();
-			if ( nextValue == 0 ) {
-				ffi.printWarning("Integer-modulus divisor is zero. Ignoring argument value.");
-			} else {
-				total %= nextValue;
-			}
-		}
-	}
-	ffi.setNewResult( new IntegerObject(total) );
-	return true;
-}
-*/
 
 bool
 Power::call(
 	FFIServices& ffi
 ) {
+	if ( ! ffi.demandAllArgsType( ObjectType::Numeric ) )
+		return false;
+
 	Decimal  base;
 	Object* arg;
+	Integer  index = 1;
+	if ( ffi.getArgCount() >= 1 )
+		base = ((NumericObject&)ffi.arg(index)).getDecimalValue();
 
-	if ( ffi.hasMoreArgs() ) {
-		base = getDecimalValue(*(ffi.getNextArg()));
-		while ( ffi.hasMoreArgs() ) {
-			arg = ffi.getNextArg();
-			if ( isNumericObject(*arg) ) {
-				base = pow( base, ((NumericObject*)arg)->getDecimalValue() );
-			}
-		}
+	for (; index < ffi.getArgCount(); ++index) {
+		base = pow( base, ((NumericObject&)ffi.arg(index)).getDecimalValue() );
 	}
 	ffi.setNewResult( new DecimalNumObject(base) );
 	return true;
@@ -252,149 +204,103 @@ SmallPI::call(
 	return true;
 }
 
+IntDeciSharedFuncs::~IntDeciSharedFuncs() {}
+
 bool
-Pick_min::call(
+IntDeciSharedFuncs::call(
 	FFIServices& ffi
 ) {
-	Object*  arg;
-	IntDeciUnion  minValue;
-	IntDeciUnion  nextValue;
+	if ( ! ffi.demandAllArgsType(ObjectType::Numeric) )
+		return false;
 
-	if ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		switch( arg->getType() )
-		{
-		case ObjectType::Numeric:
-			switch ( ((NumericObject*)arg)->getSubType() ) {
+	if ( ! ffi.demandMinArgCount(1) )
+		return false;
 
-			case NumericObject::SubType::DecimalNum:
-				minValue.d_val = getDecimalValue(*arg);
-				while ( ffi.hasMoreArgs() ) {
-					nextValue.d_val = getDecimalValue(*(ffi.getNextArg()));
-					minValue.d_val = ( minValue.d_val <= nextValue.d_val ) ? minValue.d_val : nextValue.d_val;
-				}
-				ffi.setNewResult( new DecimalNumObject(minValue.d_val) );
-				return true;
-
-			case NumericObject::SubType::Integer:
-			default:
-				minValue.i_val = getIntegerValue(*arg);
-				while ( ffi.hasMoreArgs() ) {
-					nextValue.i_val = getIntegerValue(*(ffi.getNextArg()));
-					minValue.i_val = ( minValue.i_val <= nextValue.i_val ) ? minValue.i_val : nextValue.i_val;
-				}
-				ffi.setNewResult( new IntegerObject(minValue.i_val) );
-				return true;
-			}
-			break;
-
-		default:
-			ffi.printWarning("Numeric-min given non-numeric initial argument. Defaulting to empty function.");
-			break;
-		}
+	NumericObject&  arg = (NumericObject&)ffi.arg(0);
+	if ( arg.getSubType() == NumericObject::SubType::DecimalNum ) {
+		DecimalSubFunction( arg.getDecimalValue(), ffi );
 	}
-	return true; // Should be set to false if error-faulting enabled
+	else {
+		IntegerSubFunction( arg.getIntegerValue(), ffi );
+	}
+	return true;
 }
 
-bool
-Pick_max::call(
-	FFIServices& ffi
-) {
-	Object*  arg;
-	IntDeciUnion  maxValue;
-	IntDeciUnion  nextValue;
-
-	if ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		switch( arg->getType() )
-		{
-		case ObjectType::Numeric:
-			switch ( ((NumericObject*)arg)->getSubType() ) {
-
-			case NumericObject::SubType::DecimalNum:
-				maxValue.d_val = getDecimalValue(*arg);
-				while ( ffi.hasMoreArgs() ) {
-					nextValue.d_val = getDecimalValue(*(ffi.getNextArg()));
-					maxValue.d_val = ( maxValue.d_val >= nextValue.d_val ) ? maxValue.d_val : nextValue.d_val;
-				}
-				ffi.setNewResult( new DecimalNumObject(maxValue.d_val) );
-				return true;
-
-			case NumericObject::SubType::Integer:
-			default:
-				maxValue.i_val = getIntegerValue(*arg);
-				while ( ffi.hasMoreArgs() ) {
-					nextValue.i_val = getIntegerValue(*(ffi.getNextArg()));
-					maxValue.i_val = ( maxValue.i_val >= nextValue.i_val ) ? maxValue.i_val : nextValue.i_val;
-				}
-				ffi.setNewResult( new IntegerObject(maxValue.i_val) );
-				return true;
-			}
-			break;
-
-		default:
-			ffi.printWarning("Numeric-max given non-numeric initial argument. Defaulting to empty function.");
-			break;
-		}
+void
+Pick_min::IntegerSubFunction( Integer current, FFIServices& ffi ) {
+	UInteger  index = 0;
+	Integer  next = 0;
+	for (; index < ffi.getArgCount(); ++index) {
+		next = ((NumericObject&)ffi.arg(index)).getIntegerValue();
+		if ( next < current )
+			current = next;
 	}
-	return true; // Should be set to false if error-faulting enabled
+	ffi.setNewResult( new IntegerObject(current) );
 }
 
-bool
-Avg::call(
-	FFIServices& ffi
-) {
-	Object*  arg;
-	Integer  valueCount = 0;
-	IntDeciUnion  avgValue;
-	IntDeciUnion  nextValue;
-
-	if ( ffi.hasMoreArgs() ) {
-		arg = ffi.getNextArg();
-		switch( arg->getType() )
-		{
-		case ObjectType::Numeric:
-			switch ( ((NumericObject*)arg)->getSubType() ) {
-
-			case NumericObject::SubType::DecimalNum:
-				++valueCount;
-				avgValue.d_val = getDecimalValue(*arg);
-				while ( ffi.hasMoreArgs() ) {
-					++valueCount;
-					nextValue.d_val = getDecimalValue(*(ffi.getNextArg()));
-					avgValue.d_val += nextValue.d_val;
-				}
-				ffi.setNewResult( new DecimalNumObject(avgValue.d_val / (Decimal)valueCount) );
-				return true;
-
-			case NumericObject::SubType::Integer:
-			default:
-				++valueCount;
-				avgValue.i_val = getIntegerValue(*arg);
-				while ( ffi.hasMoreArgs() ) {
-					++valueCount;
-					nextValue.i_val = getIntegerValue(*(ffi.getNextArg()));
-					avgValue.i_val += nextValue.i_val;
-				}
-				ffi.setNewResult( new IntegerObject(avgValue.i_val / valueCount) );
-				return true;
-			}
-			break;
-
-		default:
-			ffi.printWarning("Numeric-average given non-numeric initial argument. Defaulting to empty function.");
-			break;
-		}
+void
+Pick_min::DecimalSubFunction( Decimal current, FFIServices& ffi ) {
+	UInteger  index = 0;
+	Decimal  next = 0;
+	for (; index < ffi.getArgCount(); ++index) {
+		next = ((NumericObject&)ffi.arg(index)).getDecimalValue();
+		if ( next < current )
+			current = next;
 	}
-	return true; // Should be set to false if error-faulting enabled
+	ffi.setNewResult( new DecimalNumObject(current) );
+}
+
+void
+Pick_max::IntegerSubFunction( Integer current, FFIServices& ffi ) {
+	UInteger  index = 0;
+	Integer  next = 0;
+	for (; index < ffi.getArgCount(); ++index) {
+		next = ((NumericObject&)ffi.arg(index)).getIntegerValue();
+		if ( next > current )
+			current = next;
+	}
+	ffi.setNewResult( new IntegerObject(current) );
+}
+
+void
+Pick_max::DecimalSubFunction( Decimal current, FFIServices& ffi ) {
+	UInteger  index = 0;
+	Decimal  next = 0;
+	for (; index < ffi.getArgCount(); ++index) {
+		next = ((NumericObject&)ffi.arg(index)).getDecimalValue();
+		if ( next > current )
+			current = next;
+	}
+	ffi.setNewResult( new DecimalNumObject(current) );
+}
+
+void
+Avg::IntegerSubFunction( Integer current, FFIServices& ffi ) {
+	UInteger  index = 0;
+	for (; index < ffi.getArgCount(); ++index) {
+		current += ((NumericObject&)ffi.arg(index)).getIntegerValue();
+	}
+	ffi.setNewResult( new IntegerObject(current) );
+}
+
+void
+Avg::DecimalSubFunction( Decimal current, FFIServices& ffi ) {
+	UInteger  index = 0;
+	for (; index < ffi.getArgCount(); ++index) {
+		current += ((NumericObject&)ffi.arg(index)).getDecimalValue();
+	}
+	ffi.setNewResult( new DecimalNumObject(current) );
 }
 
 bool
 Sine::call(
 	FFIServices&  ffi
 ) {
+	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
+		return false;
+
 	ffi.setNewResult(
-		new DecimalNumObject( sin( getDecimalValue(*(ffi.getNextArg())) ) )
+		new DecimalNumObject( sin( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
 	return true;
 }
@@ -403,8 +309,11 @@ bool
 Cosine::call(
 	FFIServices&  ffi
 ) {
+	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
+		return false;
+
 	ffi.setNewResult(
-		new DecimalNumObject( cos( getDecimalValue(*(ffi.getNextArg())) ) )
+		new DecimalNumObject( cos( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
 	return true;
 }
@@ -413,8 +322,11 @@ bool
 Tangent::call(
 	FFIServices&  ffi
 ) {
+	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
+		return false;
+
 	ffi.setNewResult(
-		new DecimalNumObject( tan( getDecimalValue(*(ffi.getNextArg())) ) )
+		new DecimalNumObject( tan( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
 	return true;
 }
@@ -423,8 +335,11 @@ bool
 Ceiling::call(
 	FFIServices&  ffi
 ) {
+	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
+		return false;
+
 	ffi.setNewResult(
-		new DecimalNumObject( ceil( getDecimalValue(*(ffi.getNextArg())) ) )
+		new DecimalNumObject( ceil( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
 	return true;
 }
@@ -433,8 +348,11 @@ bool
 Floor::call(
 	FFIServices&  ffi
 ) {
+	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
+		return false;
+
 	ffi.setNewResult(
-		new DecimalNumObject( floor( getDecimalValue(*(ffi.getNextArg())) ) )
+		new DecimalNumObject( floor( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
 	return true;
 }

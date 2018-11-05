@@ -1,4 +1,24 @@
 ====================
+2018/11/4
+v 6-0.6
+
+- Changed FFIServices interface to use an array system instead of list. API is different.
+- Reduced ForeignFunc to contain only method virtual bool call(FFIServices&).
+- Updated ForeignFuncWrapper, CallbackWrapper, and ForeignMethod to follow new FFI.
+- Changed EngineMessage::MissingFunctionCallParam to MissingFunctionCallArg.
+- Added EngineMessage::BadArgIndexInForeignFunc and EngineMessage::CustomMessage.
+- Removed EngineMessage::ForeignFunctionWrongArgCount and EngineMessage::ForeignFunctionBadArg.
+- Changed return of NumericObject::absValue() from Object* to NumericObject*. (Makes overrides correct and fixes other issues.)
+
+
+EngMsgToStr.cpp
+- Updated.
+
+Printer.h
+- Divided call() into smaller functions.
+
+
+====================
 2018/8/17 - 2018/11/4
 v 6-0.522
 

@@ -217,7 +217,7 @@ getStringFromEngineMessage(
 	// WARNING
 	/* Missing parameter for a function call.
 	This results in a default value (of empty function) for the parameter. */
-	case EngineMessage::MissingFunctionCallParam:
+	case EngineMessage::MissingFunctionCallArg:
 		return "Missing argument for function call. Defaulting to empty function.";
 
 	// ERROR
@@ -356,24 +356,15 @@ getStringFromEngineMessage(
 		return "Index out of bounds. A valid value will substitute.";
 
 	// ERROR
+	case EngineMessage::BadArgIndexInForeignFunc:
+		errLevel = EngineErrorLevel::error;
+		return "Index for accessing argument is out-of-bounds.";
+
+	// ERROR
 	// An incorrect arg was passed to a system function.
 	case EngineMessage::SystemFunctionBadArg:
 		errLevel = EngineErrorLevel::error;
 		return "Bad argument passed to a system function.";
-
-	// ERROR
-	// The wrong number of arguments was passed to a foreign function.
-	// Aliases to "Argument count does not match foreign function header."
-	case EngineMessage::ForeignFunctionWrongArgCount:
-		errLevel = EngineErrorLevel::error;
-		return "Wrong number of arguments passed to a foreign function.";
-
-	// ERROR
-	// An argument passed to a foreign function did not match the requested type.
-	// Aliases to "Argument types do not match foreign function header."
-	case EngineMessage::ForeignFunctionBadArg:
-		errLevel = EngineErrorLevel::error;
-		return "Argument passed to a foreign function was not of the requested type.";
 
 	// ERROR
 	// The user-function contains errors.

@@ -3,6 +3,17 @@
 
 basicmath
 - Changed Object::getIntegerValue() and getDecimalValue() dependencies to NumericObject::getIntegerValue() and getDecimalValue().
+- Changed all foreign functions to use new FFI.
+-- Changed ancestor dependency of Pick_min, Pick_max, and Avg to newly created IntDeciSharedFuncs.
+- Removed struct Unimplemented (foreign function).
+- Removed IntDeciUnion.
+
+systime
+- Changed all foreign functions to use new FFI.
+- Fixed bug in GetNanoseconds that was returning milliseconds instead of nanoseconds.
+- Implemented numeric functions of NumericObject for ClockTime.
+- Fixed overrides for ClockTime, making getIntegerValue() and getDecimalValue() virtual.
+
 
 ===========
 2018/8/31

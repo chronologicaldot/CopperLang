@@ -28,39 +28,11 @@ iszero(
 	Decimal		p
 );
 
-union IntDeciUnion {
-	Integer  i_val;
-	Decimal  d_val;
-};
-
-struct VariadicFunc : public ForeignFunc {
-	virtual ~VariadicFunc() {}
-
-	virtual bool
-	isVariadic() const {
-		return true;
-	}
-};
-
-struct LoneDecimalFunc : public ForeignFunc {
-	virtual ~LoneDecimalFunc() {}
-
-	virtual UInteger
-	getParameterCount() const {
-		return 1;
-	}
-
-	virtual ObjectType::Value
-	getParameterType( UInteger  CU_UNUSED_ARG(index) ) const {
-		return ObjectType::Decimal;
-	}
-};
-
-struct IntegerCast : public VariadicFunc {
+struct IntegerCast : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct DecimalCast : public VariadicFunc {
+struct DecimalCast : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
@@ -68,17 +40,11 @@ struct DecimalCast : public VariadicFunc {
 bool ToString( FFIServices& ffi );
 bool DecimalInfinity( FFIServices& ffi );
 
-bool Unimplemented( FFIServices& ffi );
+struct AreZero : public ForeignFunc {
+	virtual bool call( FFIServices& ffi );
+};
 
-struct AreZero : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-/*
-struct Modulus : public VariadicFunc {
-	virtual bool call( FFIServices& ffi );
-};
-*/
-struct Power : public VariadicFunc {
+struct Power : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
@@ -90,35 +56,55 @@ struct SmallPI : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Pick_max : public VariadicFunc {
+class IntDeciSharedFuncs : public ForeignFunc {
+protected:
+	virtual void IntegerSubFunction( Integer current, FFIServices& ffi ) =0;
+	virtual void DecimalSubFunction( Decimal current, FFIServices& ffi ) =0;
+public:
+	virtual ~IntDeciSharedFuncs();
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Pick_min : public VariadicFunc {
+class Pick_min : public IntDeciSharedFuncs {
+protected:
+	virtual void IntegerSubFunction( Integer current, FFIServices& ffi );
+	virtual void DecimalSubFunction( Decimal current, FFIServices& ffi );
+};
+
+class Pick_max : public IntDeciSharedFuncs {
+protected:
+	virtual void IntegerSubFunction( Integer current, FFIServices& ffi );
+	virtual void DecimalSubFunction( Decimal current, FFIServices& ffi );
+};
+
+class Avg : public IntDeciSharedFuncs {
+protected:
+	virtual void IntegerSubFunction( Integer current, FFIServices& ffi );
+	virtual void DecimalSubFunction( Decimal current, FFIServices& ffi );
+};
+
+// one decimal arg only
+struct Sine : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Avg : public VariadicFunc {
+// one decimal arg only
+struct Cosine : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Sine : public LoneDecimalFunc {
+// one decimal arg only
+struct Tangent : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Cosine : public LoneDecimalFunc {
+// one decimal arg only
+struct Ceiling : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
-struct Tangent : public LoneDecimalFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-struct Ceiling : public LoneDecimalFunc {
-	virtual bool call( FFIServices& ffi );
-};
-
-struct Floor : public LoneDecimalFunc {
+// one decimal arg only
+struct Floor : public ForeignFunc {
 	virtual bool call( FFIServices& ffi );
 };
 
