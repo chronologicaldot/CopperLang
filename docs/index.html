@@ -254,7 +254,7 @@
                     <a href="#what-is-the-parse-tree" class="toc-h2 toc-link" data-title="what-is-the-parse-tree">What is the parse tree?</a>
                   </li>
                   <li>
-                    <a href="#why-not-provide-numeric-operations" class="toc-h2 toc-link" data-title="why-not-provide-numeric-operations">Why not provide numeric operations?</a>
+                    <a href="#what-numeric-operations-are-available" class="toc-h2 toc-link" data-title="what-numeric-operations-are-available">What numeric operations are available?</a>
                   </li>
                   <li>
                     <a href="#why-is-there-no-privacy-model" class="toc-h2 toc-link" data-title="why-is-there-no-privacy-model">Why is there no privacy model?</a>
@@ -315,13 +315,13 @@
 <li><a href="#ffi">Foreign Functions</a></li>
 </ul>
 <h2 id='overview'>Overview</h2>
-<p>Copper as a language is like a cross between Javascript, Rust, and Lisp. Every object is a function and vice versa. Object-functions are created in a manner similar (but not the same) as Javascript. Members are created like Python. And in order to do just about anything (including access data), you have to run a function. Whitespace is almost completely irrelevant other than that it must exist between names.</p>
+<p>Copper as a language is like a cross between Javascript, Rust, and Lisp. Every object is a function and vice versa. Object-functions are created in a manner similar to (but not the same as) Javascript. Members are created like in Python. And in order to do just about anything (including access data), you have to run a function. Whitespace is almost completely irrelevant other than that it must exist between names.</p>
 
 <p>To guarantee memory safety, variables only store and handle functions and function pointers (which are safetly converted to normal functions upon access failure). There is no null! Furthermore, variables are all tied to the virtual stack in some way, thereby preventing memory leaks.</p>
 
-<p>The Copper virtual machine is a set of files containing all of the basic necessities to process the language. The main entry point is via the Copper Engine, which requires an input feed of characters and performs all of the parsing and operations. Some basic extensions have been provided for reading and printing to the terminal/console as well as performing basic mathematical operations.</p>
+<p>The Copper virtual machine is a set of files containing all of the basic necessities to process the language. The main entry point is via the Copper Engine, which requires an input feed of characters and performs all of the parsing and operations. Some basic extensions have been provided for reading and printing to the terminal/console as well as performing some extra mathematical operations.</p>
 
-<p>Built-in data-types include integers, numbers with decimals, and lists, but there are only built-in functions for manipulating lists.</p>
+<p>Built-in data-types include booleans, integers, numbers with decimals, strings, and lists.</p>
 <h3 id='attractive-features'>Attractive Features</h3>
 <ul>
 <li>Powerful object-oriented programming!</li>
@@ -911,7 +911,7 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 <pre class="highlight cpp tab-cpp"><code><span class="k">class</span> <span class="nc">MyFF</span> <span class="o">:</span> <span class="k">public</span> <span class="n">Cu</span><span class="o">::</span><span class="n">ForeignFunc</span> <span class="p">{</span>
 <span class="k">public</span><span class="o">:</span>
     <span class="k">virtual</span> <span class="kt">bool</span> <span class="n">call</span><span class="p">(</span> <span class="n">FFIServices</span><span class="o">*</span> <span class="n">ffi</span> <span class="p">)</span> <span class="p">{</span>
-        <span class="n">ffi</span><span class="p">.</span><span class="n">setNewResult</span><span class="p">(</span> <span class="k">new</span> <span class="n">ObjectBool</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">);</span>
+        <span class="n">ffi</span><span class="p">.</span><span class="n">setNewResult</span><span class="p">(</span> <span class="k">new</span> <span class="n">BoolObject</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">);</span>
         <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
     <span class="p">}</span>
 <span class="p">};</span>
@@ -952,7 +952,7 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 
 <p>ForeignFunc descendents can also implement the virtual methods <code>getParameterCount()</code> and <code>getParameterType()</code>. These functions are called by the virtual machine to check what object types the function allows.</p>
 <h2 id='callbacks'>Callbacks</h2>
-<p>Copper allows for callbacks that can be run after the engine finishes normal execution. Functions will be inside of FunctionContainers when passed to foreign functions. There is no need to extract the function. However, since objects in Copper have limited lifetimes, you will need to either copy the function to a new FunctionContainer or call the method <code>FunctionContainer::changeOwnerTo()</code> and provide a new owner (whose lifetime you control). Copying is simpler.</p>
+<p>Copper allows for callbacks that can be run after the engine finishes normal execution. Functions will be inside of FunctionObjects when passed to foreign functions. There is no need to extract the function. However, since objects in Copper have limited lifetimes, you will need to either copy the function to a new FunctionObject or call the method <code>FunctionObject::changeOwnerTo()</code> and provide a new owner (whose lifetime you control). Copying is simpler.</p>
 <h2 id='foreign-objects'>Foreign Objects</h2>
 <p>In implementation, all objects in the Copper language are C++ objects that extend the class Cu::Object. Anything extending this class can be used as an object. However, a few things are required.</p>
 
@@ -1017,7 +1017,7 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 </thead><tbody>
 <tr>
 <td>basicmath</td>
-<td>equal lt lte gt gte + - * / % pow floor ceil sin cos tan</td>
+<td>pow floor ceil sin cos tan</td>
 </tr>
 <tr>
 <td>systime</td>
@@ -1641,26 +1641,19 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 <td>Meant to be overridden. Sets the given string to a string representation of this object&#39;s value.</td>
 </tr>
 <tr>
-<td>virtual getIntegerValue(): Integer</td>
-<td>Meant to be overridden. Returns an integer representation of this object&#39;s value.</td>
-</tr>
-<tr>
-<td>virtual getDecimalValue(): Decimal</td>
-<td>Meant to be overridden. Returns a number-with-decimal representation of this object&#39;s value.</td>
-</tr>
-<tr>
 <td>virtual typeName(): const char*</td>
 <td>Meant to be overridden. Returns a C-style string name of this object&#39;s type.</td>
 </tr>
 </tbody></table>
 <h3 id='cu-object-descendents'>Cu::Object Descendents</h3>
 <ul>
-<li>Cu::FunctionContainer - Object-function container component. This contains Function, the class containing all of the function data.</li>
-<li>Cu::ObjectBool - Basic boolean class.</li>
-<li>Cu::ObjectString - Basic string class wrapping util::String.</li>
-<li>Cu::ObjectInteger - Basic integer class wrapping Cu::Integer.</li>
-<li>Cu::ObjectDecimal - Basic decimal class wrapping Cu::Decimal.</li>
-<li>Cu::ObjectList - Doubly-linked list class with a special Node subclass for owning FunctionContainer.</li>
+<li>Cu::FunctionObject - Object-function container component. This contains Function, the class containing all of the function data.</li>
+<li>Cu::BoolObject - Basic boolean class.</li>
+<li>Cu::StringObject - Basic string class wrapping util::String.</li>
+<li>Cu::NumericObject - Parent class for all number types.</li>
+<li>Cu::IntegerObject - Basic integer class wrapping Cu::Integer. (Descendant of NumericObject.)</li>
+<li>Cu::DecimalNumObject - Basic decimal class wrapping Cu::Decimal. (Descendant of NumericObject.)</li>
+<li>Cu::ListObject - Doubly-linked list class with a special Node subclass for owning FunctionObject.</li>
 </ul>
 
 <p><br id="api-ffi"></p>
@@ -1674,16 +1667,36 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 </tr>
 </thead><tbody>
 <tr>
-<td>FFIServices( Engine&amp;, ArgsIter )</td>
+<td>FFIServices( Engine&amp;, ArgsList, String )</td>
 <td>Constructor (DO NOT USE)</td>
 </tr>
 <tr>
-<td>getNextArg(): Object*</td>
-<td>Returns each successive argument sent to the function.</td>
+<td>~FFIServices()</td>
+<td>Destructor (DO NOT USE)</td>
 </tr>
 <tr>
-<td>hasMoreArgs(): bool</td>
-<td>Indicates more arguments are available (that is, unaccessed via getNextArg()).</td>
+<td>getArgCount() const: UInteger</td>
+<td>Returns the number of arguments sent to the function.</td>
+</tr>
+<tr>
+<td>demandArgCount( UInteger, bool ): bool</td>
+<td>Returns true if the number of arguments matches the given value.</td>
+</tr>
+<tr>
+<td>demandArgCountRange( UInteger, UInteger, bool ): bool</td>
+<td>Returns true if the number of given arguments is within the given range.</td>
+</tr>
+<tr>
+<td>demandMinArgCount( UInteger, bool ): bool</td>
+<td>Returns true if the number of given arguments is at least equal to the given value.</td>
+</tr>
+<tr>
+<td>demandAllArgsType( ObjectType::Value, bool ): bool</td>
+<td>Returns true if all of the given arguments are of the given type.</td>
+</tr>
+<tr>
+<td>arg( UInteger ): Object&amp;</td>
+<td>Returns a pointer to the argument at the given index.</td>
 </tr>
 <tr>
 <td>printInfo( message: const char* ): void</td>
@@ -1696,6 +1709,18 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 <tr>
 <td>printError( message: const char* ): void</td>
 <td>Print an error message to the logger.</td>
+</tr>
+<tr>
+<td>printCustomInfoCode( UInteger ): void</td>
+<td>Prints a custom information code to the logger.</td>
+</tr>
+<tr>
+<td>printCustomWarningCode( UInteger ): void</td>
+<td>Prints a custom information code to the logger.</td>
+</tr>
+<tr>
+<td>printCustomErrorCode( UInteger ): void</td>
+<td>Prints a custom information code to the logger.</td>
 </tr>
 <tr>
 <td>setResult( Object* ): void</td>
@@ -1772,7 +1797,7 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 <td>Continues processing in the virtual machine. (You should not need to use this function directly.)</td>
 </tr>
 <tr>
-<td>runFunctionObject( FunctionContainer* ): EngineResult::Value</td>
+<td>runFunctionObject( FunctionObject* ): EngineResult::Value</td>
 <td>Executes the body of code of the given object-function. (Used for callbacks.)</td>
 </tr>
 </tbody></table>
@@ -1799,17 +1824,17 @@ The virtual machine does not use a regex, so it is a large state-machine that ma
 
 <p>Bodies of code, as represented in both instances of Function and in instances of Opcode, are containers for both a list of unparsed tokens and a list of Opcode instances. The former is converted to the latter via an Engine::parse() call that utilizes its parser context. Bodies of code are shared by instances of Function and remain constant after their conversion.</p>
 
-<p>The engine makes extensive use of FunctionContainer. The class Function holds the persistent scope of the object-function as well as the body of executable code, but the class FunctionContainer acts as the &quot;Copper object&quot; wrapper for Function. FunctionContainers can be &quot;owned&quot; by a class inheriting from class Owner. Once owned, the lifetime of the Function class inside of FunctionContainer is tied to lifetime of the class inheriting Owner.</p>
+<p>The engine makes extensive use of the class FunctionObject. The class Function holds the persistent scope of the object-function as well as the body of executable code, but the class FunctionObject acts as the &quot;Copper object&quot; wrapper for Function. FunctionObjects can be &quot;owned&quot; by a class inheriting from class Owner. Once owned, the lifetime of the Function class inside of FunctionObject is tied to lifetime of the class inheriting Owner.</p>
 
 <p>Variables are one of the descendents of class Owner.</p>
 
-<aside class="success">
-The ObjectList class has a sub-class Node that automatically handles ownership so that the nodes of a list can act like a large collection of variables tied to one name.
+<aside class="notice">
+The ListObject class has a sub-class Node that automatically handles ownership so that the nodes of a list act like a large collection of variables tied to one name.
 </aside>
 
 <p>When processing the opcodes, the engine first checks the type and the attempts to access the associated data from inside the opcode.</p>
 
-<p>Some opcodes create tasks inside of the engine. These tasks are initiated when the engine tries to process certain opcodes. In some cases, opcodes are dependent on each other and therefore must follow each other in the correct order or they can crash the engine. In some cases, certain opcodes can be run as shortcuts for tasks.</p>
+<p>Some opcodes create tasks inside of the engine when the engine processes them. In some cases, opcodes are dependent on each other and therefore must follow each other in the correct order or they can crash the engine. In some cases, certain opcodes can be run as shortcuts for tasks.</p>
 
 <aside class="warning">
 Do not try to create your own opcode strands to feed to the engine. Do not try to run opcodes loaded from a file. The engine is not designed to handle arrangements of opcodes that it did not create.
@@ -1819,15 +1844,11 @@ Do not try to create your own opcode strands to feed to the engine. Do not try t
 
 <p>Function calls in the Engine can only be made when appended to addresses. The address for the call is first checked against a list of built-in function names. If it matches, the built-in function is called. If not, foreign function names are checked for a match. If the address matches a foreign function, the arguments are checked to be sure they match the required parameters of the foreign function.</p>
 
-<aside class="success">
-Foreign functions can be variadic and still require that a certain number of arguments be a specific type. The engine will attempt to match as many arguments as are returned from ForeignFunc::getParameterCount().
-</aside>
-
 <p>If no match is found among foreign functions, it is assumed to be a user function. The engine first searches the local scope for a variable whose existence matches the full address. If no match is found, the global scope is searched. If the base variable of the path does not exist in either scope, all of the members of its address are created in the local scope.</p>
 
 <p>The engine transmits Copper data from place to place using the <code>RefPtr lastObject</code>. This special pointer is set by almost everything from function calls to data creation. Even the foreign function interface (FFIServices) methods set this object. Once set, this data can be used in variable assignments and pointer assignments both inside and outside function building.</p>
 
-<p>The engine uses a number of enumerations for its processes. Most of these enums are struct enums, meaning that they are enumerations wrapped in struct. A small number are regular enums and not meant to be used or invoked outside of the engine.</p>
+<p>The engine uses a number of enumerations for its processes. Most of these enums are struct enums, meaning that they are enumerations that are each wrapped in struct. A small number are regular enums and not meant to be used or invoked outside of the engine.</p>
 
 <p>The engine uses a set of flags (from an enumeration) for identifying current state of processing and tell the main processing loop whether or not it should proceed. These have an enormous effect on the state of the engine, so care should be used in passing them. For example, the main engine loop accepts return flags that exit the engine (when the <code>exit</code> token is found), pop the opcode operations stack (which occurs at the end of a user-function call), continue processing, and throw an error (which destroys most of the stack).</p>
 <h3 id='debugging'>Debugging</h3>
@@ -1836,8 +1857,8 @@ Foreign functions can be variadic and still require that a certain number of arg
 <p>Speed profiling code has been made available for testing certain components in the engine. However, if you wish to check the overall speed of Copper, it is recommended that you use the Time/systime extension.</p>
 <h1 id='faq'>FAQ</h1><h2 id='what-is-the-parse-tree'>What is the parse tree?</h2>
 <p>The parse tree is available in <a href="https://copperlang.wordpress.com/2016/11/18/printsyntax/">an article on the official blog</a>.</p>
-<h2 id='why-not-provide-numeric-operations'>Why not provide numeric operations?</h2>
-<p>Numbers are not an essential facet of the language grammar, and by not providing such functionality in the interpreter, it allows for setting up tightly controlled environments (with limited functionality, perhaps for demos). It also frees up names so that they can be used for functions of user-implemented libraries. For example, you may prefer to use the &quot;+&quot; function name for addition of GNU MP numbers.</p>
+<h2 id='what-numeric-operations-are-available'>What numeric operations are available?</h2>
+<p>Only basic operations are available: addition, subtraction, multiplication, division, increment/increase, and decrement/decrease. The NumericObject parent class allows you to implement these operations for descendent classes so you can create wrappers for other math classes such as GNU MP.</p>
 <h2 id='why-is-there-no-privacy-model'>Why is there no privacy model?</h2>
 <p>Because it would be absurd.</p>
 
@@ -1845,15 +1866,13 @@ Foreign functions can be variadic and still require that a certain number of arg
 
 <p><br id="faq-why-no-exceptions-system"></p>
 <h2 id='why-is-there-no-exceptions-system'>Why is there no exceptions system?</h2>
-<p>While it is possible that an exceptions system be developed to handle errors, the reality is that, if such an error does occur, there would be a breakage in logic and the rest of your application operations could be meaningless. This has less to do with program design and more to do with the simplicity of Copper.</p>
-
-<p>Copper is not designed for large-scale applications where constant testing is needed. It is meant for applications where scripting would be a nice benefit.</p>
+<p>They generally aren&#39;t needed (except in tragic cases where they can&#39;t be handled). If an error occurs, in most cases an empty function is returned, and the system function <code>are_empty()</code> can be used to check this. To halt the program, you can use the system function <code>assert()</code>. The engine can also be set to halt (rather than warn) when foreign functions fail.</p>
 
 <p><br id="faq-why-have-own"></p>
 <h2 id='why-have-own-if-it-39-s-unsafe'>Why have <code>own</code> if it&#39;s unsafe?</h2>
 <p>Some programmers might prefer a model whereby they use a designated constructor function for producing objects before passing them off to the rest of the program. However, certain ways of doing this require changing ownership to prevent the destruction of those objects when the stack frame closes. This practice, when done correctly, is still memory-safe.</p>
 
-<p>Technically, any program can be written in such a way that avoids this practice, but rather than force programmers into a particular model, the interpreter leaves it up to user discretion.</p>
+<p>Technically, any program can be written in such a way that avoids this practice, but rather than force programmers into a particular model, the virtual machine leaves it up to user discretion.</p>
 
 <p>By default, the feature is disabled and can only be enabled by passing <code>true</code> to <code>Engine::setOwnershipChangingEnabled()</code>.</p>
 <h2 id='benchmarks-how-fast-is-copper'>Benchmarks? How fast is Copper?</h2>
@@ -2018,6 +2037,8 @@ Foreign functions can be variadic and still require that a certain number of arg
 <td>Can be created anywhere in an application</td>
 </tr>
 </tbody></table>
+
+<p>Note: File readers are available for Copper in the standard library.</p>
 <h3 id='language-comparison'>Language Comparison</h3>
 <p>The following table summarizes the notable <em>differences</em>.</p>
 
@@ -2041,7 +2062,7 @@ Foreign functions can be variadic and still require that a certain number of arg
 </tr>
 <tr>
 <td>Permits null but throws exceptions</td>
-<td>No null</td>
+<td>No null but has assert function</td>
 </tr>
 </tbody></table>
 <h2 id='comparison-to-chaiscript'>Comparison to ChaiScript?</h2><h3 id='intepreter-comparison-2'>Intepreter Comparison</h3>
@@ -2073,7 +2094,7 @@ Foreign functions can be variadic and still require that a certain number of arg
 </thead><tbody>
 <tr>
 <td>Mathematical operations are built-in</td>
-<td>Math operations come in extensions</td>
+<td>Basic operations are built-in, extras in extensions</td>
 </tr>
 <tr>
 <td>Dynamic objects must be created with special constructor</td>
