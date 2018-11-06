@@ -1942,7 +1942,7 @@ struct NumericObject : public Object {
 	enum Value {
 		Integer = 0,	// Integer class
 		DecimalNum,		// Decimal Number class
-		COUNT,
+		Unknown,
 		FORCE32 = 0x7fffffff // Allows extensions
 	};};
 

@@ -57,7 +57,7 @@ public:
 
 	static const NumericObject::SubType::Value
 	StaticClockTimeType() {
-		return static_cast<NumericObject::SubType::Value>(NumericObject::SubType::COUNT + CU_CLOCK_TIME_TYPE);
+		return static_cast<NumericObject::SubType::Value>(NumericObject::SubType::Unknown + CU_CLOCK_TIME_TYPE);
 	}
 
 	virtual NumericObject::SubType::Value

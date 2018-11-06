@@ -6810,7 +6810,7 @@ Engine::process_sys_list_size(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_size");
 #endif
 	if ( task.args.size() != 1 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_size, 0, 1 );
+		printSystemFunctionWrongArgCount( SystemFunction::_list_size, task.args.size(), 1 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -6838,7 +6838,7 @@ Engine::process_sys_list_append(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_append");
 #endif
 	if ( task.args.size() < 2 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_append, 0, 2 );
+		printSystemFunctionWrongArgCount( SystemFunction::_list_append, task.args.size(), 2 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -6866,7 +6866,7 @@ Engine::process_sys_list_prepend(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_prepend");
 #endif
 	if ( task.args.size() < 2 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_prepend, 0, 2 );
+		printSystemFunctionWrongArgCount( SystemFunction::_list_prepend, task.args.size(), 2 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -6893,8 +6893,8 @@ Engine::process_sys_list_insert(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_insert");
 #endif
-	if ( task.args.size() >= 3 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_insert, 0, 3 );
+	if ( task.args.size() != 3 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_list_insert, task.args.size(), 3 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -6933,7 +6933,7 @@ Engine::process_sys_list_get_item(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_get_item");
 #endif
 	if ( task.args.size() != 2 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_get_item, 0, 2 );
+		printSystemFunctionWrongArgCount( SystemFunction::_list_get_item, task.args.size(), 2 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -6972,7 +6972,7 @@ Engine::process_sys_list_remove(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_remove");
 #endif
 	if ( task.args.size() != 2 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_remove, 0, 2 );
+		printSystemFunctionWrongArgCount( SystemFunction::_list_remove, task.args.size(), 2 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -7008,7 +7008,7 @@ Engine::process_sys_list_clear(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_clear");
 #endif
 	if ( task.args.size() != 1 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_clear, 0, 1 );
+		printSystemFunctionWrongArgCount( SystemFunction::_list_clear, task.args.size(), 1 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -7032,7 +7032,7 @@ Engine::process_sys_list_swap(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_swap");
 #endif
 	if ( task.args.size() != 3 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_swap, 0, 3 );
+		printSystemFunctionWrongArgCount( SystemFunction::_list_swap, task.args.size(), 3 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -7079,7 +7079,7 @@ Engine::process_sys_list_replace(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_replace");
 #endif
 	if ( task.args.size() != 3 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_replace, 0, 3 );
+		printSystemFunctionWrongArgCount( SystemFunction::_list_replace, task.args.size(), 3 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 
@@ -7093,8 +7093,7 @@ Engine::process_sys_list_replace(
 	}
 	ListObject* listPtr = (ListObject*)*argsIter;
 
-	if ( ! argsIter.next() )
-		return FuncExecReturn::Ran;
+	argsIter.next();
 
 	if ( ! isNumericObject(**argsIter) ) {
 		printSystemFunctionWrongArg( SystemFunction::_list_replace, 2, 3,
@@ -7104,6 +7103,8 @@ Engine::process_sys_list_replace(
 	}
 
 	Integer index = ((NumericObject*)(*argsIter))->getIntegerValue();
+
+	argsIter.next();
 
 	listPtr->replace(index, *argsIter);
 	return FuncExecReturn::Ran;
@@ -7117,7 +7118,7 @@ Engine::process_sys_list_sublist(
 	print(LogLevel::debug, "[DEBUG: Engine::process_sys_list_sublist");
 #endif
 	if ( task.args.size() != 3 ) {
-		printSystemFunctionWrongArgCount( SystemFunction::_list_sublist, 0, 3 );
+		printSystemFunctionWrongArgCount( SystemFunction::_list_sublist, task.args.size(), 3 );
 		return FuncExecReturn::ErrorOnRun;
 	}
 

@@ -1,5 +1,5 @@
 ====================
-2018/11/4
+2018/11/4 - 2018/11/6
 v 6-0.6
 
 - Changed FFIServices interface to use an array system instead of list. API is different.
@@ -9,6 +9,9 @@ v 6-0.6
 - Added EngineMessage::BadArgIndexInForeignFunc and EngineMessage::CustomMessage.
 - Removed EngineMessage::ForeignFunctionWrongArgCount and EngineMessage::ForeignFunctionBadArg.
 - Changed return of NumericObject::absValue() from Object* to NumericObject*. (Makes overrides correct and fixes other issues.)
+- Fixed bug in Engine::process_sys_list_insert() that incorrectly validated the argument count.
+- Fixed warning messages in lists and strings.
+- Fixed bug in Engine::process_sys_list_replace() that failed to increment the index of the args iterator befor the last arg.
 
 
 EngMsgToStr.cpp
@@ -16,6 +19,9 @@ EngMsgToStr.cpp
 
 Printer.h
 - Divided call() into smaller functions.
+
+docs
+- Updated numerous little details.
 
 
 ====================

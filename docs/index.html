@@ -298,8 +298,8 @@
     <div class="page-wrapper">
       <div class="dark-box"></div>
       <div class="content">
-        <h1 id='introduction'>Introduction</h1><pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_guest_name</span><span class="o">:</span><span class="w">
-</span><span class="n">print</span><span class="p">(</span><span class="s">"Welcome, "</span><span class="w"> </span><span class="n">a</span><span class="o">:</span><span class="w"> </span><span class="s">"!"</span><span class="p">)</span><span class="w">
+        <h1 id='introduction'>Introduction</h1><pre class="highlight copper tab-copper"><code><span class="n">guest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_your_name</span><span class="o">:</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="s">"Welcome, "</span><span class="w"> </span><span class="n">guest</span><span class="o">:</span><span class="w"> </span><span class="s">"!"</span><span class="p">)</span><span class="w">
 </span></code></pre>
 <p>Welcome to the (NEW) documentation of the Copper interpreted programming language!</p>
 
@@ -335,9 +335,9 @@
 <p>(Current IDE support is gtksourceview2 syntax highlighters.)</p>
 <h3 id='reasons-to-not-use-copper'>Reasons to NOT Use Copper</h3>
 <ul>
-<li>Not Battle-Hardened (Tested, but not on a business level.)</li>
+<li>Not battle-hardened (Tested, but not on a business level.)</li>
 <li>No automated testing (YET)</li>
-<li>Lacking Basic Features (See <a href="#ffi">Foreign Function Interface</a>.)</li>
+<li>Lacking basic features (See <a href="#ffi">Foreign Function Interface</a>.)</li>
 <li>Slow (Perhaps... Compared to Lua.)</li>
 </ul>
 <p><br id="basics"></p>
@@ -618,7 +618,7 @@ Though not part of the language specifications, it is possible to leave out <cod
 <p>Returns <code>true</code> if all of the given arguments have the same type.</p>
 
 <aside class="notice">
-In the virtual machine, the types are compared based on their returns from Cu::Object::typeName().
+In this functions, the types are compared based on their returns from both <code>Cu::Object::getType()</code> and <code>Cu::Object::typeName()</code>.
 </aside>
 <h3 id='are_fn'>are_fn( ... )</h3>
 <p>Returns <code>true</code> if all of the given arguments are of type object-function.</p>
@@ -670,8 +670,8 @@ In the virtual machine, the types are compared based on their returns from Cu::O
 <p>Removes all of the elements in the list <em>list_object</em>.</p>
 <h3 id='swap-list_object-index_1-index_2'>swap( <em>list_object</em>, <em>index_1</em>, <em>index_2</em> )</h3>
 <p>Swaps the locations of two elements in the list <em>list_object</em> at the indexes <em>index_1</em> and <em>index_2</em>.</p>
-<h3 id='replace-list_object-index-value'>replace( <em>list_object</em>, <em>index</em>, <em>value</em> )</h3>
-<p>Replaces the element at the index <em>index</em> in the list <em>list_object</em> with <em>value</em>.</p>
+<h3 id='replace-list_object-index-item'>replace( <em>list_object</em>, <em>index</em>, <em>item</em> )</h3>
+<p>Replaces the element at the index <em>index</em> in the list <em>list_object</em> with <em>item</em>.</p>
 <h3 id='sublist-list_object-start_index-end_index'>sublist( <em>list_object</em> [, <em>start_index</em> [, <em>end_index</em>]] )</h3>
 <p>Returns the sub-list of the list <em>list_object</em>. Optionally, <em>start_index</em> can be given. If given, optionally <em>end_index</em> can be given, where <em>end_index</em> is the last <em>excluded</em> index.</p>
 
@@ -708,17 +708,17 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
 </span><span class="cm"># The included standard library has a print() function. Sorry, no built-in. #</span><span class="w">
 </span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">b</span><span class="p">()</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints 5 #</span><span class="w">
 
-</span><span class="cm"># Lost pointers cause no memory errors or leaks. #</span><span class="w">
+</span><span class="cm"># Lost pointers cause no memory errors or leaks. A new function is created instead. #</span><span class="w">
 </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">
 </span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">b</span><span class="p">()</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints "{fn}". #</span><span class="w">
 
 </span><span class="cm"># Strings are between double-quotes only. #</span><span class="w">
 </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"hello world"</span><span class="w">
 
-</span><span class="cm"># Members are auto-created #</span><span class="w">
+</span><span class="cm"># Members are automatically created upon usage. #</span><span class="w">
 </span><span class="n">a</span><span class="o">.</span><span class="n">child</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"woot"</span><span class="w">
 
-</span><span class="cm"># Shortcut parameterless function calls using ":" #</span><span class="w">
+</span><span class="cm"># Shortcut zero-argument function calls using ":" #</span><span class="w">
 </span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="n">a</span><span class="o">.</span><span class="n">child</span><span class="o">:</span><span class="w"> </span><span class="p">)</span><span class="w">
 
 </span><span class="cm"># Getting and setting members can be done using their names. #</span><span class="w">
@@ -731,7 +731,7 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
 </span><span class="cm"># Create functions using {} #</span><span class="w">
 </span><span class="n">f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
     </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">false</span><span class="w">
-    </span><span class="cm"># if's and loop's require brackets #</span><span class="w">
+    </span><span class="cm"># if structures and loops require brackets #</span><span class="w">
     </span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="cm"># not() takes only 1 parameter,</span><span class="err">
 </span><span class="cm">        but all(), any(), nall(), and none()</span><span class="err">
@@ -868,7 +868,7 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
     <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre>
-<p>Within your code, create an instance of the Engine. The Engine is the main component of the virtual machine. It performs all of the parsing and execution of operations. The Engine can be started with the function <code>run()</code>, which returns a value of the enum Cu::EngineResult::Value. A return value of Cu::EngineResult::Ok means processing is proceeding normally and more input can be given. A return value of Cu::Engine::Done means that the engine is finished (either because it encountered the end of the input stream or an exit token) and all but the global stack has been deleted. A return value of Cu::Engine::Error means an error occured and all but the global stack has been deleted.</p>
+<p>Within your code, create an instance of the Engine. The Engine is the main component of the virtual machine. It performs all of the parsing and execution of operations. The Engine can be started with the function <code>run()</code>, which returns a value of the enum <code>Cu::EngineResult::Value</code>. A return value of <code>Cu::EngineResult::Ok</code> means processing is proceeding normally and more input can be given. A return value of <code>Cu::Engine::Done</code> means that the engine is finished (either because it encountered the end of the input stream or an exit token) and all but the global stack has been deleted. A return value of <code>Cu::Engine::Error</code> means an error occured and all but the global stack has been deleted.</p>
 
 <p>The Engine <code>run</code> function must be provided with an input source of bytes. All input sources must inherit from Cu::ByteStream - an interface with two virtual methods that must be implemented. These are:</p>
 
@@ -877,7 +877,7 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
 <li><code>bool atEOS()</code> - Returns true if the end of the stream of bytes has been reached.</li>
 </ul>
 
-<p>The Engine has a built-in filter for determining if certain sets of bytes compose valid names, but a custom filter can be added using the Engine method <code>setNameFilter</code>. See the <a href="#api">API</a> for more information.</p>
+<p>The Engine has a built-in filter for determining if certain sets of bytes compose valid names, but a custom filter can be added using the Engine method <code>setNameFilter()</code>. See the <a href="#api">API</a> for more information.</p>
 
 <p>An instance of an engine isn&#39;t useful on its own. You will need to add <a href="#foreign-functions">foreign functions</a> to it. Some have been provided. See the <a href="#provided-extensions">provided extensions section</a> for more information.</p>
 <h2 id='compiling-the-virtual-machine'>Compiling the Virtual Machine</h2>
@@ -886,7 +886,7 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
 <p>Premake can be downloaded from <a href="http://premake.github.io/download.html">here</a>.</p>
 
 <aside class="notice">
-Some Linux distro repositories have a version of premake, but be sure to check its version.
+Some Linux distro repositories have a version of premake, but be sure to check its version. Premake4 uses a different format than Premake5.
 </aside>
 <h2 id='messages-info-warnings-errors'>Messages: Info, Warnings, Errors</h2>
 <p>The virtual machine produces four types of messages: Info, Warning, Error, and Debug.</p>
@@ -895,7 +895,7 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 
 <p>Warning messages indicate abnormal activity found in the code. Such activity can result in unintended consequences, and thus warnings should never be ignored. However, the virtual machine will proceed to run and not crash.</p>
 
-<p>Error messages indicate a corrupted and possibly fatal state of the engine. Syntax errors are considered fatal. For why Copper has no exceptions system, see the <a href="#faq-why-no-exceptions-system">FAQ</a>.</p>
+<p>Error messages indicate a corrupted and possibly fatal state of the engine. Syntax errors are considered fatal. For why Copper has no exceptions system, see the <a href="#faq-why-no-exceptions-system">FAQ</a>. Foreign functions may also throw errors, which may be non-fatal but would likely result in undesirable consequences.</p>
 
 <p>The virtual machine may also throw errors identified as &quot;system errors&quot;, in which case the virtual machine code has a bug. If you encounter this, please report it by opening a ticket on the project&#39;s Github bug page and providing the necessary info to reproduce the bug.</p>
 
@@ -910,13 +910,13 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 <p>A number of helper classes have been provided for both adding foreign functions (both standard functions and class methods) without the need to create the wrapper yourself. These are given in the following table.</p>
 <pre class="highlight cpp tab-cpp"><code><span class="k">class</span> <span class="nc">MyFF</span> <span class="o">:</span> <span class="k">public</span> <span class="n">Cu</span><span class="o">::</span><span class="n">ForeignFunc</span> <span class="p">{</span>
 <span class="k">public</span><span class="o">:</span>
-    <span class="k">virtual</span> <span class="kt">bool</span> <span class="n">call</span><span class="p">(</span> <span class="n">FFIServices</span><span class="o">*</span> <span class="n">ffi</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="k">virtual</span> <span class="kt">bool</span> <span class="n">call</span><span class="p">(</span> <span class="n">FFIServices</span><span class="o">&amp;</span> <span class="n">ffi</span> <span class="p">)</span> <span class="p">{</span>
         <span class="n">ffi</span><span class="p">.</span><span class="n">setNewResult</span><span class="p">(</span> <span class="k">new</span> <span class="n">BoolObject</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">);</span>
         <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
     <span class="p">}</span>
 <span class="p">};</span>
 
-<span class="c1">// Ways of adding it to an instance of Engine.
+<span class="c1">// Convenient ways of adding it to an instance of Engine.
 </span><span class="n">Engine</span> <span class="n">engine</span><span class="p">;</span>
 <span class="c1">// Option 1:
 </span><span class="n">addForeignFuncInstance</span><span class="o">&lt;</span><span class="n">MyFF</span><span class="o">&gt;</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">String</span><span class="p">(</span><span class="s">"myff"</span><span class="p">));</span>
@@ -942,15 +942,13 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 </tr>
 <tr>
 <td>addForeignFuncInstance( Engine&amp;, pName: const String&amp;, bool (*pFunction)( FFIServices&amp; ) ): void</td>
-<td>Adds a function with the <code>call(FFIServices&amp;)</code> prototype to the engine as a foreign function.</td>
+<td>Adds a function with the <code>call(FFIServices&amp;):bool</code> prototype to the engine as a foreign function.</td>
 </tr>
 <tr>
 <td>addForeignMethodInstance( pEngine: Engine&amp;, pName: const String&amp;, pBase: BaseClass*, bool (BaseClass::*pMethod)( FFIServices&amp; ) ): void</td>
 <td>Adds a method from an instance of BaseClass to the engine as a foreign function.</td>
 </tr>
 </tbody></table>
-
-<p>ForeignFunc descendents can also implement the virtual methods <code>getParameterCount()</code> and <code>getParameterType()</code>. These functions are called by the virtual machine to check what object types the function allows.</p>
 <h2 id='callbacks'>Callbacks</h2>
 <p>Copper allows for callbacks that can be run after the engine finishes normal execution. Functions will be inside of FunctionObjects when passed to foreign functions. There is no need to extract the function. However, since objects in Copper have limited lifetimes, you will need to either copy the function to a new FunctionObject or call the method <code>FunctionObject::changeOwnerTo()</code> and provide a new owner (whose lifetime you control). Copying is simpler.</p>
 <h2 id='foreign-objects'>Foreign Objects</h2>
@@ -967,6 +965,8 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 </ol>
 
 <p>Optionally, functions may implement <code>virtual void writeToString(String&amp; out)</code> to set the data to be returned when the object appears in string-requiring contexts.</p>
+
+<p>Foreign objects intended to work as numbers should inherit the NumericObject class and implement its virtual methods. Objects inheriting this type should extend the <code>SubType::Value</code> enum and return it from <code>getSubType()</code> instead of overriding the <code>ObjectType::Value type</code>.</p>
 
 <p><br id="provided-extensions"></p>
 <h2 id='provided-extensions'>Provided Extensions</h2>
@@ -1000,7 +1000,7 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used. Submitting code is done by the "Enter" key. If the object-body tokens are in one submission but their following execution-body tokens are in a second submission, they will be treated as separate object-functions.
 </aside>
 <h3 id='exts-directory-extensions'>exts Directory Extensions</h3>
-<p>Some extensions have an <code>addFunctionsToEngine(Cu::Engine&amp;amp)</code>. This function will add all of the foreign functions associated with the extension to the given Cu::Engine instance using default names. Currently, the extensions with this feature are:</p>
+<p>Some extensions have an <code>addFunctionsToEngine(Cu::Engine&amp;)</code>. This function will add all of the foreign functions associated with the extension to the given Cu::Engine instance using default names. Currently, the extensions with this feature are:</p>
 
 <ul>
 <li>Math/basicmath</li>
@@ -1630,7 +1630,7 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 </tr>
 <tr>
 <td>operator Object*()</td>
-<td>Implicit Cast</td>
+<td>Implicit cast.</td>
 </tr>
 <tr>
 <td>virtual copy(): Object*</td>
@@ -1667,7 +1667,7 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 </tr>
 </thead><tbody>
 <tr>
-<td>call( FFIServices&amp; ): virtual bool</td>
+<td>virtual call( FFIServices&amp; ): bool</td>
 <td>Meant to be implemented. Called by the Engine. Returns false only in cases of errors.</td>
 </tr>
 </tbody></table>
