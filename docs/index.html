@@ -1658,6 +1658,20 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 
 <p><br id="api-ffi"></p>
 <h3 id='cu-foreignfunc'>Cu::ForeignFunc</h3>
+<p>Ancestor class to be inherited by all classes that need to interact with the virtual machine.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>call( FFIServices&amp; ): virtual bool</td>
+<td>Meant to be implemented. Called by the Engine. Returns false only in cases of errors.</td>
+</tr>
+</tbody></table>
+<h3 id='cu-ffiservices'>Cu::FFIServices</h3>
 <p>Interface for foreign functions to interact with the engine.</p>
 
 <table><thead>
