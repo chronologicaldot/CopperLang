@@ -1,5 +1,18 @@
+===================
+2018/12/4-5
+v 6-0.61
+
+- Added Engine::execute( OpstrandStack& ) using execute() body and sent execute() through it.
+- Changed Engine::runFunctionObject() to generate its own OpStrandStack so that it would be independent of the execution cycle currently being run by the engine.
+- Made it possible for OpStrandContainers to be considered immutable (that is, don't allow destruction of their strands). This enables runFunctionObject() to rerun a function.
+- Fixed bug in Engine::runFunctionObject() that failed to pop the stack (variable stack) after it executed code.
+
+List.h
+- Added isSame(const List<T>&) const.
+
+
 ====================
-2018/11/4 - 2018/11/6
+2018/11/4 - 2018/11/6 - 2018/12/3
 v 6-0.6
 
 - Changed FFIServices interface to use an array system instead of list. API is different.
@@ -12,6 +25,7 @@ v 6-0.6
 - Fixed bug in Engine::process_sys_list_insert() that incorrectly validated the argument count.
 - Fixed warning messages in lists and strings.
 - Fixed bug in Engine::process_sys_list_replace() that failed to increment the index of the args iterator befor the last arg.
+- Removed excessive obtaining of the function in Engine::runFunctionObject().
 
 
 EngMsgToStr.cpp

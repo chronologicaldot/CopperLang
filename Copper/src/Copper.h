@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.6
+#define COPPER_INTERPRETER_VERSION 0.61
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -1493,11 +1493,13 @@ public:
 class OpStrandContainer {
 	OpStrand* s;
 	OpStrandIter i; // Should be const but stuff may act through it. Find out what does.
+	bool is_const;
 
 public:
-	OpStrandContainer( OpStrand* strand )
+	OpStrandContainer( OpStrand* strand, bool immutable = false )
 		: s(strand)
 		, i(strand->start())
+		, is_const(immutable)
 	{
 		s->ref();
 	}
@@ -1505,6 +1507,7 @@ public:
 	OpStrandContainer(const OpStrandContainer& pOther)
 		: s(pOther.s)
 		, i(pOther.i)
+		, is_const(pOther.is_const)
 	{
 		s->ref();
 	}
@@ -1522,7 +1525,8 @@ public:
 	}
 
 	void removeAllUpToCurrentCode() {
-		s->removeUpTo(i);
+		if (!is_const)
+			s->removeUpTo(i);
 	}
 };
 
@@ -3633,6 +3637,9 @@ public:
 	getLastObject() const;
 
 protected:
+	EngineResult::Value
+	execute( OpStrandStack& );
+
 	ExecutionResult::Value
 	operate(
 		OpStrandStackIter&	opStrandStackIter,

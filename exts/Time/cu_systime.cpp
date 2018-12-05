@@ -1,6 +1,6 @@
 // Copyright 2018 Nicolaus Anderson
 
-#include "systime.h"
+#include "cu_systime.h"
 
 namespace Cu {
  namespace Time {

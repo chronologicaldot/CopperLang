@@ -4846,6 +4846,11 @@ Engine::addOpStrandToStack(
 
 EngineResult::Value
 Engine::execute() {
+	return execute(opcodeStrandStack);	
+}
+
+EngineResult::Value
+Engine::execute( OpStrandStack&  srcOpcodeStrandStack ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::execute");
 #endif
@@ -4859,7 +4864,7 @@ Engine::execute() {
 
 
 	// Note: When adding a list of operations, also set currOp.
-	OpStrandStackIter opcodeStrandStackIter = opcodeStrandStack.end();
+	OpStrandStackIter opcodeStrandStackIter = srcOpcodeStrandStack.end();
 	if ( ! opcodeStrandStackIter.has() )
 		return EngineResult::Ok;
 
@@ -4878,7 +4883,6 @@ Engine::execute() {
 			// Otherwise, process
 			do {
 				hasNextToken = true;
-				// Should check for the end_main opcode, which ends everything
 
 				switch( operate( opcodeStrandStackIter, *currOp ) ) {
 				case ExecutionResult::Ok:
@@ -4920,17 +4924,21 @@ Engine::execute() {
 		// and go to that.
 		do {
 			if ( opcodeStrandStackIter.atStart() ) {
-				// At the global opcodes level, so don't pop. Instead, just add a terminal.
-				// This is also for preventing all other operations from being repeated.
-				globalParserContext.addNewOperation( new Opcode(Opcode::Terminal) );
-				currOp->next(); //... and go to it.
+				// At the global level, so don't pop.
+				if ( opcodeStrandStack.isSame( srcOpcodeStrandStack ) ) {
+					// The engine's default strand stack is also the current one, so add a terminal.
+					// (Otherwise, there would be a memory leak.)
+					// This is also for preventing all other operations from being repeated.
+					globalParserContext.addNewOperation( new Opcode(Opcode::Terminal) );
+					currOp->next(); //... and go to it.
+				}
 				break;
 			}
 
 			// Not at the global opcodes strand, so it's safe to pop the strand
 			// Functions should pop variable/scope stack contexts.
 			stack.pop();
-			opcodeStrandStack.pop();
+			srcOpcodeStrandStack.pop();
 			opcodeStrandStackIter.makeLast();
 			currOp = &(opcodeStrandStackIter->getCurrOp());
 
@@ -4941,7 +4949,7 @@ Engine::execute() {
 	//printGlobalStrand();
 
 	// Clear all first-level opcodes that have been run up to this point
-	opcodeStrandStack.start()->removeAllUpToCurrentCode();
+	srcOpcodeStrandStack.start()->removeAllUpToCurrentCode();
 
 #ifdef COPPER_SPEED_PROFILE
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &endTime);
@@ -5270,8 +5278,8 @@ Engine::operate(
 
 //! Runs a given function with the passed parameters.
 // This is useful for callback functions.
-// It must NOT be run alongside Engine::run() or Engine::execute() but
-// must be run after them.
+// Originally, it could not be safely run alongside Engine::run() or Engine::execute(), only after them.
+// Now it should be able to.
 EngineResult::Value
 Engine::runFunctionObject(
 	FunctionObject*  functionObject,
@@ -5304,6 +5312,7 @@ Engine::runFunctionObject(
 	}
 
 	if ( body->isEmpty() ) {
+		print(LogLevel::debug, "Engine::runFunctionObject: Function body is empty.");
 		return EngineResult::Ok;
 	}
 
@@ -5328,22 +5337,26 @@ Engine::runFunctionObject(
 	callVariable->setFunc( functionObject, true );
 
 	// Argument-passing
-	Function*  func;
-	functionObject->getFunction(func);
-	bool done = false;
 	if ( notNull(args) ) {
-		addForeignFunctionArgsToStackFrame(*stackFrame, func->params, *args);
+		addForeignFunctionArgsToStackFrame(*stackFrame, function->params, *args);
 	}
 
 	// Add stack frame
 	stack.push(stackFrame);
 	stackFrame->deref();
 
-	// Finally, add the body to be processed
-	addOpStrandToStack(body->getOpcodeStrand());
+	// Create temporary strand stack
+	OpStrandStack  contextStrandStack;
+	contextStrandStack.push_back( OpStrandContainer(body->getOpcodeStrand(), true) );
 
-	// Call it from the engine
-	EngineResult::Value  result = execute();
+	// Run the function's body of opcodes in the engine
+	// NOTE: To prevent memory leaks of adding a Terminal to the global strand stack,
+	// the currently running strand stack has been checked in execute().
+	EngineResult::Value  result = execute( contextStrandStack );
+
+	// Remove the frame just added
+	stack.pop();
+
 	if ( result == EngineResult::Error ) {
 		return result;
 	}

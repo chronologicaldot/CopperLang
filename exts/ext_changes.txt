@@ -1,4 +1,14 @@
 ===========
+2018/12/3
+
+Renamed "basicmath" files "cu_basicmath"
+Renamed "systime" files "cu_systime"
+
+Added "cu_stringmap"
+Deleted "ExtTypeValues.h"
+
+
+===========
 2018/11/4
 
 basicmath

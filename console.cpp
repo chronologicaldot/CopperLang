@@ -10,8 +10,9 @@
 #include "Copper/stdlib/Printer.h"
 #include "Copper/stdlib/InStreamLogger.h"
 
-#include "exts/Math/basicmath.h"
-#include "exts/Time/systime.h"
+#include "exts/Math/cu_basicmath.h"
+#include "exts/Time/cu_systime.h"
+#include "exts/String/cu_stringmap.h"
 
 // function by tgamblin
 // https://stackoverflow.com/questions/77005/how-to-generate-a-stacktrace-when-my-gcc-c-app-crashes
@@ -55,6 +56,7 @@ int main() {
 
 	Cu::Numeric::addFunctionsToEngine(engine);
 	Cu::Time::addFunctionsToEngine(engine);
+	Cu::StringLib::Map::addToEngine(engine);
 
 	//Cu::CallbackWrapper ccw(engine, util::String("set_wrapper"));
 
