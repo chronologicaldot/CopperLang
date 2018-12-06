@@ -143,12 +143,12 @@ protected:
 };
 
 struct GetClockTime : public ForeignFunc {
-	virtual bool call( FFIServices& );
+	virtual ForeignFunc::Result call( FFIServices& );
 };
 
-bool GetSeconds( FFIServices& );
-bool GetMilliseconds( FFIServices& );
-bool GetNanoseconds( FFIServices& );
+ForeignFunc::Result GetSeconds( FFIServices& );
+ForeignFunc::Result GetMilliseconds( FFIServices& );
+ForeignFunc::Result GetNanoseconds( FFIServices& );
 
  }
 }

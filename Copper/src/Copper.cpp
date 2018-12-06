@@ -2110,7 +2110,7 @@ FFIServices::demandArgType( UInteger  index, ObjectType::Value  type ) {
 	engine.print( LogMessage::create( LogLevel::error )
 		.FunctionName(who)
 		.Message( EngineMessage::WrongArgType )
-		.ArgIndex(index)
+		.ArgIndex(index+1)
 		.ArgCount(numArgs)
 		.GivenArgType(givenType)
 		.ExpectedArgType(type)
@@ -2274,6 +2274,7 @@ Engine::Engine()
 	, bufferedTokens()
 	, globalParserContext()
 	, opcodeStrandStack()
+	, activeOpcodeStrandStack(&opcodeStrandStack)
 	, endMainCallback(REAL_NULL)
 	, builtinFunctions(50)
 	, foreignFunctions(100)
@@ -2442,6 +2443,7 @@ Engine::printTokens( TokenQueue& tokenQueue ) {
 		do {
 			logger->printToken(tokenIter.getItem());
 		} while ( tokenIter.next() );
+		logger->print(LogLevel::debug, "\n"); // Termination line.
 	}
 }
 
@@ -4839,20 +4841,20 @@ Engine::addOpStrandToStack(
 ) {
 	if ( isNull(strand) )
 		throw EmptyOpstrandException();
-	opcodeStrandStack.push_back( OpStrandContainer(strand) );
+	activeOpcodeStrandStack->push_back( OpStrandContainer(strand) );
 }
 
 
 
 EngineResult::Value
 Engine::execute() {
-	return execute(opcodeStrandStack);	
-}
-
-EngineResult::Value
-Engine::execute( OpStrandStack&  srcOpcodeStrandStack ) {
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::execute");
+#endif
+
+#ifdef COPPER_STRICT_CHECKS
+	if ( isNull(activeOpcodeStrandStack) )
+		throw NullOpcodeStrandException();
 #endif
 
 #ifdef COPPER_SPEED_PROFILE
@@ -4864,11 +4866,11 @@ Engine::execute( OpStrandStack&  srcOpcodeStrandStack ) {
 
 
 	// Note: When adding a list of operations, also set currOp.
-	OpStrandStackIter opcodeStrandStackIter = srcOpcodeStrandStack.end();
+	OpStrandStackIter opcodeStrandStackIter = activeOpcodeStrandStack->end();
 	if ( ! opcodeStrandStackIter.has() )
 		return EngineResult::Ok;
 
-	//opcodeStrandStack.start()->getCurrStrand()->validate();
+	//activeOpcodeStrandStack->start()->getCurrStrand()->validate();
 
 	// This could cause problems as the same opcode might be run twice if the execution is paused
 	// or stopped due to lack of tokens:
@@ -4925,7 +4927,7 @@ Engine::execute( OpStrandStack&  srcOpcodeStrandStack ) {
 		do {
 			if ( opcodeStrandStackIter.atStart() ) {
 				// At the global level, so don't pop.
-				if ( opcodeStrandStack.isSame( srcOpcodeStrandStack ) ) {
+				if ( &opcodeStrandStack == activeOpcodeStrandStack ) {
 					// The engine's default strand stack is also the current one, so add a terminal.
 					// (Otherwise, there would be a memory leak.)
 					// This is also for preventing all other operations from being repeated.
@@ -4938,7 +4940,7 @@ Engine::execute( OpStrandStack&  srcOpcodeStrandStack ) {
 			// Not at the global opcodes strand, so it's safe to pop the strand
 			// Functions should pop variable/scope stack contexts.
 			stack.pop();
-			srcOpcodeStrandStack.pop();
+			activeOpcodeStrandStack->pop();
 			opcodeStrandStackIter.makeLast();
 			currOp = &(opcodeStrandStackIter->getCurrOp());
 
@@ -4949,7 +4951,7 @@ Engine::execute( OpStrandStack&  srcOpcodeStrandStack ) {
 	//printGlobalStrand();
 
 	// Clear all first-level opcodes that have been run up to this point
-	srcOpcodeStrandStack.start()->removeAllUpToCurrentCode();
+	activeOpcodeStrandStack->start()->removeAllUpToCurrentCode();
 
 #ifdef COPPER_SPEED_PROFILE
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &endTime);
@@ -5349,19 +5351,22 @@ Engine::runFunctionObject(
 	OpStrandStack  contextStrandStack;
 	contextStrandStack.push_back( OpStrandContainer(body->getOpcodeStrand(), true) );
 
+	// Set the opcode strand stack used by the engine
+	activeOpcodeStrandStack = &contextStrandStack;
+
 	// Run the function's body of opcodes in the engine
 	// NOTE: To prevent memory leaks of adding a Terminal to the global strand stack,
 	// the currently running strand stack has been checked in execute().
-	EngineResult::Value  result = execute( contextStrandStack );
+	EngineResult::Value  result = execute();
 
 	// Remove the frame just added
 	stack.pop();
 
-	if ( result == EngineResult::Error ) {
-		return result;
-	}
+	// Restore the opcode stack
+	activeOpcodeStrandStack = &opcodeStrandStack;
 
-	return EngineResult::Ok;
+	// Return all result types
+	return result;
 }
 
 void
@@ -5669,12 +5674,25 @@ Engine::setupForeignFunctionExecution(
 	ForeignFunc* foreignFunc = bucketData->item.getForeignFunction();
 
 	FFIServices ffi(*this, task.args, task.getAddress().first());
-	bool result = foreignFunc->call( ffi );
+	ForeignFunc::Result  result = foreignFunc->call( ffi );
 
 	// lastObject is set by setResult() or setNewResult() of the FFI.
-	return result ?
-		FuncExecReturn::Ran :
-		FuncExecReturn::ErrorOnRun;
+	switch ( result )
+	{
+	case ForeignFunc::NONFATAL:
+		if ( ignoreBadForeignFunctionCalls )
+			break;
+		// Pass through
+
+	case ForeignFunc::FATAL:
+		return FuncExecReturn::ErrorOnRun;
+
+	case ForeignFunc::EXIT:
+		return FuncExecReturn::ExitCalled;
+
+	default: break;
+	}
+	return FuncExecReturn::Ran;
 }
 
 FuncExecReturn::Value
@@ -7530,7 +7548,7 @@ addNewForeignFunc(
 void addForeignFuncInstance(
 	Engine&  pEngine,
 	const String&  pName,
-	bool (*pFunction)( FFIServices& )
+	ForeignFuncPrototypePtr  pFunction
 ) {
 	ForeignFunc* ff = new ForeignFuncWrapper(pFunction);
 	pEngine.addForeignFunction(pName, ff);
@@ -7569,7 +7587,7 @@ CallbackWrapper::owns(
 	return notNull(callback) && callback == container;
 }
 
-bool
+ForeignFunc::Result
 CallbackWrapper::call(
 	FFIServices&  ffi
 ) {
@@ -7577,9 +7595,9 @@ CallbackWrapper::call(
 		callback = (FunctionObject*)&(ffi.arg(0));
 		callback->ref();
 		callback->changeOwnerTo(this);
-		return true;
+		return FINISHED;
 	}
-	return false;
+	return NONFATAL;
 }
 
 

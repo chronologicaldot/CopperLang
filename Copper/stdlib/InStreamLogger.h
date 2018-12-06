@@ -24,6 +24,8 @@ class InStreamLogger : public Cu::Logger, public Cu::ByteStream {
 	unsigned long prev_lines;
 	unsigned long prev_columns;
 	EngineErrorLevel::Value errLevel;
+	unsigned nesting;
+	bool needInputLine;
 
 public:
 
@@ -32,6 +34,7 @@ public:
 	bool showWarnings;
 	bool showErrors;
 	bool printNaturalTokens;
+	bool showInputLine;
 
 	InStreamLogger();
 
@@ -46,6 +49,8 @@ public:
 	void setLogFile(std::FILE* pFile );
 	bool willShow(LogLevel::Value logLevel);
 	util::String  getObjectTypeNameFromType( ObjectType::Value  type );
+
+	void printInputLine();
 
 protected:
 	void printInfo(const char* msg);

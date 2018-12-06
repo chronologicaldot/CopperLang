@@ -10,20 +10,20 @@ namespace StringLib {
 class Map : public ForeignFunc, public Owner {
 	Engine&  engine;
 	FunctionObject*  mapFunction;
+	bool defaultCharKeepPolicy;
 
 	// Private constructor to prevent using a different engine
-	Map( Engine& );
+	Map( Engine&, bool );
 
-	//void clearArgsList( ArgsList& );
 	void clearMapFunction();
 
 public:
-	bool call( FFIServices& );
+	virtual Result call( FFIServices& );
 
 	virtual bool owns( FunctionObject* ) const;
 
-	static void addToEngine( Engine&  engine ) {
-		Map* m = new Map(engine);
+	static void addToEngine( Engine&  engine, bool  charKeepPolicy=true ) {
+		Map* m = new Map(engine, charKeepPolicy);
 		engine.addForeignFunction("string_map", m);
 		m->deref();
 	}

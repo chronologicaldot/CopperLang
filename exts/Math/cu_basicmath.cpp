@@ -70,43 +70,44 @@ void Int::writeToString(
 }
 */
 
-bool
+ForeignFunc::Result
 IntegerCast::call(
 	FFIServices&  ffi
 ) {
 	// Only accepts at most 1 arg, but may have zero
 	if ( ! ffi.demandArgCountRange(0,1) )
-		return false;
+		return ForeignFunc::NONFATAL;
 
 	Integer  value = 0;
 	if ( ffi.getArgCount() == 1 )
 		value = getIntegerValue(ffi.arg(1));
 
 	ffi.setNewResult( new IntegerObject( value ) );
-	return true;
+	return ForeignFunc::FINISHED;
 }
 
-bool
+ForeignFunc::Result
 DecimalCast::call(
 	FFIServices&  ffi
 ) {
 	// Only accepts at most 1 arg, but may have zero
 	if ( ! ffi.demandArgCountRange(0,1) )
-		return false;
+		return ForeignFunc::NONFATAL;
 
 	Decimal  value = 0;
 	if ( ffi.getArgCount() == 1 )
 		value = getDecimalValue(ffi.arg(1));
 
 	ffi.setNewResult( new DecimalNumObject( value ) );
-	return true;
+	return ForeignFunc::FINISHED;
 }
 
-bool ToString(
+ForeignFunc::Result
+ToString(
 	FFIServices& ffi
 ) {
 	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
-		return false;
+		return ForeignFunc::NONFATAL;
 
 	std::stringstream  sstream;
 	NumericObject& arg = (NumericObject&) ffi.arg(0);
@@ -125,25 +126,25 @@ bool ToString(
 	ffi.setNewResult(
 		new StringObject(sstream.str().c_str())
 	);
-	return true;
+	return ForeignFunc::FINISHED;
 }
 
-bool
+ForeignFunc::Result
 DecimalInfinity(
 	FFIServices& ffi
 ) {
 	ffi.setNewResult(
 		new DecimalNumObject( std::numeric_limits<double>::infinity() )
 	);
-	return true;
+	return ForeignFunc::FINISHED;
 }
 
-bool
+ForeignFunc::Result
 AreZero::call(
 	FFIServices&  ffi
 ) {
 	if ( ! ffi.demandAllArgsType( ObjectType::Numeric ) )
-		return false;
+		return NONFATAL;
 
 	NumericObject*  arg;
 	bool  is_zero = true;
@@ -161,15 +162,15 @@ AreZero::call(
 		if ( ! is_zero ) break;
 	}
 	ffi.setNewResult( new BoolObject(is_zero) );
-	return true;
+	return FINISHED;
 }
 
-bool
+ForeignFunc::Result
 Power::call(
 	FFIServices& ffi
 ) {
 	if ( ! ffi.demandAllArgsType( ObjectType::Numeric ) )
-		return false;
+		return NONFATAL;
 
 	Decimal  base;
 	Object* arg;
@@ -181,40 +182,40 @@ Power::call(
 		base = pow( base, ((NumericObject&)ffi.arg(index)).getDecimalValue() );
 	}
 	ffi.setNewResult( new DecimalNumObject(base) );
-	return true;
+	return FINISHED;
 }
 
-bool
+ForeignFunc::Result
 PI::call(
 	FFIServices& ffi
 ) {
 	ffi.setNewResult(
 		new DecimalNumObject(3.1415926535897932384626433832795028841971693993751)
 	);
-	return true;
+	return FINISHED;
 }
 
-bool
+ForeignFunc::Result
 SmallPI::call(
 	FFIServices& ffi
 ) {
 	ffi.setNewResult(
 		new DecimalNumObject(3.1415926)
 	);
-	return true;
+	return FINISHED;
 }
 
 IntDeciSharedFuncs::~IntDeciSharedFuncs() {}
 
-bool
+ForeignFunc::Result
 IntDeciSharedFuncs::call(
 	FFIServices& ffi
 ) {
 	if ( ! ffi.demandAllArgsType(ObjectType::Numeric) )
-		return false;
+		return NONFATAL;
 
 	if ( ! ffi.demandMinArgCount(1) )
-		return false;
+		return NONFATAL;
 
 	NumericObject&  arg = (NumericObject&)ffi.arg(0);
 	if ( arg.getSubType() == NumericObject::SubType::DecimalNum ) {
@@ -223,7 +224,7 @@ IntDeciSharedFuncs::call(
 	else {
 		IntegerSubFunction( arg.getIntegerValue(), ffi );
 	}
-	return true;
+	return FINISHED;
 }
 
 void
@@ -292,69 +293,69 @@ Avg::DecimalSubFunction( Decimal current, FFIServices& ffi ) {
 	ffi.setNewResult( new DecimalNumObject(current) );
 }
 
-bool
+ForeignFunc::Result
 Sine::call(
 	FFIServices&  ffi
 ) {
 	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
-		return false;
+		return NONFATAL;
 
 	ffi.setNewResult(
 		new DecimalNumObject( sin( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
-	return true;
+	return FINISHED;
 }
 
-bool
+ForeignFunc::Result
 Cosine::call(
 	FFIServices&  ffi
 ) {
 	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
-		return false;
+		return NONFATAL;
 
 	ffi.setNewResult(
 		new DecimalNumObject( cos( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
-	return true;
+	return FINISHED;
 }
 
-bool
+ForeignFunc::Result
 Tangent::call(
 	FFIServices&  ffi
 ) {
 	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
-		return false;
+		return NONFATAL;
 
 	ffi.setNewResult(
 		new DecimalNumObject( tan( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
-	return true;
+	return FINISHED;
 }
 
-bool
+ForeignFunc::Result
 Ceiling::call(
 	FFIServices&  ffi
 ) {
 	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
-		return false;
+		return NONFATAL;
 
 	ffi.setNewResult(
 		new DecimalNumObject( ceil( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
-	return true;
+	return FINISHED;
 }
 
-bool
+ForeignFunc::Result
 Floor::call(
 	FFIServices&  ffi
 ) {
 	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
-		return false;
+		return NONFATAL;
 
 	ffi.setNewResult(
 		new DecimalNumObject( floor( ((NumericObject&)ffi.arg(0)).getDecimalValue() ) )
 	);
-	return true;
+	return FINISHED;
 }
 
 }}

@@ -29,31 +29,31 @@ iszero(
 );
 
 struct IntegerCast : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 struct DecimalCast : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 
-bool ToString( FFIServices& ffi );
-bool DecimalInfinity( FFIServices& ffi );
+ForeignFunc::Result ToString( FFIServices& ffi );
+ForeignFunc::Result DecimalInfinity( FFIServices& ffi );
 
 struct AreZero : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 struct Power : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 struct PI : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 struct SmallPI : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 class IntDeciSharedFuncs : public ForeignFunc {
@@ -62,7 +62,7 @@ protected:
 	virtual void DecimalSubFunction( Decimal current, FFIServices& ffi ) =0;
 public:
 	virtual ~IntDeciSharedFuncs();
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 class Pick_min : public IntDeciSharedFuncs {
@@ -85,27 +85,27 @@ protected:
 
 // one decimal arg only
 struct Sine : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 // one decimal arg only
 struct Cosine : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 // one decimal arg only
 struct Tangent : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 // one decimal arg only
 struct Ceiling : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 // one decimal arg only
 struct Floor : public ForeignFunc {
-	virtual bool call( FFIServices& ffi );
+	virtual Result call( FFIServices& ffi );
 };
 
 }}

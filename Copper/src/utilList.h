@@ -668,10 +668,6 @@ public:
 		}
 	}
 
-	bool isSame( const List<T>& pOther ) const {
-		return this == &pOther;
-	}
-
 };
 
 }

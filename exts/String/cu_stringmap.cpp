@@ -4,37 +4,32 @@
 namespace Cu {
 namespace StringLib {
 
-Map::Map( Engine&  hostEngine )
+Map::Map( Engine&  hostEngine, bool  charKeepPolicy )
 	: engine(hostEngine)
 	, mapFunction(REAL_NULL)
+	, defaultCharKeepPolicy(charKeepPolicy)
 {}
 
-/*void Map::clearArgsList( ArgsList&  argsList ) {
-	ArgsIter  ai = argsList.start();
-	if ( ai.has() ) do {
-		ai.getItem()->deref();
-	} while ( ai.next() );
-	argsList.clear();
-}*/
-
-void Map::clearMapFunction() {
+void
+Map::clearMapFunction() {
 	mapFunction->disown(this);
 	mapFunction->deref();
 	mapFunction = REAL_NULL;
 }
 
-bool Map::call( FFIServices&  ffi ) {
+ForeignFunc::Result
+Map::call( FFIServices&  ffi ) {
 	if (!ffi.demandArgCount(2)
 		|| !ffi.demandArgType(0, ObjectType::String)
 		|| !ffi.demandArgType(1, ObjectType::Function)
 	) {
-		return false;
+		return NONFATAL;
 	}
 
 	util::String  srcString = ((StringObject&)ffi.arg(0)).getString();
 	mapFunction = (FunctionObject*)&(ffi.arg(1));
 	mapFunction->ref();
-	mapFunction->own(this);
+	mapFunction->own(this); // Only own if there is no owner (i.e. this is a homeless function/lambda)
 
 	util::CharList  rebuild;
 	ArgsList  args; // util::List<Object*>
@@ -58,9 +53,7 @@ bool Map::call( FFIServices&  ffi ) {
 				keep = ((BoolObject*)result)->getValue();
 			}
 			else {
-				// Default to true but warn
-				//keep = true;
-				keep = false; // for debug - seems to make no difference
+				keep = defaultCharKeepPolicy;
 				ffi.printWarning("Given map function did not return boolean value.");
 				result->writeToString(typestr);
 				ffi.printWarning( typestr.c_str() );
@@ -70,7 +63,7 @@ bool Map::call( FFIServices&  ffi ) {
 		case EngineResult::Error:
 			clearMapFunction();
 			ffi.printError("Error during call to given map function.");
-			return false;
+			return NONFATAL;
 
 		default: break;
 		}
@@ -81,10 +74,11 @@ bool Map::call( FFIServices&  ffi ) {
 	clearMapFunction();
 	String  finalString( rebuild );
 	ffi.setNewResult(new StringObject(finalString));
-	return true;
+	return FINISHED;
 }
 
-bool Map::owns( FunctionObject*  obj ) const {
+bool
+Map::owns( FunctionObject*  obj ) const {
 	return notNull(mapFunction) && mapFunction == obj;
 }
 

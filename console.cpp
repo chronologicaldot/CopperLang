@@ -69,8 +69,9 @@ int main() {
 	// ATTENTION: Leave the spaces alone
 	std::printf("\33[92m\n \t\tCOPPER LANGUAGE\n\t\tConsole Application\n\t\t(c) 2016-2018 Nicolaus Anderson\n\33[4m                                                              \33[0m\n");
 
-	Cu::EngineResult::Value  result;
+	//streamLogger.printInputLine();
 
+	Cu::EngineResult::Value  result;
 	int err = 0;
 	try {
 		do {

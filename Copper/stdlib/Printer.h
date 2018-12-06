@@ -22,8 +22,11 @@ class Printer : public Cu::ForeignFunc {
 	std::FILE* writeFile;
 
 public:
+	bool  usePadding;
+
 	Printer()
 		: writeFile(stdout)
+		, usePadding(true)
 	{}
 
 	void setWriteFile(std::FILE* pFile) {
@@ -34,7 +37,7 @@ public:
 		}
 	}
 
-	virtual bool call( FFIServices& ffi ) {
+	virtual Result call( FFIServices& ffi ) {
 		Object*  arg;
 		util::String  out;
 		Cu::UInteger  i = 0;
@@ -65,13 +68,16 @@ public:
 				break;
 			}
 		}
-		return true;
+		return FINISHED;
 	}
 
 protected:
 	void printBooleanString( const util::String&  value ) {
 		if ( writeFile == stdout ) {
-			std::fprintf(writeFile, "\33[92m%s\33[0m", value.c_str());
+			if ( usePadding )
+				std::fprintf(writeFile, "\t\33[92m%s\33[0m\n", value.c_str());
+			else
+				std::fprintf(writeFile, "\33[92m%s\33[0m", value.c_str());
 		} else {
 			std::fprintf(writeFile, "%s", value.c_str());
 		}
@@ -79,7 +85,10 @@ protected:
 
 	void printInteger( Cu::Integer value ) {
 		if ( writeFile == stdout ) {
-			std::fprintf(writeFile, "\33[96m%ld\33[0m", value);
+			if ( usePadding )
+				std::fprintf(writeFile, "\t\33[96m%ld\33[0m\n", value);
+			else
+				std::fprintf(writeFile, "\33[96m%ld\33[0m", value);
 		} else {
 			std::fprintf(writeFile, "%ld", value);
 		}
@@ -87,7 +96,10 @@ protected:
 
 	void printDecimalNum( Cu::Decimal value ) {
 		if ( writeFile == stdout ) {
-			std::fprintf(writeFile, "\33[95m%lf\33[0m", value);
+			if ( usePadding )
+				std::fprintf(writeFile, "\t\33[95m%lf\33[0m\n", value);
+			else
+				std::fprintf(writeFile, "\33[95m%lf\33[0m", value);
 		} else {
 			std::fprintf(writeFile, "%lf", value);
 		}
@@ -95,7 +107,10 @@ protected:
 
 	void printString( const util::String&  value ) {
 		if ( writeFile == stdout ) {
-			std::fprintf(writeFile, "\33[93m%s\33[0m", value.c_str());
+			if ( usePadding )
+				std::fprintf(writeFile, "\t\33[93m%s\33[0m\n", value.c_str());
+			else
+				std::fprintf(writeFile, "\33[93m%s\33[0m", value.c_str());
 		} else {
 			std::fprintf(writeFile, "%s", value.c_str());
 		}

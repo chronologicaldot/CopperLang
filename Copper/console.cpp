@@ -44,6 +44,8 @@ int main() {
 	printer.declareStackBased();
 #endif
 
+	//streamLogger.printInputLine();
+
 	int err = 0;
 	try {
 		while ( engine.run( streamLogger ) == Cu::EngineResult::Ok );

@@ -161,20 +161,20 @@ ClockTime::subtract(const timespec& other) {
 	return new ClockTime(total);
 }
 
-bool
+ForeignFunc::Result
 GetClockTime::call(
 	FFIServices&  ffi
 ) {
 	timespec currTime;
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &currTime);
 	ffi.setNewResult( new ClockTime(currTime) );
-	return true;
+	return FINISHED;
 }
 
-bool
+ForeignFunc::Result
 GetSeconds( FFIServices& ffi ) {
 	if ( ! ffi.demandAllArgsType( ObjectType::Numeric, true ) )
-		return false;
+		return ForeignFunc::NONFATAL;
 
 	NumericObject*  arg;
 	Integer  totalTime = 0;
@@ -188,13 +188,13 @@ GetSeconds( FFIServices& ffi ) {
 	}
 
 	ffi.setNewResult( new IntegerObject( totalTime ) );
-	return true;
+	return ForeignFunc::FINISHED;
 }
 
-bool
+ForeignFunc::Result
 GetMilliseconds( FFIServices& ffi ) {
 	if ( ! ffi.demandAllArgsType( ObjectType::Numeric, true ) )
-		return false;
+		return ForeignFunc::NONFATAL;
 
 	NumericObject*  arg;
 	Integer  totalTime = 0;
@@ -208,13 +208,13 @@ GetMilliseconds( FFIServices& ffi ) {
 	}
 
 	ffi.setNewResult( new IntegerObject( totalTime ) );
-	return true;
+	return ForeignFunc::FINISHED;
 }
 
-bool
+ForeignFunc::Result
 GetNanoseconds( FFIServices& ffi ) {
 	if ( ! ffi.demandAllArgsType( ObjectType::Numeric, true ) )
-		return false;
+		return ForeignFunc::NONFATAL;
 
 	NumericObject*  arg;
 	Integer  totalTime = 0;
@@ -228,7 +228,7 @@ GetNanoseconds( FFIServices& ffi ) {
 	}
 
 	ffi.setNewResult( new IntegerObject( totalTime ) );
-	return true;
+	return ForeignFunc::FINISHED;
 }
 
 }

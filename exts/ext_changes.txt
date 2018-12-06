@@ -1,4 +1,20 @@
 ===========
+2018/12/5
+
+cu_basicmath
+- Changed all foreign functions to use ForeignFunc::Result.
+- Changed all "false" return values of foreign functions to NONFATAL and all "true" return values to FINISHED.
+
+cu_systime
+- Changed all foreign functions to use ForeignFunc::Result.
+- Changed all "false" return values of foreign functions to NONFATAL and all "true" return values to FINISHED.
+
+cu_stringmap
+- Changed call() ForeignFunc::Result.
+- Changed all "false" return values of foreign functions to NONFATAL and all "true" return values to FINISHED.
+
+
+===========
 2018/12/3
 
 Renamed "basicmath" files "cu_basicmath"

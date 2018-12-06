@@ -21,11 +21,14 @@ InStreamLogger::InStreamLogger()
 	, prev_lines(1)
 	, prev_columns(0)
 	, errLevel(EngineErrorLevel::error)
+	, nesting(0)
+	, needInputLine(true)
 	, enabled(true)
 	, showInfo(true)
 	, showWarnings(true)
 	, showErrors(true)
 	, printNaturalTokens(true)
+	, showInputLine(true)
 {}
 
 void
@@ -40,6 +43,11 @@ InStreamLogger::setInputFile(std::FILE* pFile) {
 
 char
 InStreamLogger::getNextByte() {
+	if ( showInputLine && needInputLine && inFile == stdin ) {
+		printInputLine();
+		needInputLine = false;
+	}
+
 	int c = std::fgetc(inFile);
 	prev_lines = lines;
 	prev_columns = columns;
@@ -49,8 +57,17 @@ InStreamLogger::getNextByte() {
 			++lines;
 			columns = 0;
 			// Addendum
-			if ( inFile == stdin )
+			if ( inFile == stdin ) {
 				atEOF = true;
+				//if ( showInputLine )
+				//	printInputLine();
+				needInputLine = true;
+			}
+		}
+		else if ( c == '{' ) {
+			++nesting;
+		} else if ( c == '}' ) {
+			--nesting;
 		}
 		return char(c);
 	}
@@ -108,6 +125,14 @@ InStreamLogger::getObjectTypeNameFromType( ObjectType::Value  type ) {
 	case ObjectType::List: return Cu::ListObject::StaticTypeName();
 	default: return util::String("unknown");
 	}
+}
+
+void
+InStreamLogger::printInputLine() {
+	if ( outFile == stdout )
+		std::fprintf(outFile, "\033[92m%u >\033[0m  ", nesting);
+	else
+		std::fprintf(outFile, "%u > ", nesting);
 }
 
 void

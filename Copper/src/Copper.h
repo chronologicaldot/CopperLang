@@ -2525,10 +2525,18 @@ ref() on the passed object.
 */
 class ForeignFunc : public Ref {
 public:
+	enum Result {
+		FINISHED = 0,
+		NONFATAL,
+		FATAL,
+		EXIT
+	};
+
 	virtual ~ForeignFunc() {}
 
 	// Calls the function. Return "false" on error.
-	virtual bool call( FFIServices& ffi )=0;
+	//virtual bool call( FFIServices& ffi )=0;
+	virtual Result call( FFIServices& ffi )=0;
 
 	//operator ForeignFunc* () {
 	//	return (ForeignFunc*)(*this);
@@ -3265,6 +3273,10 @@ struct EngineEndProcCallback {
 
 //----------------------------------------
 
+#ifdef COPPER_STRICT_CHECKS
+class NullOpcodeStrandException {};
+#endif
+
 /*
 Processing begins with run(), which takes a user string and tokenizes it.
 It then sends it to process(), where the token causes changes in the state machine.
@@ -3282,6 +3294,7 @@ class Engine {
 	List<Token> bufferedTokens;
 	ParserContext globalParserContext;
 	OpStrandStack opcodeStrandStack;
+	OpStrandStack* activeOpcodeStrandStack;
 	EngineEndProcCallback* endMainCallback;
 	RobinHoodHash<SystemFunction::Value> builtinFunctions;
 	RobinHoodHash<ForeignFuncContainer> foreignFunctions;
@@ -3637,8 +3650,6 @@ public:
 	getLastObject() const;
 
 protected:
-	EngineResult::Value
-	execute( OpStrandStack& );
 
 	ExecutionResult::Value
 	operate(
@@ -3795,6 +3806,10 @@ protected:
 #endif
 };
 
+// Independent Foreign Function Prototype
+// "ForeignFuncPrototypePtr"
+typedef  ForeignFunc::Result (*ForeignFuncPrototypePtr)( FFIServices& );
+
 
 // Function for automatically creating foreign function instances and assigning them to the engine
 // NOTE: Must be after the definition of Engine.
@@ -3823,14 +3838,14 @@ struct name : public ::Cu::ForeignFunc { \
 //! Class for wrapping variadic functions
 class ForeignFuncWrapper : public ForeignFunc {
 
-	bool (*func)( FFIServices& );
+	ForeignFuncPrototypePtr  func;
 
 public:
-	ForeignFuncWrapper( bool (*f)( FFIServices& ) )
+	ForeignFuncWrapper( ForeignFuncPrototypePtr  f )
 		: func(f)
 	{}
 
-	virtual bool
+	virtual Result
 	call( FFIServices& ffi ) {
 		return func(ffi);
 	}
@@ -3840,7 +3855,7 @@ void
 addForeignFuncInstance(
 	Engine&  pEngine,
 	const String&  pName,
-	bool (*pFunction)( FFIServices& )
+	ForeignFuncPrototypePtr  pFunction
 );
 
 //! Class for wrapping callback functions and using them
@@ -3860,7 +3875,7 @@ public:
 	virtual bool
 	owns( FunctionObject*  container ) const;
 
-	virtual bool
+	virtual Result
 	call( FFIServices&  ffi );
 };
 
@@ -3876,16 +3891,18 @@ public:
 */
 template<class BaseClass>
 class ForeignMethod : public ForeignFunc {
+	typedef  Result (BaseClass::*ForeignMethodPrototypePtr)( FFIServices& );
+
 	BaseClass*  base;
-	bool (BaseClass::*method)( FFIServices& );
+	ForeignMethodPrototypePtr  method;
 
 public:
-	ForeignMethod( BaseClass* pBase, bool (BaseClass::*pMethod)( FFIServices& ) )
+	ForeignMethod( BaseClass*  pBase, ForeignMethodPrototypePtr  pMethod )
 		: base(pBase)
 		, method(pMethod)
 	{}
 
-	virtual bool
+	virtual Result
 	call( FFIServices& ffi ) {
 		return (base->*method)(ffi); // Calling the method
 	}
@@ -3896,7 +3913,8 @@ void addForeignMethodInstance(
 	Engine&  pEngine,
 	const String&  pName,
 	BaseClass*  pBase,
-	bool (BaseClass::*pMethod)( FFIServices& )
+	//ForeignMethod<BaseClass>::ForeignMethodPrototypePtr  pMethod // Doesn't work
+	ForeignFunc::Result (BaseClass::*pMethod)( FFIServices& )
 ) {
 	ForeignFunc* ff = new ForeignMethod<BaseClass>(pBase, pMethod);
 	pEngine.addForeignFunction(pName, ff);
