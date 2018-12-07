@@ -43,6 +43,7 @@ project "Copper"
 		"exts/Math/basicmath.h", "exts/Math/cu_basicmath.cpp",
 		"exts/Time/systime.h", "exts/Time/cu_systime.cpp",
 		"exts/String/cu_stringmap.h", "exts/String/cu_stringmap.cpp",
+		"exts/System/cu_info.h", "exts/System/cu_info.cpp",
 	}
 
 	excludes

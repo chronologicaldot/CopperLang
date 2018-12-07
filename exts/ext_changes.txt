@@ -1,4 +1,10 @@
 ===========
+2018/12/6
+
+Created cu_info.h and cu_info.cpp.
+
+
+===========
 2018/12/5
 
 cu_basicmath
