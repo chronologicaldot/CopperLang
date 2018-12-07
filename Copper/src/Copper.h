@@ -867,6 +867,7 @@ struct LogMessage {
 
 	LogMessage&
 	CustomCode( UInteger  code ) {
+		messageId = EngineMessage::CustomMessage;
 		customCode = code;
 		return *this;
 	}

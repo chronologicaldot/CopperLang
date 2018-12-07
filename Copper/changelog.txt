@@ -14,6 +14,7 @@ v 6-0.61
 - Changed language version to 3.1.
 - Marked EngineMessage::ConditionlessIf as signaling an error.
 - Changed FFIServices methods printCustomInfoCode(), printCustomWarningCode(), and printCustomErrorCode() to set the function name for the log message.
+- Changed LogMessage::CustomCode() to set the messageId to CustomMessage.
 
 Printer.h
 - Changed call() to use ForeignFunc::Result values.
