@@ -2173,6 +2173,7 @@ FFIServices::printError(
 void
 FFIServices::printCustomInfoCode( UInteger  code ) {
 	engine.print( LogMessage::create(LogLevel::info)
+		.FunctionName(who)
 		.Message(EngineMessage::CustomMessage)
 		.CustomCode(code)
 	);
@@ -2181,6 +2182,7 @@ FFIServices::printCustomInfoCode( UInteger  code ) {
 void
 FFIServices::printCustomWarningCode( UInteger  code ) {
 	engine.print( LogMessage::create(LogLevel::warning)
+		.FunctionName(who)
 		.Message(EngineMessage::CustomMessage)
 		.CustomCode(code)
 	);
@@ -2189,6 +2191,7 @@ FFIServices::printCustomWarningCode( UInteger  code ) {
 void
 FFIServices::printCustomErrorCode( UInteger  code ) {
 	engine.print( LogMessage::create(LogLevel::error)
+		.FunctionName(who)
 		.Message(EngineMessage::CustomMessage)
 		.CustomCode(code)
 	);
