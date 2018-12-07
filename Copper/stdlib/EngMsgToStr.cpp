@@ -259,12 +259,13 @@ getStringFromEngineMessage(
 		errLevel = EngineErrorLevel::error;
 		return "Contamination in \"if\" structure condition.";
 
-	// WARNING
+	// ERROR
 	// No boolean result came from the condition body given to the if-statement.
 	// The statement automatically defaults to "false".
 	// If this happens for successive if and elif statements, the else block is still executed.
 	case EngineMessage::ConditionlessIf:
-		return "Missing boolean condition in \"if\" structure condition. Defaulting to false.";
+		errLevel = EngineErrorLevel::error;
+		return "Missing boolean condition in \"if\" structure condition.";
 
 	// ERROR
 	// A different token was found while searching for the body-opener token of an if-statment.

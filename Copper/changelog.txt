@@ -10,9 +10,9 @@ v 6-0.61
 - Changed setupForeignFunctionExecution() to account for various values of ForeignFunc::Result.
 - Fixed FFIServices::demandArgType() that printed a confusing index value.
 - Changed Engine::addOpStrandToStack to use activeOpcodeStrandStack instead of opcodeStrandStack.
-
-List.h
-- Added isSame(const List<T>&) const.
+- Added xall()
+- Changed language version to 3.1.
+- Marked EngineMessage::ConditionlessIf as signaling an error.
 
 Printer.h
 - Changed call() to use ForeignFunc::Result values.
@@ -20,6 +20,9 @@ Printer.h
 
 InStreamLogger.h
 - Added ability to print input line that includes nesting (open brackets).
+
+EngMsgToStr.cpp
+- Changed EngineMessage::ConditionlessIf to report an error.
 
 
 ====================

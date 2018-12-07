@@ -96,7 +96,7 @@
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 3
+#define COPPER_LANG_VERSION 3.1
 
 // ******* Language modifications *******
 
@@ -407,9 +407,8 @@ struct EngineMessage {
 	// e.g.: true if() { print("runs") }
 	IfConditionContaminated,
 
-	// WARNING
+	// ERROR
 	// No boolean result came from the condition body given to the if-statement.
-	// The statement automatically defaults to "false".
 	// If this happens for successive if and elif statements, the else block is still executed.
 	ConditionlessIf,
 
@@ -690,6 +689,7 @@ struct SystemFunction {
 	_any,
 	_nall,
 	_none,
+	_xall,
 	_are_fn,
 	_are_empty,
 	_are_same, // function/pointer and pointer are for the same object (C++ pointer equality)
@@ -3733,6 +3733,7 @@ protected:
 	FuncExecReturn::Value	process_sys_any(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_nall(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_none(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_xall(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_fn(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_empty(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_same(		FuncFoundTask& task );

@@ -2985,6 +2985,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("any"), SystemFunction::_any);
 	builtinFunctions.insert(String("nall"), SystemFunction::_nall);
 	builtinFunctions.insert(String("none"), SystemFunction::_none);
+	builtinFunctions.insert(String("xall"), SystemFunction::_xall);
 	builtinFunctions.insert(String("are_fn"), SystemFunction::_are_fn);
 	//builtinFunctions.insert(String("is_ptr"), SystemFunction::_is_ptr); // handled as SRPS
 	//builtinFunctions.insert(String("is_owner"), SystemFunction::_is_owner); // handled as SRPS
@@ -5498,6 +5499,10 @@ Engine::setupBuiltinFunctionExecution(
 		process_sys_none(task);
 		break;
 
+	case SystemFunction::_xall:
+		process_sys_xall(task);
+		break;
+
 	case SystemFunction::_are_fn:
 		process_sys_are_fn(task);
 		break;
@@ -6138,6 +6143,26 @@ Engine::process_sys_none(
 		result = ! getBoolValue(**ai);
 	} while ( ai.next() && !result );
 	lastObject.setWithoutRef(new BoolObject(result));
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_xall(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_xall");
+#endif
+	bool first = false;
+	bool sameness = true;
+	ArgsIter ai = task.args.start();
+	if ( ai.has() ) {
+		first = getBoolValue(**ai);
+		while ( ai.next() && sameness ) {
+			sameness = first == getBoolValue(**ai);
+		}
+	}
+	lastObject.setWithoutRef(new BoolObject(sameness));
 	return FuncExecReturn::Ran;
 }
 
