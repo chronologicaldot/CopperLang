@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.61
+#define COPPER_INTERPRETER_VERSION 0.62
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -514,7 +514,7 @@ struct ObjectType {
 		List,
 		Numeric, // Parent class
 		Integer,
-		Decimal,
+		DecimalNum,
 
 		// For non-usable data
 		UnknownData,
@@ -1076,6 +1076,13 @@ public:
 	// matrices, etc., and complemented by extension functions.
 	virtual const char*
 	typeName() const =0;
+
+	//! Indicate interface support
+	// Returns true if this object can be casted to objects of the given type.
+	virtual bool
+	supportsInterface( ObjectType::Value ) const {
+		return false;
+	}
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char*
@@ -1719,6 +1726,11 @@ public:
 		return "fn";
 	}
 
+	virtual bool
+	supportsInterface( ObjectType::Value  typeValue ) const {
+		return typeValue == object_type;
+	}
+
 	static const char*
 	StaticTypeName() {
 		return "fn";
@@ -1830,6 +1842,11 @@ public:
 		return StaticTypeName();
 	}
 
+	virtual bool
+	supportsInterface( ObjectType::Value  typeValue ) const {
+		return typeValue == BoolObject::object_type;
+	}
+
 	static const char*
 	StaticTypeName() {
 		return "bool";
@@ -1882,6 +1899,11 @@ public:
 	virtual const char*
 	typeName() const {
 		return StaticTypeName();
+	}
+
+	virtual bool
+	supportsInterface( ObjectType::Value  typeValue ) const {
+		return typeValue == StringObject::object_type;
 	}
 
 	static const char*
@@ -1968,6 +1990,11 @@ struct NumericObject : public Object {
 	virtual const char*
 	typeName() const {
 		return StaticTypeName();
+	}
+
+	virtual bool
+	supportsInterface( ObjectType::Value  typeValue ) const {
+		return typeValue == NumericObject::object_type;
 	}
 
 	virtual SubType::Value
@@ -2068,21 +2095,18 @@ class IntegerObject : public NumericObject {
 public:
 	//! cstor
 	IntegerObject()
-		//: Object( ObjectType::Integer )
 		: NumericObject()
 		, value(0)
 	{}
 
 	//! cstor
 	IntegerObject( Integer newValue )
-		//: Object( ObjectType::Integer )
 		: NumericObject()
 		, value ( newValue )
 	{}
 
 	//! cstor
 	IntegerObject( const IntegerObject& other )
-		//: Object( ObjectType::Integer )
 		: NumericObject()
 		, value( other.value )
 	{}
@@ -2103,10 +2127,8 @@ public:
 		return StaticTypeName();
 	}
 
-	//static ObjectType::Value
-	//StaticType() {
-	//	return ObjectType::Integer;
-	//}
+	virtual bool
+	supportsInterface( ObjectType::Value  typeValue ) const;
 
 	virtual NumericObject::SubType::Value
 	getSubType() const {
@@ -2180,21 +2202,18 @@ class DecimalNumObject : public NumericObject {
 public:
 	//! cstor
 	DecimalNumObject()
-		//: Object( ObjectType::Decimal )
 		: NumericObject()
 		, value(0)
 	{}
 
 	//! cstor
 	DecimalNumObject( Decimal newValue )
-		//: Object( ObjectType::Decimal )
 		: NumericObject()
 		, value ( newValue )
 	{}
 
 	//! cstor
 	DecimalNumObject( const DecimalNumObject& other )
-		//: Object( ObjectType::Decimal )
 		: NumericObject()
 		, value( other.value )
 	{}
@@ -2215,10 +2234,8 @@ public:
 		return StaticTypeName();
 	}
 
-	//static ObjectType::Value
-	//StaticType() {
-	//	return ObjectType::Decimal;
-	//}
+	virtual bool
+	supportsInterface( ObjectType::Value  typeValue ) const;
 
 	virtual NumericObject::SubType::Value
 	getSubType() const {
@@ -2492,6 +2509,11 @@ public:
 	virtual const char*
 	typeName() const {
 		return StaticTypeName();
+	}
+
+	virtual bool
+	supportsInterface( ObjectType::Value  typeValue ) const {
+		return typeValue == ListObject::object_type;
 	}
 
 	static ObjectType::Value
@@ -3250,7 +3272,6 @@ inline bool
 isIntegerObject(
 	const Object& pObject
 ) {
-	//return ( pObject.getType() == ObjectType::Integer );
 	if ( pObject.getType() == ObjectType::Numeric ) {
 		return ((NumericObject&)pObject).getSubType() == NumericObject::SubType::Integer;
 	}
@@ -3260,7 +3281,6 @@ inline bool
 isDecimalNumObject(
 	const Object& pObject
 ) {
-	//return ( pObject.getType() == ObjectType::Decimal );
 	if ( pObject.getType() == ObjectType::Numeric ) {
 		return ((NumericObject&)pObject).getSubType() == NumericObject::SubType::DecimalNum;
 	}

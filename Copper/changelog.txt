@@ -1,4 +1,15 @@
 ===================
+2018/12/12
+v 6-0.62
+
+- Changed ObjectType::Decimal to ObjectType::DecimalNum.
+- Added method virtual bool Object::supportsInterface(ObjectType::Value) and implementations to all built-in Object descendants.
+- Removed old commented out code regarding ObjectType::Value values.
+- Changed FFIServices::demandArgType() and demandAllArgsType() to use Object::supportsInterface().
+- Fixed error message in FFIServices::demandAllArgsType() to use index+1.
+
+
+===================
 2018/12/4-5
 v 6-0.61
 

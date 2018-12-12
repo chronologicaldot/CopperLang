@@ -769,6 +769,16 @@ NumericObject::~NumericObject()
 
 //--------------------------------------
 
+bool
+IntegerObject::supportsInterface( ObjectType::Value  typeValue ) const {
+	switch ( typeValue ) {
+	case NumericObject::object_type: return true;
+	case ObjectType::Integer: return true;
+	default: break;
+	}
+	return false;
+}
+
 void
 IntegerObject::setValue( const NumericObject&  other ) {
 	value = other.getIntegerValue();
@@ -880,6 +890,16 @@ iszero(
 ) {
 	// Check based on rounding error
 	return p < DECIMAL_ROUNDING_ERROR && p > - DECIMAL_ROUNDING_ERROR;
+}
+
+bool
+DecimalNumObject::supportsInterface( ObjectType::Value  typeValue ) const {
+	switch ( typeValue ) {
+	case NumericObject::object_type: return true;
+	case ObjectType::DecimalNum: return true;
+	default: break;
+	}
+	return false;
 }
 
 void
@@ -2104,7 +2124,10 @@ FFIServices::demandArgType( UInteger  index, ObjectType::Value  type ) {
 
 	ObjectType::Value  givenType = argsArray[index].raw()->getType();
 
-	if ( givenType == type )
+	//if ( givenType == type )
+	//	return true;
+
+	if ( argsArray[index].raw()->supportsInterface( type ) )
 		return true;
 
 	engine.print( LogMessage::create( LogLevel::error )
@@ -2126,11 +2149,13 @@ FFIServices::demandAllArgsType( ObjectType::Value  type, bool  imperative ) {
 
 	for (; index < numArgs; ++index) {
 		givenType = argsArray[index].raw()->getType();
-		if ( givenType != type ) {
+		//if ( givenType != type ) {
+
+		if ( ! argsArray[index].raw()->supportsInterface(type) ) {
 			engine.print( LogMessage::create( imperative? LogLevel::error : LogLevel::warning )
 				.FunctionName(who)
 				.Message( EngineMessage::WrongArgType )
-				.ArgIndex(index)
+				.ArgIndex(index+1)
 				.ArgCount(numArgs)
 				.GivenArgType(givenType)
 				.ExpectedArgType(type)
