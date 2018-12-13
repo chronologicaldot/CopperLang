@@ -56,31 +56,16 @@ struct SmallPI : public ForeignFunc {
 	virtual Result call( FFIServices& ffi );
 };
 
-class IntDeciSharedFuncs : public ForeignFunc {
-protected:
-	virtual void IntegerSubFunction( Integer current, FFIServices& ffi ) =0;
-	virtual void DecimalSubFunction( Decimal current, FFIServices& ffi ) =0;
-public:
-	virtual ~IntDeciSharedFuncs();
+struct PickMin : public ForeignFunc {
 	virtual Result call( FFIServices& ffi );
 };
 
-class Pick_min : public IntDeciSharedFuncs {
-protected:
-	virtual void IntegerSubFunction( Integer current, FFIServices& ffi );
-	virtual void DecimalSubFunction( Decimal current, FFIServices& ffi );
+struct PickMax : public ForeignFunc {
+	virtual Result call( FFIServices& ffi );
 };
 
-class Pick_max : public IntDeciSharedFuncs {
-protected:
-	virtual void IntegerSubFunction( Integer current, FFIServices& ffi );
-	virtual void DecimalSubFunction( Decimal current, FFIServices& ffi );
-};
-
-class Avg : public IntDeciSharedFuncs {
-protected:
-	virtual void IntegerSubFunction( Integer current, FFIServices& ffi );
-	virtual void DecimalSubFunction( Decimal current, FFIServices& ffi );
+struct Avg : public ForeignFunc {
+	virtual Result call( FFIServices& ffi );
 };
 
 // one decimal arg only

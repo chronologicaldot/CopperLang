@@ -43,8 +43,8 @@ addFunctionsToEngine(
 	addForeignFuncInstance( engine, "infinity", DecimalInfinity );
 
 	addNewForeignFunc( engine, "avg", new Avg() );
-	addNewForeignFunc( engine, "min", new Pick_min() );
-	addNewForeignFunc( engine, "max", new Pick_max() );
+	addNewForeignFunc( engine, "min", new PickMin() );
+	addNewForeignFunc( engine, "max", new PickMax() );
 
 	// Decimal return only
 	addNewForeignFunc( engine, "pow", new Power() );
@@ -205,92 +205,76 @@ SmallPI::call(
 	return FINISHED;
 }
 
-IntDeciSharedFuncs::~IntDeciSharedFuncs() {}
-
 ForeignFunc::Result
-IntDeciSharedFuncs::call(
-	FFIServices& ffi
-) {
-	if ( ! ffi.demandAllArgsType(ObjectType::Numeric) )
-		return NONFATAL;
+PickMin::call( FFIServices& ffi ) {
+	if ( ! ffi.demandAllArgsType( NumericObject::object_type ) )
+		return ForeignFunc::NONFATAL;
 
 	if ( ! ffi.demandMinArgCount(1) )
-		return NONFATAL;
+		return ForeignFunc::NONFATAL;
 
-	NumericObject&  arg = (NumericObject&)ffi.arg(0);
-	if ( arg.getSubType() == NumericObject::SubType::DecimalNum ) {
-		DecimalSubFunction( arg.getDecimalValue(), ffi );
+	NumericObject*  current = (NumericObject*)&(ffi.arg(0));
+	NumericObject*  next = REAL_NULL;
+	UInteger index = 1;
+	for (; index < ffi.getArgCount(); ++index) {
+		if ( current->isGreaterThan( (NumericObject&)ffi.arg(index) ) ) {
+			current = (NumericObject*)&(ffi.arg(index));
+		}
 	}
-	else {
-		IntegerSubFunction( arg.getIntegerValue(), ffi );
-	}
-	return FINISHED;
+
+	ffi.setNewResult( current->copy() );
+	return ForeignFunc::FINISHED;
 }
 
-void
-Pick_min::IntegerSubFunction( Integer current, FFIServices& ffi ) {
-	UInteger  index = 0;
-	Integer  next = 0;
+ForeignFunc::Result
+PickMax::call( FFIServices& ffi ) {
+	if ( ! ffi.demandAllArgsType( NumericObject::object_type ) )
+		return ForeignFunc::NONFATAL;
+
+	if ( ! ffi.demandMinArgCount(1) )
+		return ForeignFunc::NONFATAL;
+
+	NumericObject*  current = (NumericObject*)&(ffi.arg(0));
+	NumericObject*  next = REAL_NULL;
+	UInteger index = 1;
 	for (; index < ffi.getArgCount(); ++index) {
-		next = ((NumericObject&)ffi.arg(index)).getIntegerValue();
-		if ( next < current )
-			current = next;
+		if ( ((NumericObject&)ffi.arg(index)).isGreaterThan(*current) ) {
+			current = (NumericObject*)&(ffi.arg(index));
+		}
 	}
-	ffi.setNewResult( new IntegerObject(current) );
+
+	ffi.setNewResult( current->copy() );
+	return ForeignFunc::FINISHED;
 }
 
-void
-Pick_min::DecimalSubFunction( Decimal current, FFIServices& ffi ) {
-	UInteger  index = 0;
-	Decimal  next = 0;
-	for (; index < ffi.getArgCount(); ++index) {
-		next = ((NumericObject&)ffi.arg(index)).getDecimalValue();
-		if ( next < current )
-			current = next;
+ForeignFunc::Result
+Avg::call( FFIServices& ffi ) {
+	if ( ! ffi.demandAllArgsType( ObjectType::Numeric ) ) {
+		return ForeignFunc::NONFATAL;
 	}
-	ffi.setNewResult( new DecimalNumObject(current) );
-}
+	if ( ! ffi.demandMinArgCount(1) )
+		return ForeignFunc::NONFATAL;
 
-void
-Pick_max::IntegerSubFunction( Integer current, FFIServices& ffi ) {
-	UInteger  index = 0;
-	Integer  next = 0;
-	for (; index < ffi.getArgCount(); ++index) {
-		next = ((NumericObject&)ffi.arg(index)).getIntegerValue();
-		if ( next > current )
-			current = next;
+	if ( ffi.getArgCount() == 1 ) {
+		ffi.setNewResult( ffi.arg(0).copy() );
+		return ForeignFunc::FINISHED;
 	}
-	ffi.setNewResult( new IntegerObject(current) );
-}
 
-void
-Pick_max::DecimalSubFunction( Decimal current, FFIServices& ffi ) {
-	UInteger  index = 0;
-	Decimal  next = 0;
-	for (; index < ffi.getArgCount(); ++index) {
-		next = ((NumericObject&)ffi.arg(index)).getDecimalValue();
-		if ( next > current )
-			current = next;
+	UInteger  count = 1;
+	NumericObject*  totalObject = (NumericObject*)&(ffi.arg(0));
+	totalObject->ref();
+	NumericObject*  nextObject = REAL_NULL;
+	for (; count < ffi.getArgCount(); ++count) {
+		nextObject = totalObject->add( (NumericObject&)ffi.arg(count) );
+		totalObject->deref();
+		totalObject = nextObject;
 	}
-	ffi.setNewResult( new DecimalNumObject(current) );
-}
+	NumericObject*  countObject = new IntegerObject(count);
+	nextObject = totalObject->divide( *countObject );
+	ffi.setNewResult( nextObject );
+	countObject->deref();
 
-void
-Avg::IntegerSubFunction( Integer current, FFIServices& ffi ) {
-	UInteger  index = 0;
-	for (; index < ffi.getArgCount(); ++index) {
-		current += ((NumericObject&)ffi.arg(index)).getIntegerValue();
-	}
-	ffi.setNewResult( new IntegerObject(current) );
-}
-
-void
-Avg::DecimalSubFunction( Decimal current, FFIServices& ffi ) {
-	UInteger  index = 0;
-	for (; index < ffi.getArgCount(); ++index) {
-		current += ((NumericObject&)ffi.arg(index)).getDecimalValue();
-	}
-	ffi.setNewResult( new DecimalNumObject(current) );
+	return ForeignFunc::FINISHED;
 }
 
 ForeignFunc::Result
