@@ -80,7 +80,7 @@ IntegerCast::call(
 
 	Integer  value = 0;
 	if ( ffi.getArgCount() == 1 )
-		value = getIntegerValue(ffi.arg(1));
+		value = getIntegerValue(ffi.arg(0));
 
 	ffi.setNewResult( new IntegerObject( value ) );
 	return ForeignFunc::FINISHED;

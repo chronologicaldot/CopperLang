@@ -1,11 +1,12 @@
 ===========
-2018/12/12
+2018/12/12-13
 
 cu_basicmath
 - Replaced Pick_min with PickMin, which works for all descendents of NumericObject.
 - Replaced Pick_max with PickMax, which works for all descendents of NumericObject.
 - Replaced Avg inheriting IntDeciSharedFuncs with Avg inheriting ForeignFunc and reimplement to work correctly for all descendents of NumericObject. (Original implementation also forgot to divide final value by the count.)
 - Removed IntDeciSharedFuncs.
+- Fixed bug in IntegerCast::call() that used the wrong index for accessing the argument.
 
 
 ===========
