@@ -1,5 +1,5 @@
 ===========
-2018/12/12-13
+2018/12/12-17
 
 cu_basicmath
 - Replaced Pick_min with PickMin, which works for all descendents of NumericObject.
@@ -7,6 +7,9 @@ cu_basicmath
 - Replaced Avg inheriting IntDeciSharedFuncs with Avg inheriting ForeignFunc and reimplement to work correctly for all descendents of NumericObject. (Original implementation also forgot to divide final value by the count.)
 - Removed IntDeciSharedFuncs.
 - Fixed bug in IntegerCast::call() that used the wrong index for accessing the argument.
+
+cu_stringmap.cu
+- Fixed bug in Map::call() that failed to return ExitCalled when EngineResult::Done was encountered.
 
 
 ===========

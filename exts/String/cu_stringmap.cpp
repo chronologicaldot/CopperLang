@@ -41,7 +41,7 @@ Map::call( FFIServices&  ffi ) {
 	bool keep;
 	uint  index = 0;
 
-	String  typestr; // for debug
+	//String  typestr; // for debug
 
 	for (; index < srcString.size(); ++index) {
 		indexObject.setValue(index);
@@ -55,8 +55,8 @@ Map::call( FFIServices&  ffi ) {
 			else {
 				keep = defaultCharKeepPolicy;
 				ffi.printWarning("Given map function did not return boolean value.");
-				result->writeToString(typestr);
-				ffi.printWarning( typestr.c_str() );
+				//result->writeToString(typestr);
+				//ffi.printWarning( typestr.c_str() );
 			}
 			break;
 
@@ -65,7 +65,10 @@ Map::call( FFIServices&  ffi ) {
 			ffi.printError("Error during call to given map function.");
 			return NONFATAL;
 
-		default: break;
+		default:
+			// Engine is done
+			clearMapFunction();
+			return EXIT;
 		}
 
 		if ( keep )
