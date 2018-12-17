@@ -422,14 +422,15 @@ Function::getPersistentScope() {
 }
 
 void
-Function::set( Function& other ) {
+Function::set( Function& other, bool copyScope ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Function::set [%p]\n", (void*)this);
 #endif
 	constantReturn = other.constantReturn;
 	body = other.body;
 	params = other.params; // If params is changed to a pointer, this has to be changed to a copy
-	*persistentScope = *(other.persistentScope);
+	if ( copyScope )
+		*persistentScope = *(other.persistentScope);
 	Object* rs;
 	if ( other.result.obtain(rs) ) {
 		result.setWithoutRef( rs->copy() );
@@ -561,6 +562,13 @@ void FunctionObject::setFrom( FunctionObject& pOther ) {
 	} else {
 		throw SettingNullFunctionInContainerException();
 	}
+}
+
+void FunctionObject::createFromBody( Function&  source ) {
+	Function*  f = new Function();
+	f->set(source, false);
+	funcBox.set( f );
+	f->deref();
 }
 
 Object* FunctionObject::copy() {
@@ -1271,7 +1279,7 @@ Scope::Scope( UInteger  pTableSize )
 	: robinHoodTable(REAL_NULL)
 {
 #ifdef COPPER_SCOPE_LEVEL_MESSAGES
-	std::printf("[DEBUG: Scope constructor 1 (Uinteger) [%p]\n", (void*)this);
+	std::printf("[DEBUG: Scope constructor 1 (UInteger) [%p]\n", (void*)this);
 #endif
 	robinHoodTable = new RobinHoodHash<RefVariableStorage>(pTableSize);
 }
@@ -2122,13 +2130,10 @@ FFIServices::demandArgType( UInteger  index, ObjectType::Value  type ) {
 		return false;
 	}
 
-	ObjectType::Value  givenType = argsArray[index].raw()->getType();
-
-	//if ( givenType == type )
-	//	return true;
-
 	if ( argsArray[index].raw()->supportsInterface( type ) )
 		return true;
+
+	ObjectType::Value  givenType = argsArray[index].raw()->getType();
 
 	engine.print( LogMessage::create( LogLevel::error )
 		.FunctionName(who)
@@ -2149,7 +2154,6 @@ FFIServices::demandAllArgsType( ObjectType::Value  type, bool  imperative ) {
 
 	for (; index < numArgs; ++index) {
 		givenType = argsArray[index].raw()->getType();
-		//if ( givenType != type ) {
 
 		if ( ! argsArray[index].raw()->supportsInterface(type) ) {
 			engine.print( LogMessage::create( imperative? LogLevel::error : LogLevel::warning )
@@ -3037,6 +3041,7 @@ Engine::setupSystemFunctions() {
 
 	builtinFunctions.insert(String("copy_of"), SystemFunction::_copy);
 	builtinFunctions.insert(String("xwsv"), SystemFunction::_execute_with_alt_super);
+	builtinFunctions.insert(String("share_body"), SystemFunction::_share_body);
 
 	builtinFunctions.insert(String("list"), SystemFunction::_make_list);
 	builtinFunctions.insert(String("length"), SystemFunction::_list_size);
@@ -5594,6 +5599,9 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_execute_with_alt_super:
 		return process_sys_execute_with_alt_super(task, opStrandStackIter);
 
+	case SystemFunction::_share_body:
+		return process_sys_share_body(task);
+
 	case SystemFunction::_make_list:
 		return process_sys_make_list(task);
 
@@ -6866,6 +6874,82 @@ Engine::process_sys_execute_with_alt_super(
 	opStrandStackIter.next();
 
 	return FuncExecReturn::Reset;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_share_body(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_share_body");
+#endif
+	ArgsIter argsIter = task.args.start();
+
+	if ( task.args.size() < 2 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_share_body, task.args.size(), 2 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	// Obtain the first argument, checking to make sure it is a FunctionObject.
+	if ( (*argsIter)->getType() != FunctionObject::object_type ) {
+		printSystemFunctionWrongArg( SystemFunction::_share_body, 1, task.args.size(),
+			(*argsIter)->getType(), FunctionObject::object_type );
+		return FuncExecReturn::ErrorOnRun;
+	}
+		// Object that provides the body
+	FunctionObject*  sourceFunctionObject = (FunctionObject*)(*argsIter);
+	Function*  sourceFunction = REAL_NULL;
+	FunctionObject*  secondFunctionObject = REAL_NULL;
+	Function*  secondFunction = REAL_NULL;
+	UInteger  index = 2;
+
+	if ( sourceFunctionObject->getFunction(sourceFunction) ) {
+
+		while ( argsIter.next() ) { // At least 2 arguments are guaranteed based on the size check
+			if ( (*argsIter)->getType() == FunctionObject::object_type )
+			{
+				secondFunctionObject = (FunctionObject*) *argsIter;
+				if ( secondFunctionObject->getFunction(secondFunction) ) {
+					shareBody(*sourceFunction, *secondFunction);
+				} else {
+					// Could not obtain a second function, so create a new one
+					secondFunctionObject->createFromBody( *sourceFunction );
+				}
+			} else {
+				printSystemFunctionWrongArg( SystemFunction::_share_body, index, task.args.size(),
+					(*argsIter)->getType(), FunctionObject::object_type, false );
+			}
+			++index;
+		}		
+	}
+	else {
+		print( LogMessage::create(LogLevel::warning)
+			.Message( EngineMessage::NoFunctionInContainer )
+			.SystemFunctionId( SystemFunction::_share_body )
+			.ArgIndex(1)
+			.ArgCount( task.args.size() )
+		);
+	}
+	return FuncExecReturn::Ran;
+}
+
+void
+Engine::shareBody(
+	Function&  source,
+	Function&  benefactor
+) {
+	if ( source.constantReturn )
+	{
+		benefactor.result = source.result;
+		benefactor.params.clear();
+		benefactor.constantReturn = true;
+		benefactor.body.set( REAL_NULL );
+	} else {
+		benefactor.result.set( REAL_NULL );
+		benefactor.params = source.params;
+		benefactor.constantReturn = false;
+		benefactor.body = source.body;
+	}
 }
 
 FuncExecReturn::Value

@@ -91,12 +91,12 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.62
+#define COPPER_INTERPRETER_VERSION 0.621
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 3.1
+#define COPPER_LANG_VERSION 3.2
 
 // ******* Language modifications *******
 
@@ -710,6 +710,7 @@ struct SystemFunction {
 	_assert,
 	_copy,
 	_execute_with_alt_super, // "xwsv"
+	_share_body,
 
 	_make_list,		// "list"
 	_list_size,		// "length"
@@ -1613,7 +1614,7 @@ public:
 	~Function();
 	Function& operator=(const Function& pOther);
 	Scope& getPersistentScope();
-	void set( Function& other );
+	void set( Function& other, bool copyScope=true );
 	void addParam( const String pName );
 
 #ifdef COPPER_USE_DEBUG_NAMES
@@ -1688,6 +1689,9 @@ public:
 
 	// Used for assignment, which only requires copying
 	void setFrom( FunctionObject& pOther );
+
+	// Createa a new function from the body of the given one (also copies constant return)
+	void createFromBody( Function& );
 
 	// FunctionObject* copy()
 	virtual Object* copy();
@@ -3160,6 +3164,8 @@ public:
 	//! Demand all args are of the given type
 	/*
 		Prints an error if at least one argument doesn't match the given type.
+		\return - false only if there is an argument that does not match the given type.
+			Defaults to "true" even for no arguments.
 	*/
 	bool demandAllArgsType( ObjectType::Value  type, bool  imperative = true );
 
@@ -3775,6 +3781,9 @@ protected:
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_copy(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_execute_with_alt_super( FuncFoundTask& task, OpStrandStackIter&	opStrandStackIter );
+	FuncExecReturn::Value   process_sys_share_body(		FuncFoundTask& task );
+
+	void   shareBody( Function&  source, Function&  benefactor );
 
 	// List functions
 	FuncExecReturn::Value	process_sys_make_list(		FuncFoundTask& task );

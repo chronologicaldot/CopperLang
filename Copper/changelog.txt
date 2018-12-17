@@ -1,5 +1,18 @@
 ===================
-2018/12/12
+2018/12/17
+v 6-0.621
+
+- Changed language version to 3.2.
+- Added system function for sharing function object bodies, "share_body". Related methods:
+-- FunctionObject::createFromBody()
+-- Engine::process_sys_share_body( FuncFoundTask& )
+-- Engine::shareBody( Function&, Function& )
+- Changed Function::set(Function&) to Function::set(Function&, bool) to allowing disabling scope copying.
+DEV NOTE: Even for "share_body", Function::result has been copied because otherwise it could be indirectly changed via for example increment methods.
+
+
+===================
+2018/12/12, 2018/12/16
 v 6-0.62
 
 - Changed ObjectType::Decimal to ObjectType::DecimalNum.
@@ -7,6 +20,7 @@ v 6-0.62
 - Removed old commented out code regarding ObjectType::Value values.
 - Changed FFIServices::demandArgType() and demandAllArgsType() to use Object::supportsInterface().
 - Fixed error message in FFIServices::demandAllArgsType() to use index+1.
+- Cleaned up code.
 
 
 ===================
