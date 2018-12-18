@@ -9,6 +9,10 @@ v 6-0.621
 -- Engine::shareBody( Function&, Function& )
 - Changed Function::set(Function&) to Function::set(Function&, bool) to allowing disabling scope copying.
 DEV NOTE: Even for "share_body", Function::result has been copied because otherwise it could be indirectly changed via for example increment methods.
+- Fixed Function::operator=() to return its own address. (Wasn't used but users might want it.)
+- Fixed RefVariableStorage::operator=() to return its own address. (Wasn't used.)
+- Fixed isIntegerObject() by giving it a return (of false) when the if-condition was not fulfilled.
+- Fixed isDecimalNumObject() by giving it a return (of false) when the if-condition was not fulfilled.
 
 
 ===================

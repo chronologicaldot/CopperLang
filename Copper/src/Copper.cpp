@@ -411,6 +411,7 @@ Function& Function::operator=(const Function& pOther) {
 	params = pOther.params;
 	result = pOther.result;
 	*persistentScope = *(pOther.persistentScope);
+	return *this;
 }
 
 Scope&
@@ -1237,6 +1238,7 @@ RefVariableStorage&  RefVariableStorage::operator= (RefVariableStorage& pOther) 
 #endif
 	variable = pOther.variable;
 	variable->ref();
+	return *this;
 }
 
 Variable&

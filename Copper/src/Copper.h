@@ -3281,6 +3281,7 @@ isIntegerObject(
 	if ( pObject.getType() == ObjectType::Numeric ) {
 		return ((NumericObject&)pObject).getSubType() == NumericObject::SubType::Integer;
 	}
+	return false;
 }
 
 inline bool
@@ -3290,6 +3291,7 @@ isDecimalNumObject(
 	if ( pObject.getType() == ObjectType::Numeric ) {
 		return ((NumericObject&)pObject).getSubType() == NumericObject::SubType::DecimalNum;
 	}
+	return false;
 }
 
 //--------------------------------
