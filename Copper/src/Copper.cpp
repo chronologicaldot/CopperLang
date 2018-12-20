@@ -2169,7 +2169,7 @@ FFIServices::demandAllArgsType( ObjectType::Value  type, bool  imperative ) {
 			return false;
 		}
 	}
-	return true;
+	return (numArgs == 0 ? !imperative : true);
 }
 
 Object&
@@ -2239,8 +2239,7 @@ void
 FFIServices::setNewResult(
 	Object* obj
 ) {
-	engine.lastObject.set(obj);
-	obj->deref();
+	engine.lastObject.setWithoutRef(obj);
 }
 
 
@@ -2558,11 +2557,15 @@ Engine::lexAndParse(
 		}
 	}
 
+	ParserContext& context = getGlobalParserContext();
+
 	if ( ! bufferedTokens.has() ) {
+		if ( ! context.taskStack.has() ) {
+			return ParseResult::Done;
+		}
 		return ParseResult::More;
 	}
 
-	ParserContext& context = getGlobalParserContext();
 	context.setTokenSource( bufferedTokens );
 
 	switch( parse( context, srcDone ) ) {
@@ -3098,8 +3101,8 @@ Engine::parse(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::parse");
 #endif
-	// IMPORTANT NOTE: You cannot short-circuit this function by merely checking for if the context
-	// is finished. There may be unfinished tasks that prevent valid processing.
+	// IMPORTANT NOTE: Short-circuting this function is done in lexAndParse by checking for
+	// BOTH the bufferedTokens empty (context finished) AND unfinished tasks remaining.
 
 	ParseTaskIter parseIter = context.taskStack.start();
 	ParseTask::Result::Value result;
@@ -6926,8 +6929,8 @@ Engine::process_sys_share_body(
 	}
 	else {
 		print( LogMessage::create(LogLevel::warning)
-			.Message( EngineMessage::NoFunctionInContainer )
 			.SystemFunctionId( SystemFunction::_share_body )
+			.Message( EngineMessage::NoFunctionInContainer )
 			.ArgIndex(1)
 			.ArgCount( task.args.size() )
 		);

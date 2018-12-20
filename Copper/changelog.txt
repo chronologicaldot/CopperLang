@@ -1,5 +1,5 @@
 ===================
-2018/12/17
+2018/12/17-19
 v 6-0.621
 
 - Changed language version to 3.2.
@@ -13,6 +13,10 @@ DEV NOTE: Even for "share_body", Function::result has been copied because otherw
 - Fixed RefVariableStorage::operator=() to return its own address. (Wasn't used.)
 - Fixed isIntegerObject() by giving it a return (of false) when the if-condition was not fulfilled.
 - Fixed isDecimalNumObject() by giving it a return (of false) when the if-condition was not fulfilled.
+- Fixed bug in Engine::run/lexAndParse/parse stage (in lexAndParse) to correctly handle streams that unexpectedly but correctly end.
+- Changed FFIServices::setNewResult() to use setWithoutRef() instead of trying to deference without checking argument existence.
+- Removed outdated comment above class Engine regarding usage of (no-longer-existent) Engine::process().
+- Changed FFIServices::demandAllArgsType() to return false if "imperative" parameter is set to "true".
 
 
 ===================

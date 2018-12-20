@@ -3164,8 +3164,8 @@ public:
 	//! Demand all args are of the given type
 	/*
 		Prints an error if at least one argument doesn't match the given type.
-		\return - false only if there is an argument that does not match the given type.
-			Defaults to "true" even for no arguments.
+		\return - fales if there is an argument that does not match the given type.
+			Defaults to "true" even for no arguments unless imperative.
 	*/
 	bool demandAllArgsType( ObjectType::Value  type, bool  imperative = true );
 
@@ -3306,12 +3306,7 @@ struct EngineEndProcCallback {
 class NullOpcodeStrandException {};
 #endif
 
-/*
-Processing begins with run(), which takes a user string and tokenizes it.
-It then sends it to process(), where the token causes changes in the state machine.
-run() is used to filter out bad tokens, so passing any bad tokens to process() could be fatal.
-You can use process() directly if you know what you are doing.
-*/
+//*************** MAIN INTERPRETER CLASS **************
 
 class Engine {
 	friend FFIServices; // Not needed if you don't require the FFI to directly set the lastObject
