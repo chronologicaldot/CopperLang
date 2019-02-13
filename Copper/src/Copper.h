@@ -221,15 +221,11 @@ struct OSInfo {
 
 	// Engine Messages
 /*
-Note: Those marked with ERROR indicate problems that cause the engine to halt running.
+Those marked with ERROR indicate problems that cause the engine to halt running or leave it in
+ambiguous state.
 Those marked with WARNING are problems but merely produce messages.
 The engine attempts to compensate for the issues that have arisen, but this may result in
 unwanted activity, so the user is informed.
-*/
-/*
-It would probably be better if I reduced these to simple numbers.
-That's annoying, but at least I can see what the errors are numerically.
-At the same rate, it would be annoying when trying to insert new errors and not break code.
 */
 struct EngineMessage {
 	enum Value {
@@ -378,7 +374,7 @@ struct EngineMessage {
 	// Attempting to treat a built-in function like a variable.
 	SystemFuncInvalidAccess,
 
-	// Warning
+	// WARNING
 	// Attempting to treat a foreign function like a variable.
 	ForeignFuncInvalidAccess,
 
@@ -443,7 +439,7 @@ struct EngineMessage {
 	// Unused but preserved in case it is desired later.
 	NonexistentVariablePassedToPtrHandler,
 
-	// Warning
+	// WARNING
 	// Invalid name passed to "own", "is_ptr", or "is_owner".
 	NonVariablePassedToPtrHandler,
 
@@ -553,7 +549,7 @@ struct ExecutionResult {
 
 /*
 This MUST be a buffered stream - that is, one possessing another byte.
-atEOS() is to return true if another byte is in the buffer or guaranteed to be (such as from stdin).
+atEOS() is to return false if another byte is in the buffer or guaranteed to be (such as from stdin).
 */
 struct ByteStream {
 	virtual char getNextByte()=0;
