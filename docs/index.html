@@ -682,6 +682,39 @@ Index ranges can be any value that maps to the list. See <code>item_at()</code> 
 <p>Returns <code>true</code> if all of the given arguments are matching strings.</p>
 <h3 id='concat'>concat( ... )</h3>
 <p>Returns a string resulting from the concetenation of the given arguments. The <code>Cu::Object::writeToString()</code> method is employed for obtaining a string value from every argument.</p>
+<h3 id='equal-number'>equal( <em>number</em> ... )</h3>
+<p>Returns true if all of the given numbers are equal to the first argument.</p>
+<h3 id='gt-number'>gt( <em>number</em> ... )</h3>
+<p>Returns true if all of the given numbers are greater than the first argument.</p>
+<h3 id='gte-number'>gte( <em>number</em> ... )</h3>
+<p>Returns true if all of the given numbers are greater than or equal to the first argument.</p>
+<h3 id='lt-number'>lt( <em>number</em> ... )</h3>
+<p>Returns true if all of the given numbers are less than the first argument.</p>
+<h3 id='lte-number'>lte( <em>number</em> ... )</h3>
+<p>Returns true if all of the given numbers are less than or equal to the first argument.</p>
+<h3 id='abs-number'>abs( <em>number</em> )</h3>
+<p>Returns the absolute value of the given argument.</p>
+<h3 id='number-add-number'>+( <em>number</em> ... ) , add( <em>number</em> ... )</h3>
+<p>Returns the sum of the given numbers.
+The name of this function depends on if the extended nameset flag is enabled during compilation.</p>
+<h3 id='number-sbtr-number'>-( <em>number</em> ... ) , sbtr( <em>number</em> ... )</h3>
+<p>Returns the result of subtracting from the first argument all of the remaining given numbers.
+The name of this function depends on if the extended nameset flag is enabled during compilation.</p>
+<h3 id='number-mult-number'>*( <em>number</em> ... ) , mult( <em>number</em> ... )</h3>
+<p>Returns the product of all of the given numbers.
+The name of this function depends on if the extended nameset flag is enabled during compilation.</p>
+<h3 id='number-divd-number'>/( <em>number</em> ... ) , divd( <em>number</em> ... )</h3>
+<p>Returns the result of dividing the first argument by all of the remaining given numbers.
+The name of this function depends on if the extended nameset flag is enabled during compilation.</p>
+<h3 id='number-mod-number'>%( <em>number</em> ... ) , mod( <em>number</em> ... )</h3>
+<p>Returns the result of the modulus of the first argument by all of the remaining given numbers.
+The name of this function depends on if the extended nameset flag is enabled during compilation.</p>
+<h3 id='number-step_size-incr-number-step_size'>++( <em>number</em> [, <em>step_size</em>] ) , incr( <em>number</em> [, <em>step_size</em>] )</h3>
+<p>Increments the given number by 1 or by the <em>step_size</em> if that is given.
+The name of this function depends on if the extended nameset flag is enabled during compilation.</p>
+<h3 id='number-step_size-decr-number-step_size'>--( <em>number</em> [, <em>step_size</em>] ) , decr( <em>number</em> [, <em>step_size</em>] )</h3>
+<p>Decrements the given number by 1 or by the <em>step_size</em> if that is given.
+The name of this function depends on if the extended nameset flag is enabled during compilation.</p>
 <h2 id='debugging-copper'>Debugging Copper</h2>
 <p>The engine comes built-in with a number of error messages for debugging Copper code. When stack-trace printing is enabled, both the current stack and the queued operations (&quot;Task Stack&quot;) are printed. Unfortunately, because object-functions are nameless, it can be difficult to figure out exactly what caused the problem, so you will need to examine both the stack trace and the printing of the queue operations.</p>
 
@@ -903,16 +936,16 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 
 <p><br id="ffi"></p>
 <h2 id='foreign-functions'>Foreign Functions</h2>
-<p>Adding foreign functions to the virtual machine requires creating or using some class that descends from <code>class Cu::ForeignFunc</code> and implements the method <code>virtual bool call( FFIServices&amp; )</code>. The method <code>call()</code> must return true if there is no error; otherwise, false. <code>FFIServices</code> is an interface providing useful methods for interacting with the engine. These methods can be found in the <a href="#api-ffi">API</a>.</p>
+<p>Adding foreign functions to the virtual machine requires creating or using some class that descends from <code>class Cu::ForeignFunc</code> and implements the method <code>virtual ForeignFunc::Result call( FFIServices&amp; )</code>. The method <code>call()</code> must return <code>ForeignFunc::FINISHED</code> if there is no error. For errors, it can return <code>ForeignFunc::NONFATAL</code> or <code>ForeignFunc::FATAL</code>. Finally, the foreign function can end the virtual machine processing by returning <code>ForeignFunc::EXIT</code>. <code>FFIServices</code> is an interface providing useful methods for interacting with the engine. These methods can be found in the <a href="#api-ffi">API</a>.</p>
 
 <p>Once given to the engine, the ForeignFunc classes will have their reference-counts incremented until the destruction of the engine.</p>
 
 <p>A number of helper classes have been provided for both adding foreign functions (both standard functions and class methods) without the need to create the wrapper yourself. These are given in the following table.</p>
 <pre class="highlight cpp tab-cpp"><code><span class="k">class</span> <span class="nc">MyFF</span> <span class="o">:</span> <span class="k">public</span> <span class="n">Cu</span><span class="o">::</span><span class="n">ForeignFunc</span> <span class="p">{</span>
 <span class="k">public</span><span class="o">:</span>
-    <span class="k">virtual</span> <span class="kt">bool</span> <span class="n">call</span><span class="p">(</span> <span class="n">FFIServices</span><span class="o">&amp;</span> <span class="n">ffi</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="k">virtual</span> <span class="n">Result</span> <span class="n">call</span><span class="p">(</span> <span class="n">FFIServices</span><span class="o">&amp;</span> <span class="n">ffi</span> <span class="p">)</span> <span class="p">{</span>
         <span class="n">ffi</span><span class="p">.</span><span class="n">setNewResult</span><span class="p">(</span> <span class="k">new</span> <span class="n">BoolObject</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">);</span>
-        <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="k">return</span> <span class="n">FINISHED</span><span class="p">;</span>
     <span class="p">}</span>
 <span class="p">};</span>
 
@@ -941,8 +974,8 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 <td>Adds a ForeignFunc descendent to the engine and dereferences it. It assumes you are passing it a new object allocated on the heap.</td>
 </tr>
 <tr>
-<td>addForeignFuncInstance( Engine&amp;, pName: const String&amp;, bool (*pFunction)( FFIServices&amp; ) ): void</td>
-<td>Adds a function with the <code>call(FFIServices&amp;):bool</code> prototype to the engine as a foreign function.</td>
+<td>addForeignFuncInstance( Engine&amp;, pName: const String&amp;, ForeignFunc::Result (*pFunction)( FFIServices&amp; ) ): void</td>
+<td>Adds a function with the <code>call(FFIServices&amp;):ForeignFunc::Result</code> prototype to the engine as a foreign function.</td>
 </tr>
 <tr>
 <td>addForeignMethodInstance( pEngine: Engine&amp;, pName: const String&amp;, pBase: BaseClass*, bool (BaseClass::*pMethod)( FFIServices&amp; ) ): void</td>
@@ -966,7 +999,18 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 
 <p>Optionally, functions may implement <code>virtual void writeToString(String&amp; out)</code> to set the data to be returned when the object appears in string-requiring contexts.</p>
 
-<p>Foreign objects intended to work as numbers should inherit the NumericObject class and implement its virtual methods. Objects inheriting this type should extend the <code>SubType::Value</code> enum and return it from <code>getSubType()</code> instead of overriding the <code>ObjectType::Value type</code>.</p>
+<p>Foreign objects intended to work as numbers should inherit the NumericObject class and implement its virtual methods. Objects inheriting this type must implement <code>virtual bool supportsInterface( ObjectType::Value )</code> and return <code>true</code> for <code>ObjectType::Numeric</code>.</p>
+<h3 id='complex-type-support'>Complex Type Support</h3>
+<p>Sometimes objects inherit multiple interfaces and all are Copper Objects. Rather that invent new types that encompass and indicate certain mixed interfaces, Copper provides two virtual methods to enable multiple interface support. Either method can be optionally overridden to suite the need.</p>
+
+<ul>
+<li>bool isSameData( Object* )</li>
+<li>bool supportsInterface( ObjectType::Value )</li>
+</ul>
+
+<p><code>isSameData()</code> returns true when the data for both objects is the same. For example, it may return true when two numeric types use the same representation and have the same value. It could also be used for checking if pointer addresses to data are the same. The primary usage of this method is for equality but is not the same as numeric equality.</p>
+
+<p><code>supportsInterface()</code> returns true if the object can be safely casted to the class type represented by the given <code>ObjectType::Value</code> value.</p>
 
 <p><br id="provided-extensions"></p>
 <h2 id='provided-extensions'>Provided Extensions</h2>
@@ -994,6 +1038,16 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 <td>Printer.h</td>
 <td>Class for printing the writeToString values of Cu::Object descendents to string.</td>
 </tr>
+<tr>
+<td>FileInStream</td>
+<td>FileInStream.h</td>
+<td>Class for opening a file from a given string and feeding it to Engine::run() as a ByteStream.</td>
+</tr>
+<tr>
+<td>StringInStream</td>
+<td>StringInStream.h</td>
+<td>Class for feeding a given string to Engine::run() as a ByteStream.</td>
+</tr>
 </tbody></table>
 
 <aside class="notice">
@@ -1003,8 +1057,10 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 <p>Some extensions have an <code>addFunctionsToEngine(Cu::Engine&amp;)</code>. This function will add all of the foreign functions associated with the extension to the given Cu::Engine instance using default names. Currently, the extensions with this feature are:</p>
 
 <ul>
-<li>Math/basicmath</li>
-<li>Time/systime</li>
+<li>System/cu_info</li>
+<li>Math/cu_basicmath</li>
+<li>Time/cu_systime</li>
+<li>String/cu_stringmap</li>
 </ul>
 
 <p>The default names of functions provided by these extensions are given in the following table.</p>
@@ -1016,12 +1072,20 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 </tr>
 </thead><tbody>
 <tr>
-<td>basicmath</td>
+<td>cu_info</td>
+<td>sys_lang_version sys_vm_version sys_vm_branch</td>
+</tr>
+<tr>
+<td>cu_basicmath</td>
 <td>pow floor ceil sin cos tan</td>
 </tr>
 <tr>
-<td>systime</td>
+<td>cu_systime</td>
 <td>get_time get_seconds get_milliseconds get_nanoseconds</td>
+</tr>
+<tr>
+<td>cu_stringmap</td>
+<td>string_map</td>
 </tr>
 </tbody></table>
 <pre class="highlight copper tab-copper"><code><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_time</span><span class="o">:</span><span class="w">
@@ -1355,6 +1419,10 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 <td>Deconstructor</td>
 </tr>
 <tr>
+<td>steal( String&amp; ): void</td>
+<td>Steals the data pointer from the given string unless they point to the same array.</td>
+</tr>
+<tr>
 <td>operator= ( const String&amp; ): String&amp;</td>
 <td>Assignment</td>
 </tr>
@@ -1657,6 +1725,72 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 </ul>
 
 <p><br id="api-ffi"></p>
+<h3 id='cu-logmessage'>Cu::LogMessage</h3>
+<p>Struct for passing logging information to the logger. All engine messages are passed as LogMessage instances via <code>Logger::print( LogMessage&amp; )</code>. The set fields depend on the <code>messadeId</code>.</p>
+
+<table><thead>
+<tr>
+<th>Member</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>level</td>
+<td>LogLevel::Value</td>
+<td>Category of the message ( <code>info</code>, <code>warning</code>, <code>error</code>, or <code>debug</code> ).</td>
+</tr>
+<tr>
+<td>messageId</td>
+<td>EngineMessage::Value</td>
+<td>Internal message ID associated with certain strings. Use <code>getStringFromEngineMessage()</code> in EngMsgToStr.h to get the text.</td>
+</tr>
+<tr>
+<td>functionName</td>
+<td>String</td>
+<td>Name of the foreign function in which the message originated.</td>
+</tr>
+<tr>
+<td>systemFunctionId</td>
+<td>SystemFunction::Value</td>
+<td>If the message originated from a built-in function, this will be set.</td>
+</tr>
+<tr>
+<td>argIndex</td>
+<td>UInteger</td>
+<td>Index of the argument causing the message if applicable.</td>
+</tr>
+<tr>
+<td>argCount</td>
+<td>UInteger</td>
+<td>Number of arguments given to the function.</td>
+</tr>
+<tr>
+<td>givenArgType</td>
+<td>ObjectType::Value</td>
+<td>The type of the object given as the argument.</td>
+</tr>
+<tr>
+<td>expectedArgType</td>
+<td>ObjectType::Value</td>
+<td>The expected type of object the argument was supposed to be.</td>
+</tr>
+<tr>
+<td>givenArgTypeName</td>
+<td>String</td>
+<td>The name of the type of the object given as the argument.</td>
+</tr>
+<tr>
+<td>expectedArgTypeName</td>
+<td>String</td>
+<td>The name of the expected type of the object the argument was supposed to be.</td>
+</tr>
+<tr>
+<td>customCode</td>
+<td>UInteger</td>
+<td>Use this for your own purposes. If using this, set <code>messageId</code> to <code>EngineMessage::CustomMessage</code>.</td>
+</tr>
+</tbody></table>
 <h3 id='cu-foreignfunc'>Cu::ForeignFunc</h3>
 <p>Ancestor class to be inherited by all classes that need to interact with the virtual machine.</p>
 
@@ -1667,8 +1801,8 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 </tr>
 </thead><tbody>
 <tr>
-<td>virtual call( FFIServices&amp; ): bool</td>
-<td>Meant to be implemented. Called by the Engine. Returns false only in cases of errors.</td>
+<td>virtual call( FFIServices&amp; ): ForeignFunc::Result</td>
+<td>Meant to be implemented. Called by the Engine. Returns ForeignFunc::FINISHED when complete.</td>
 </tr>
 </tbody></table>
 <h3 id='cu-ffiservices'>Cu::FFIServices</h3>
@@ -1703,6 +1837,10 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 <tr>
 <td>demandMinArgCount( UInteger, bool ): bool</td>
 <td>Returns true if the number of given arguments is at least equal to the given value.</td>
+</tr>
+<tr>
+<td>demandArgType( UInteger, ObjectType::Value ): bool</td>
+<td>Returns true if the argument at the given index was of the given type.</td>
 </tr>
 <tr>
 <td>demandAllArgsType( ObjectType::Value, bool ): bool</td>
@@ -1872,7 +2010,7 @@ Do not try to create your own opcode strands to feed to the engine. Do not try t
 <h1 id='faq'>FAQ</h1><h2 id='what-is-the-parse-tree'>What is the parse tree?</h2>
 <p>The parse tree is available in <a href="https://copperlang.wordpress.com/2016/11/18/printsyntax/">an article on the official blog</a>.</p>
 <h2 id='what-numeric-operations-are-available'>What numeric operations are available?</h2>
-<p>Only basic operations are available: addition, subtraction, multiplication, division, increment/increase, and decrement/decrease. The NumericObject parent class allows you to implement these operations for descendent classes so you can create wrappers for other math classes such as GNU MP.</p>
+<p>Only basic operations are available: absolute value, addition, subtraction, multiplication, division, increment/increase, decrement/decrease, and the comparisons of equality, less than, less than or equal, greater than, and greater than or equal. The NumericObject parent class allows you to implement these operations for descendent classes so you can create wrappers for other math classes such as GNU MP.</p>
 <h2 id='why-is-there-no-privacy-model'>Why is there no privacy model?</h2>
 <p>Because it would be absurd.</p>
 
