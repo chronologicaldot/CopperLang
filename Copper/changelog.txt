@@ -1,4 +1,16 @@
 ===================
+2019/3/11
+v 6-0.622
+
+- Removed isIntegerObject() and isDecimalNumObject().
+- Changed Engine::process_sys_are_integer() to use IntegerObject::supportsInterface().
+- Changed Engine::process_sys_are_decimal() to use DecimalNumObject::supportsInterface().
+- Removed SubType and getSubType() from NumericObjectType, IntegerObject, DecimalNumObject.
+
+Printer.h
+- Changed Printer::call() to use supportsInterface() for numbers.
+
+===================
 2018/12/17-19
 v 6-0.621
 

@@ -15,9 +15,15 @@ addFunctionsToEngine(
 	addForeignFuncInstance( engine, "get_nanoseconds", GetNanoseconds );
 }
 
+bool
+ClockTime::supportsInterface( ObjectType::Value  typeValue ) const {
+	return typeValue == ObjectType::Numeric
+		|| typeValue == ClockTime::StaticClockTimeType();
+}
+
 void
 ClockTime::setValue( const NumericObject&  other ) {
-	if ( other.getSubType() == ClockTime::StaticClockTimeType() ) {
+	if ( other.supportsInterface( ClockTime::StaticClockTimeType() ) ) {
 		setValue( ((ClockTime&)other).data );
 	}
 	else {
@@ -27,7 +33,7 @@ ClockTime::setValue( const NumericObject&  other ) {
 
 bool
 ClockTime::isEqualTo(const NumericObject&  other ) {
-	if ( other.getSubType() == ClockTime::StaticClockTimeType() ) {
+	if ( other.supportsInterface( ClockTime::StaticClockTimeType() ) ) {
 		return isEqualTo( ((ClockTime&)other).data );
 	}
 	return getIntegerValue() == other.getIntegerValue();
@@ -35,7 +41,7 @@ ClockTime::isEqualTo(const NumericObject&  other ) {
 
 bool
 ClockTime::isGreaterThan(const NumericObject&  other ) {
-	if ( other.getSubType() == ClockTime::StaticClockTimeType() ) {
+	if ( other.supportsInterface( ClockTime::StaticClockTimeType() ) ) {
 		return isGreaterThan( ((ClockTime&)other).data );
 	}
 	return getIntegerValue() > other.getIntegerValue();
@@ -43,7 +49,7 @@ ClockTime::isGreaterThan(const NumericObject&  other ) {
 
 bool
 ClockTime::isGreaterOrEqual(const NumericObject&  other ) {
-	if ( other.getSubType() == ClockTime::StaticClockTimeType() ) {
+	if ( other.supportsInterface( ClockTime::StaticClockTimeType() ) ) {
 		return isGreaterOrEqual( ((ClockTime&)other).data );
 	}
 	return getIntegerValue() >= other.getIntegerValue();
@@ -56,7 +62,7 @@ ClockTime::absValue() const {
 
 NumericObject*
 ClockTime::add(const NumericObject&  other ) {
-	if ( other.getSubType() == ClockTime::StaticClockTimeType() ) {
+	if ( other.supportsInterface( ClockTime::StaticClockTimeType() ) ) {
 		return add( ((ClockTime&)other).data );
 	}
 	timespec  total;
@@ -68,7 +74,7 @@ ClockTime::add(const NumericObject&  other ) {
 
 NumericObject*
 ClockTime::subtract(const NumericObject&  other ) {
-	if ( other.getSubType() == ClockTime::StaticClockTimeType() ) {
+	if ( other.supportsInterface( ClockTime::StaticClockTimeType() ) ) {
 		return subtract( ((ClockTime&)other).data );
 	}
 	timespec  total;
@@ -173,18 +179,16 @@ GetClockTime::call(
 
 ForeignFunc::Result
 GetSeconds( FFIServices& ffi ) {
-	if ( ! ffi.demandAllArgsType( ObjectType::Numeric, true ) )
+	if ( ! ffi.demandAllArgsType( ClockTime::StaticClockTimeType(), true ) )
 		return ForeignFunc::NONFATAL;
 
-	NumericObject*  arg;
+	ClockTime*  arg;
 	Integer  totalTime = 0;
 	UInteger  i = 0;
 
 	for (; i < ffi.getArgCount(); ++i) {
-		arg = (NumericObject*)&(ffi.arg(i));
-		if ( arg->getSubType() == ClockTime::StaticClockTimeType() ) {
-			totalTime += ((ClockTime*)arg)->getSecondsValue();
-		}
+		arg = (ClockTime*)&(ffi.arg(i));
+		totalTime += arg->getSecondsValue();
 	}
 
 	ffi.setNewResult( new IntegerObject( totalTime ) );
@@ -193,18 +197,16 @@ GetSeconds( FFIServices& ffi ) {
 
 ForeignFunc::Result
 GetMilliseconds( FFIServices& ffi ) {
-	if ( ! ffi.demandAllArgsType( ObjectType::Numeric, true ) )
+	if ( ! ffi.demandAllArgsType( ClockTime::StaticClockTimeType(), true ) )
 		return ForeignFunc::NONFATAL;
 
-	NumericObject*  arg;
+	ClockTime*  arg;
 	Integer  totalTime = 0;
 	UInteger  i = 0;
 
 	for (; i < ffi.getArgCount(); ++i) {
-		arg = (NumericObject*)&(ffi.arg(i));
-		if ( arg->getSubType() == ClockTime::StaticClockTimeType() ) {
-			totalTime += ((ClockTime*)arg)->getMillisecondsValue();
-		}
+		arg = (ClockTime*)&(ffi.arg(i));
+		totalTime += arg->getMillisecondsValue();
 	}
 
 	ffi.setNewResult( new IntegerObject( totalTime ) );
@@ -213,18 +215,16 @@ GetMilliseconds( FFIServices& ffi ) {
 
 ForeignFunc::Result
 GetNanoseconds( FFIServices& ffi ) {
-	if ( ! ffi.demandAllArgsType( ObjectType::Numeric, true ) )
+	if ( ! ffi.demandAllArgsType( ClockTime::StaticClockTimeType(), true ) )
 		return ForeignFunc::NONFATAL;
 
-	NumericObject*  arg;
+	ClockTime*  arg;
 	Integer  totalTime = 0;
 	UInteger  i = 0;
 
 	for (; i < ffi.getArgCount(); ++i) {
-		arg = (NumericObject*)&(ffi.arg(i));
-		if ( arg->getSubType() == ClockTime::StaticClockTimeType() ) {
-			totalTime += ((ClockTime*)arg)->getNanosecondsValue();
-		}
+		arg = (ClockTime*)&(ffi.arg(i));
+		totalTime += arg->getNanosecondsValue();
 	}
 
 	ffi.setNewResult( new IntegerObject( totalTime ) );

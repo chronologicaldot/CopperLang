@@ -12,7 +12,9 @@
 namespace Cu {
  namespace Time {
 
-#define CU_CLOCK_TIME_TYPE 1
+#ifndef CU_CLOCK_TIME_TYPE
+#define CU_CLOCK_TIME_TYPE 10
+#endif
 
 	// You should really just use me. :)
 void
@@ -55,14 +57,17 @@ public:
 		return StaticTypeName();
 	}
 
-	static const NumericObject::SubType::Value
+	virtual bool
+	supportsInterface( ObjectType::Value  typeValue ) const;
+
+	static const ObjectType::Value
 	StaticClockTimeType() {
-		return static_cast<NumericObject::SubType::Value>(NumericObject::SubType::Unknown + CU_CLOCK_TIME_TYPE);
+		return static_cast<ObjectType::Value>( CU_CLOCK_TIME_TYPE );
 	}
 
-	virtual NumericObject::SubType::Value
-	getSubType() const {
-		return StaticClockTimeType();
+	static bool
+	isCastable( NumericObject&  arg ) {
+		return arg.supportsInterface( ClockTime::StaticClockTimeType() );
 	}
 
 	Decimal

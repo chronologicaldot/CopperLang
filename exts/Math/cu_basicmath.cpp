@@ -111,17 +111,10 @@ ToString(
 
 	std::stringstream  sstream;
 	NumericObject& arg = (NumericObject&) ffi.arg(0);
-	switch ( arg.getSubType() )
-	{
-	case NumericObject::SubType::Integer:
-		sstream << arg.getIntegerValue();
-		break;
-	case NumericObject::SubType::DecimalNum:
+	if ( arg.supportsInterface( ObjectType::DecimalNum ) ) {
 		sstream << arg.getDecimalValue();
-		break;
-	default:
+	} else {
 		sstream << arg.getIntegerValue();
-		break;
 	}
 	ffi.setNewResult(
 		new StringObject(sstream.str().c_str())
@@ -151,13 +144,10 @@ AreZero::call(
 	UInteger  index = 0;
 	for (; index < ffi.getArgCount(); ++index) {
 		arg = (NumericObject*)&(ffi.arg(index));
-		switch( arg->getSubType() )
-		{
-		case NumericObject::SubType::DecimalNum:
+		if ( arg->supportsInterface( ObjectType::DecimalNum ) ) {
 			is_zero = iszero( arg->getDecimalValue() );
-		default:
+		} else {
 			is_zero = ( 0 == arg->getIntegerValue() );
-			break;
 		}
 		if ( ! is_zero ) break;
 	}

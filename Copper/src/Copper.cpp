@@ -6702,7 +6702,7 @@ Engine::process_sys_are_integer(
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isIntegerObject(**argsIter);
+		out = (*argsIter)->supportsInterface( ObjectType::Integer );
 		if ( !out)
 			break;
 	} while ( argsIter.next() );
@@ -6725,7 +6725,7 @@ Engine::process_sys_are_decimal(
 	// Check all parameters
 	bool out = true;
 	do {
-		out = isDecimalNumObject(**argsIter);
+		out = (*argsIter)->supportsInterface( ObjectType::DecimalNum );
 		if ( !out)
 			break;
 	} while ( argsIter.next() );

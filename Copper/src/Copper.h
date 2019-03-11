@@ -1964,15 +1964,6 @@ struct NumericObject : public Object {
 
 	static const ObjectType::Value object_type = ObjectType::Numeric;
 
-	// Please extend
-	struct SubType {
-	enum Value {
-		Integer = 0,	// Integer class
-		DecimalNum,		// Decimal Number class
-		Unknown,
-		FORCE32 = 0x7fffffff // Allows extensions
-	};};
-
 	NumericObject();
 
 	virtual ~NumericObject();
@@ -1996,9 +1987,6 @@ struct NumericObject : public Object {
 	supportsInterface( ObjectType::Value  typeValue ) const {
 		return typeValue == NumericObject::object_type;
 	}
-
-	virtual SubType::Value
-	getSubType() const = 0;
 
 	virtual void
 	writeToString(String& out) const {
@@ -2130,11 +2118,6 @@ public:
 	virtual bool
 	supportsInterface( ObjectType::Value  typeValue ) const;
 
-	virtual NumericObject::SubType::Value
-	getSubType() const {
-		return NumericObject::SubType::Integer;
-	}
-
 	virtual void
 	writeToString(String& out) const {
 		out = "{integer}";
@@ -2236,11 +2219,6 @@ public:
 
 	virtual bool
 	supportsInterface( ObjectType::Value  typeValue ) const;
-
-	virtual NumericObject::SubType::Value
-	getSubType() const {
-		return NumericObject::SubType::DecimalNum;
-	}
 
 	virtual void
 	writeToString(String& out) const {
@@ -3268,26 +3246,6 @@ isNumericObject(
 	const Object& pObject
 ) {
 	return pObject.getType() == ObjectType::Numeric;
-}
-
-inline bool
-isIntegerObject(
-	const Object& pObject
-) {
-	if ( pObject.getType() == ObjectType::Numeric ) {
-		return ((NumericObject&)pObject).getSubType() == NumericObject::SubType::Integer;
-	}
-	return false;
-}
-
-inline bool
-isDecimalNumObject(
-	const Object& pObject
-) {
-	if ( pObject.getType() == ObjectType::Numeric ) {
-		return ((NumericObject&)pObject).getSubType() == NumericObject::SubType::DecimalNum;
-	}
-	return false;
 }
 
 //--------------------------------

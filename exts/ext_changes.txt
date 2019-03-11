@@ -1,4 +1,28 @@
 ===========
+2019/3/11
+
+cu_systime
+- Changed type return system.
+-- Removed ClockTime::getSubType().
+-- Changed ClockTime::StaticClockTimeType() to return Cu::ObjectType.
+-- Added preprocessor ifndef for CU_CLOCK_TIME_TYPE and set the new value of CU_CLOCK_TIME_TYPE to 10.
+-- Changed ClockTime methods to use supportsInterface():
+--- setValue(const NumericObject&)
+--- isEqualTo(const NumericObject&)
+--- isGreaterThan(const NumericObject&)
+--- isGreaterOrEqual(const NumericObject&)
+--- add(const NumericObject&)
+--- subtract(const NumericObject&)
+-- Changed GetSeconds(), GetMilliseconds(), and GetNanoseconds() to use ClockTime::StaticClockTimeType().
+-- Added ClockTime::supportsInterface().
+-- Added static bool ClockTime::isCastable().
+
+cu_basicmath
+- Changed call() methods to use supportsInterface():
+-- ToString
+-- AreZero
+
+===========
 2018/12/12-17
 
 cu_basicmath

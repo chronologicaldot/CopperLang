@@ -51,14 +51,11 @@ public:
 				break;
 
 			case ObjectType::Numeric:
-				switch ( ((NumericObject*)arg)->getSubType() ) {
-				case NumericObject::SubType::Integer:
+				if ( arg->supportsInterface( ObjectType::Integer ) ) {
 					printInteger( ((NumericObject*)arg)->getIntegerValue() );
-					break;
-				case NumericObject::SubType::DecimalNum:
-				default:
+				}
+				else {
 					printDecimalNum( ((NumericObject*)arg)->getDecimalValue() );
-					break;
 				}
 				break;
 
