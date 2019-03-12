@@ -123,7 +123,9 @@ InStreamLogger::getObjectTypeNameFromType( ObjectType::Value  type ) {
 	case ObjectType::String: return Cu::StringObject::StaticTypeName();
 	case ObjectType::Numeric: return Cu::NumericObject::StaticTypeName();
 	case ObjectType::List: return Cu::ListObject::StaticTypeName();
-	default: return util::String("unknown");
+	case ObjectType::TypeValue: return Cu::ObjectTypeObject::StaticTypeName();
+	case ObjectType::Unknown: return util::String("unknown");
+	default: return util::String("user type");
 	}
 }
 

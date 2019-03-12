@@ -22,6 +22,8 @@ cu_basicmath
 -- ToString
 -- AreZero
 
+cu_stringbasics created
+
 ===========
 2018/12/12-17
 

@@ -43,14 +43,14 @@ project "Copper"
 		"exts/Math/basicmath.h", "exts/Math/cu_basicmath.cpp",
 		"exts/Time/systime.h", "exts/Time/cu_systime.cpp",
 		"exts/String/cu_stringmap.h", "exts/String/cu_stringmap.cpp",
+		"exts/String/cu_stringbasics.h", "exts/String/cu_stringbasics.cpp",
 		"exts/System/cu_info.h", "exts/System/cu_info.cpp",
 	}
 
 	excludes
 	{
 		"debug/**.*",
-		"exts/scraps/**.*",
-		"exts/FileIO/**.*"
+		"exts/excludes/**.*"
 	}
 
 	filter { "system:linux or bsd or hurd" }

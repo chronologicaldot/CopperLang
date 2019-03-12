@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.621
+#define COPPER_INTERPRETER_VERSION 0.623
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -511,9 +511,13 @@ struct ObjectType {
 		Numeric, // Parent class
 		Integer,
 		DecimalNum,
+		TypeValue, // Wrapper of ObjectType::Value
 
 		// For non-usable data
-		UnknownData,
+		Unknown,
+
+		// Begin your user types with this value
+		UserTypeStart = 100,
 
 		// Forces 32-bit compilation so that any user integer can be used to extend the enum
 		FORCE_32BIT = 0x7fffffff
@@ -697,6 +701,10 @@ struct SystemFunction {
 	_union,
 	_type,
 	_are_same_type,
+	_are_type,
+	_equal_type_value,
+	_typename,
+	_have_same_typename,
 	_are_bool,
 	_are_string,
 	_are_list,
@@ -798,8 +806,8 @@ struct LogMessage {
 		, systemFunctionId(SystemFunction::_unset)
 		, argIndex(0)
 		, argCount(0)
-		, givenArgType(ObjectType::UnknownData)
-		, expectedArgType(ObjectType::UnknownData)
+		, givenArgType(ObjectType::Unknown)
+		, expectedArgType(ObjectType::Unknown)
 		, customCode(0)
 	{}
 
@@ -1035,7 +1043,7 @@ protected:
 	// Enumeration is intended to be extended to other types
 	ObjectType::Value type;
 public:
-	Object( ObjectType::Value t = ObjectType::UnknownData )
+	Object( ObjectType::Value t = ObjectType::Unknown )
 		: type(t)
 	{}
 
@@ -1072,7 +1080,9 @@ public:
 	// The class can be extended to point to other types of data, such as huge numbers,
 	// matrices, etc., and complemented by extension functions.
 	virtual const char*
-	typeName() const =0;
+	typeName() const {
+		return "object";
+	}
 
 	//! Indicate interface support
 	// Returns true if this object can be casted to objects of the given type.
@@ -2511,6 +2521,72 @@ public:
 #endif
 };
 
+//------------------
+
+//! ObjectType Value Wrapper Object
+
+class ObjectTypeObject : public Object {
+protected:
+	ObjectType::Value  data;
+
+public:
+	static const ObjectType::Value object_type = ObjectType::TypeValue;
+
+	ObjectTypeObject();
+	ObjectTypeObject( ObjectType::Value  data_value );
+
+	// Meant to be overridden.
+	// Meant to return a "new" (heap) object or one with an extra reference count.
+	// If you return "this", you must call this->ref() to ensure proper memory management.
+	virtual Object*
+	copy() {
+		return new ObjectTypeObject( data );
+	}
+
+	virtual void
+	writeToString(String& out) const {
+		//out = "{type}";
+		out = dataToString();
+	}
+
+	static const char*
+	StaticTypeName() {
+		return "type_value";
+	}
+
+	//! Name of the data
+	// The class can be extended to point to other types of data, such as huge numbers,
+	// matrices, etc., and complemented by extension functions.
+	virtual const char*
+	typeName() const {
+		return StaticTypeName();
+	}
+
+	//! Indicate interface support
+	// Returns true if this object can be casted to objects of the given type.
+	virtual bool
+	supportsInterface( ObjectType::Value v ) const {
+		return ObjectTypeObject::object_type == v;
+	}
+
+	//! Returns the real value
+	ObjectType::Value
+	getData() const {
+		return data;
+	}
+
+	//! Returns the print-version string of the data value
+	const char*
+	dataToString() const;
+
+#ifdef COPPER_USE_DEBUG_NAMES
+	virtual const char*
+	getDebugName() const {
+		return "ObjectTypeObject";
+	}
+#endif
+};
+
 //*********** FOREIGN FUNCTION HANDLING *********
 
 class FFIServices; // predeclaration
@@ -3723,6 +3799,10 @@ protected:
 	FuncExecReturn::Value	process_sys_union(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_type(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_same_type(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_type(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_equal_type_value(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_typename(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_have_same_typename(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_bool(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_string(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_list(		FuncFoundTask& task );

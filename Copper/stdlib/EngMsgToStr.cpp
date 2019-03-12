@@ -442,6 +442,18 @@ getSystemFunctionDefaultName(
 	case SystemFunction::_are_same_type:
 		return "are_same_type";
 
+	case SystemFunction::_are_type:
+		return "are_type";
+
+	case SystemFunction::_equal_type_value:
+		return "equal_type_value";
+
+	case SystemFunction::_typename:
+		return "typename_of";
+
+	case SystemFunction::_have_same_typename:
+		return "have_same_typename";
+
 	case SystemFunction::_are_bool:
 		return "are_bool";
 

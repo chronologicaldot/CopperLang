@@ -1179,6 +1179,31 @@ ListObject::getItem( Integer  index ) {
 	return REAL_NULL;
 }
 
+//--------------------------------------
+
+ObjectTypeObject::ObjectTypeObject()
+	: Object( ObjectTypeObject::object_type )
+	, data( ObjectType::Unknown )
+{}
+
+ObjectTypeObject::ObjectTypeObject( ObjectType::Value  data_value )
+	: Object( ObjectTypeObject::object_type )
+	, data(data_value)
+{}
+
+const char*
+ObjectTypeObject::dataToString() const {
+	switch( data ) {
+	case ObjectType::Function: return "{Function Type}";
+	case ObjectType::Bool: return "{Bool Type}";
+	case ObjectType::String: return "{String Type}";
+	case ObjectType::List: return "{List Type}";
+	case ObjectType::Numeric: return "{Numeric Type}";
+	case ObjectType::TypeValue: return "{TypeValue Type}";
+	case ObjectType::Unknown: return "{Unknown Type}";
+	default: return "{User Type}";
+	}
+}
 
 //--------------------------------------
 
@@ -3036,6 +3061,10 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("union"), SystemFunction::_union);
 	builtinFunctions.insert(String("type_of"), SystemFunction::_type);
 	builtinFunctions.insert(String("are_same_type"), SystemFunction::_are_same_type);
+	builtinFunctions.insert(String("are_type"), SystemFunction::_are_type);
+	builtinFunctions.insert(String("equal_type_value"), SystemFunction::_equal_type_value);
+	builtinFunctions.insert(String("typename_of"), SystemFunction::_typename);
+	builtinFunctions.insert(String("have_same_typename"), SystemFunction::_have_same_typename);
 	builtinFunctions.insert(String("are_bool"), SystemFunction::_are_bool);
 	builtinFunctions.insert(String("are_string"), SystemFunction::_are_string);
 	builtinFunctions.insert(String("are_list"), SystemFunction::_are_list);
@@ -5577,6 +5606,18 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_are_same_type:
 		return process_sys_are_same_type(task);
 
+	case SystemFunction::_are_type:
+		return process_sys_are_type(task);
+
+	case SystemFunction::_equal_type_value:
+		return process_sys_equal_type_value(task);
+
+	case SystemFunction::_typename:
+		return process_sys_typename(task);
+
+	case SystemFunction::_have_same_typename:
+		return process_sys_have_same_typename(task);
+
 	case SystemFunction::_are_bool:
 		return process_sys_are_bool(task);
 
@@ -6556,11 +6597,11 @@ Engine::process_sys_type(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new StringObject());
+		lastObject.setWithoutRef(new ObjectTypeObject());
 		return FuncExecReturn::Ran;
 	}
 	// Get only the first parameter
-	lastObject.setWithoutRef(new StringObject( (*argsIter)->typeName() ));
+	lastObject.setWithoutRef(new ObjectTypeObject( (*argsIter)->getType() ));
 	return FuncExecReturn::Ran;
 }
 
@@ -6573,7 +6614,7 @@ Engine::process_sys_are_same_type(
 #endif
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new FunctionObject());
+		lastObject.setWithoutRef(new BoolObject(false));
 		return FuncExecReturn::Ran;
 	}
 	// First parameter, to which all other parameters are compared
@@ -6581,16 +6622,131 @@ Engine::process_sys_are_same_type(
 	String first( (*argsIter)->typeName() );
 
 	bool same = true;
-	do {
+	while( argsIter.next() )
+	{
 		same = firstType == (*argsIter)->getType();
 		if ( !same )
 			break;
+	}
+	// Get only the first parameter
+	lastObject.setWithoutRef(new BoolObject(same));
+	return FuncExecReturn::Ran;
+}
 
+FuncExecReturn::Value
+Engine::process_sys_are_type(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_type");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
+		lastObject.setWithoutRef(new BoolObject(false));
+		return FuncExecReturn::Ran;
+	}
+	if ( (*argsIter)->getType() != ObjectTypeObject::object_type ) {
+		printSystemFunctionWrongArg( SystemFunction::_are_type, 1, task.args.size(),
+			(*argsIter)->getType(), ObjectTypeObject::object_type );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	ObjectType::Value  comparisonType = ((ObjectTypeObject*)(*argsIter))->getData();
+
+	bool same = true;
+	while( argsIter.next() )
+	{
+		same = comparisonType == (*argsIter)->getType();
+		if ( !same )
+			break;
+	}
+	// Get only the first parameter
+	lastObject.setWithoutRef(new BoolObject(same));
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_equal_type_value(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_equal_type_value");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
+		lastObject.setWithoutRef(new BoolObject(false));
+		return FuncExecReturn::Ran;
+	}
+	if ( (*argsIter)->getType() != ObjectTypeObject::object_type ) {
+		printSystemFunctionWrongArg( SystemFunction::_are_type, 1, task.args.size(),
+			(*argsIter)->getType(), ObjectTypeObject::object_type );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	ObjectType::Value  comparisonType = ((ObjectTypeObject*)(*argsIter))->getData();
+
+	ObjectTypeObject*  otherObject;
+
+	bool same = true;
+	while( argsIter.next() )
+	{
+		if ( (*argsIter)->getType() != ObjectType::TypeValue ) {
+			same = false;
+			break;
+		}
+
+		otherObject = (ObjectTypeObject*)(*argsIter);
+
+		same = comparisonType == otherObject->getData();
+		if ( !same )
+			break;
+	}
+	// Get only the first parameter
+	lastObject.setWithoutRef(new BoolObject(same));
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_typename(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_typename");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
+		lastObject.setWithoutRef(new StringObject());
+		return FuncExecReturn::Ran;
+	}
+	// Get only the first parameter
+	lastObject.setWithoutRef(new StringObject( (*argsIter)->typeName() ));
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_have_same_typename(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_have_same_typename");
+#endif
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
+		lastObject.setWithoutRef(new BoolObject(false));
+		return FuncExecReturn::Ran;
+	}
+	// First parameter, to which all other parameters are compared
+	ObjectType::Value firstType = (*argsIter)->getType();
+	String first( (*argsIter)->typeName() );
+
+	bool same = true;
+	while( argsIter.next() )
+	{
 		same = first.equals( (*argsIter)->typeName() );
 		if ( !same )
 			break;
 
-	} while( argsIter.next() );
+	}
 	// Get only the first parameter
 	lastObject.setWithoutRef(new BoolObject(same));
 	return FuncExecReturn::Ran;

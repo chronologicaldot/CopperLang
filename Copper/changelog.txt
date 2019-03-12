@@ -1,4 +1,29 @@
 ===================
+2019/3/12
+v 6-0.63
+
+- Added ObjectTypeObject.
+- Changed type_of() to use ObjectTypeObject.
+- Added typename_of() Copper method:
+-- Engine::process_sys_typename
+-- SystemFunction::_typename
+- Added have_same_typename() Copper method:
+-- Engine::process_sys_have_same_typename()
+-- SystemFunction::_have_same_typename
+- Provided generic implementation for Object::typename().
+- Changed ObjectType::UnknownData to ObjectType::Unknown.
+- Engine::process_sys_are_same_type() now correctly returns a boolean when there are no arguments.
+- Added are_type()
+-- Engine::process_sys_are_type()
+- Added equal_type_value()
+-- Engine::process_sys_equal_type_value()
+- Added String::set(uint, char)
+
+EngMsgToStr
+- Updated getSystemFunctionDefaultName() to have typename_of, typename_of, have_same_typename, are_type, and equal_type_value.
+
+
+===================
 2019/3/11
 v 6-0.622
 

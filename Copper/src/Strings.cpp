@@ -475,6 +475,12 @@ char String::operator[] ( uint pIndex ) const
 	return str[pIndex];
 }
 
+void String::set( uint pIndex, char pChar )
+{
+	if ( pIndex < len )
+		str[pIndex] = pChar;
+}
+
 const char* String::c_str() const
 {
 	return str;

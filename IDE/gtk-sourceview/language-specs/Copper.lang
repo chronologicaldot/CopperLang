@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language id="copper" _name="Copper" version="2.0" _section="Scripts">
 <!--
-Copyright 2016 Nic Anderson
+Copyright 2016-2019 Nic Anderson
 
 Description:
 Rainbow syntax highlighter language for Gtk sourceview 2.0.
@@ -85,6 +85,10 @@ You are free to use, modify and redistribute this code to your heart's content, 
     <keyword>union</keyword>
     <keyword>type_of</keyword>
     <keyword>are_same_type</keyword>
+	<keyword>are_type</keyword>
+	<keyword>equal_type_value</keyword>
+	<keyword>typename_of</keyword>
+	<keyword>have_same_typename</keyword>
     <keyword>are_fn</keyword>
     <keyword>are_empty</keyword>
     <keyword>are_bool</keyword>
@@ -96,6 +100,7 @@ You are free to use, modify and redistribute this code to your heart's content, 
     <keyword>assert</keyword>
     <keyword>copy_of</keyword>
     <keyword>xwsv</keyword>
+    <keyword>share_body</keyword>
 
     <keyword>not</keyword>
     <keyword>all</keyword>

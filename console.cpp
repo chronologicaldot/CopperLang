@@ -1,4 +1,4 @@
-// Copyright 2016-2018 Nicolaus Anderson
+// Copyright 2016-2019 Nicolaus Anderson
 
 #include <execinfo.h>
 #include <signal.h>
@@ -13,6 +13,7 @@
 #include "exts/Math/cu_basicmath.h"
 #include "exts/Time/cu_systime.h"
 #include "exts/String/cu_stringmap.h"
+#include "exts/String/cu_stringbasics.h"
 #include "exts/System/cu_info.h"
 
 // function by tgamblin
@@ -58,6 +59,7 @@ int main() {
 	Cu::Numeric::addFunctionsToEngine(engine);
 	Cu::Time::addFunctionsToEngine(engine);
 	Cu::StringLib::Map::addToEngine(engine);
+	Cu::StringLib::Basics::addFunctionsToEngine(engine);
 	Cu::System::addFunctionsToEngine(engine);
 
 	//Cu::CallbackWrapper ccw(engine, util::String("set_wrapper"));

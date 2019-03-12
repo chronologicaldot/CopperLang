@@ -58,6 +58,7 @@ public:
 	String& operator= ( const CharList& pList );
 	String& operator+= ( const String& pString ); // may be removed
 	char operator[] ( uint pIndex ) const;
+	void set( uint pIndex, char pChar );
 	const char* c_str() const;
 	uint size() const;
 	bool equals( const String& pString ) const;
