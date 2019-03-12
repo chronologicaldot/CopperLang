@@ -325,11 +325,11 @@
 <h3 id='attractive-features'>Attractive Features</h3>
 <ul>
 <li>Powerful object-oriented programming!</li>
-<li>Easy to Learn - Very simple syntax! (See <a href="#copper-in-5-mins">Copper in 5 minutes</a>.)</li>
-<li>Lightweight! (Core code is only 290kb!)</li>
-<li>No external dependencies!</li>
-<li>Highly compressable!</li>
-<li>IDE support!</li>
+<li>Easy to Learn - Very simple syntax (See <a href="#copper-in-5-mins">Copper in 5 minutes</a>.)</li>
+<li>Lightweight (Core code is roughly 300kb)</li>
+<li>No external dependencies</li>
+<li>Highly compressable</li>
+<li>IDE support</li>
 </ul>
 
 <p>(Current IDE support is gtksourceview2 syntax highlighters.)</p>
@@ -337,8 +337,14 @@
 <ul>
 <li>Not battle-hardened (Tested, but not on a business level.)</li>
 <li>No automated testing (YET)</li>
-<li>Lacking basic features (See <a href="#ffi">Foreign Function Interface</a>.)</li>
-<li>Slow (Perhaps... Compared to Lua.)</li>
+<li>Some basic functions are extensions (See <a href="#ffi">Foreign Function Interface</a>.)</li>
+<li>Relatively slow (Perhaps... Compared to Lua.)</li>
+</ul>
+<h3 id='uses-for-copper'>Uses for Copper</h3>
+<ul>
+<li>GUI Layouts</li>
+<li>Consumer/User-Created Code Sandboxes</li>
+<li>Embedded Applications</li>
 </ul>
 <p><br id="basics"></p>
 <h1 id='the-language-of-copper'>The Language of Copper</h1>
@@ -616,9 +622,23 @@ Though not part of the language specifications, it is possible to leave out <cod
 <p>Returns the name of the type of <em>arg</em>.</p>
 <h3 id='are_same_type'>are_same_type( ... )</h3>
 <p>Returns <code>true</code> if all of the given arguments have the same type.</p>
+<h3 id='are_type-type_value'>are_type( <em>type_value</em> ... )</h3>
+<p>Accepts a <em>type_value</em> and any number of other objects.
+Returns <code>true</code> if all of successive arguments are of the type given by the first <em>type_value</em>.</p>
 
 <aside class="notice">
-In this functions, the types are compared based on their returns from both <code>Cu::Object::getType()</code> and <code>Cu::Object::typeName()</code>.
+In this function, the types are compared based on their return from the virtual method <code>Cu::Object::getType()</code>.
+</aside>
+<h3 id='equal_type_value-type_value-type_value'>equal_type_value( <em>type_value</em> [<em>type_value</em> ...] )</h3>
+<p>Accepts only <em>type_value</em> objects.
+Returns <code>true</code> if all of the <em>type_value</em> objects have the same value.</p>
+<h3 id='typename_of-object'>typename_of( <em>object</em> )</h3>
+<p>Returns the typename of the given object as a string.</p>
+<h3 id='have_same_typename-object'>have_same_typename( <em>object</em> ... )</h3>
+<p>Returns <code>true</code> if all of the given objects have the same typename.</p>
+
+<aside class="notice">
+In this function, the types are compared based on their return from the virtual method <code>Cu::Object::typeName()</code>.
 </aside>
 <h3 id='are_fn'>are_fn( ... )</h3>
 <p>Returns <code>true</code> if all of the given arguments are of type object-function.</p>
@@ -649,7 +669,7 @@ In this functions, the types are compared based on their returns from both <code
 <h3 id='any-boolean_arg'>any( <em>boolean_arg</em> ... )</h3>
 <p>Returns <code>true</code> if any of the given arguments are boolean <code>true</code>.</p>
 <h3 id='nall-boolean_arg'>nall( <em>boolean_arg</em> ... )</h3>
-<p>Returns <code>true</code> if any of the given arguments are boolean <code>true</code>.</p>
+<p>Returns <code>true</code> only if all of the given arguments are boolean <code>false</code>.</p>
 <h3 id='none-boolean_arg'>none( <em>boolean_arg</em> ... )</h3>
 <p>Returns <code>true</code> if none of the given arguments are boolean <code>true</code>.</p>
 <h3 id='list'>list( ... )</h3>
@@ -989,19 +1009,20 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 
 <ol>
 <li>All objects must set their object type upon instantiation by passing it to the parent Cu::Object constructor. This type is of the enumeration ObjectType::Value. You may cast other values to this enumeration and make your own extended enum starting with the value <code>Cu::ObjectType::UnknownData + 1</code>.</li>
-<li>All objects must implement the following functions:
+<li>All objects must implement the following virtual methods:
 
 <ul>
 <li>copy(): Object*</li>
-<li>typeName() const: const char*</li>
 </ul></li>
 </ol>
 
-<p>Optionally, functions may implement <code>virtual void writeToString(String&amp; out)</code> to set the data to be returned when the object appears in string-requiring contexts.</p>
+<p>Optionally, objects may have an implementation of <code>virtual void writeToString(String&amp; out)</code> to set the data to be returned when the object appears in string-requiring contexts.</p>
+
+<p>Optionally, objects may have an implementation of <code>virtual const char* typeName() const</code> for better printing information and type comparison via <code>have_same_typename()</code>.</p>
 
 <p>Foreign objects intended to work as numbers should inherit the NumericObject class and implement its virtual methods. Objects inheriting this type must implement <code>virtual bool supportsInterface( ObjectType::Value )</code> and return <code>true</code> for <code>ObjectType::Numeric</code>.</p>
 <h3 id='complex-type-support'>Complex Type Support</h3>
-<p>Sometimes objects inherit multiple interfaces and all are Copper Objects. Rather that invent new types that encompass and indicate certain mixed interfaces, Copper provides two virtual methods to enable multiple interface support. Either method can be optionally overridden to suite the need.</p>
+<p>Sometimes objects inherit multiple interfaces and all are Copper Objects. Rather that invent new types that encompass and indicate certain mixed interfaces, Copper provides two virtual methods to enable multiple interface support. Either method can be optionally overridden to suit the need.</p>
 
 <ul>
 <li>bool isSameData( Object* )</li>
@@ -1061,6 +1082,7 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 <li>Math/cu_basicmath</li>
 <li>Time/cu_systime</li>
 <li>String/cu_stringmap</li>
+<li>String/cu_charstring</li>
 </ul>
 
 <p>The default names of functions provided by these extensions are given in the following table.</p>
@@ -1086,6 +1108,10 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 <tr>
 <td>cu_stringmap</td>
 <td>string_map</td>
+</tr>
+<tr>
+<td>cu_stringbasics</td>
+<td>str_overwrite str_byte_length str_byte_at</td>
 </tr>
 </tbody></table>
 <pre class="highlight copper tab-copper"><code><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_time</span><span class="o">:</span><span class="w">
@@ -1714,15 +1740,45 @@ HEADS UP! In the terminal version of the virtual machine, InStreamLogger is used
 </tr>
 </tbody></table>
 <h3 id='cu-object-descendents'>Cu::Object Descendents</h3>
-<ul>
-<li>Cu::FunctionObject - Object-function container component. This contains Function, the class containing all of the function data.</li>
-<li>Cu::BoolObject - Basic boolean class.</li>
-<li>Cu::StringObject - Basic string class wrapping util::String.</li>
-<li>Cu::NumericObject - Parent class for all number types.</li>
-<li>Cu::IntegerObject - Basic integer class wrapping Cu::Integer. (Descendant of NumericObject.)</li>
-<li>Cu::DecimalNumObject - Basic decimal class wrapping Cu::Decimal. (Descendant of NumericObject.)</li>
-<li>Cu::ListObject - Doubly-linked list class with a special Node subclass for owning FunctionObject.</li>
-</ul>
+<table><thead>
+<tr>
+<th>Class Name</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>FunctionObject</td>
+<td>Object-function container component. This contains Function, the class containing all of the function data.</td>
+</tr>
+<tr>
+<td>BoolObject</td>
+<td>Basic boolean class.</td>
+</tr>
+<tr>
+<td>StringObject</td>
+<td>Basic string class wrapping util::String.</td>
+</tr>
+<tr>
+<td>NumericObject</td>
+<td>Parent class for all number types.</td>
+</tr>
+<tr>
+<td>IntegerObject</td>
+<td>Basic integer class wrapping Cu::Integer. (Descendant of NumericObject.)</td>
+</tr>
+<tr>
+<td>DecimalNumObject</td>
+<td>Basic decimal class wrapping Cu::Decimal. (Descendant of NumericObject.)</td>
+</tr>
+<tr>
+<td>ListObject</td>
+<td>Doubly-linked list class with a special Node subclass for owning FunctionObject.</td>
+</tr>
+<tr>
+<td>ObjectTypeObject</td>
+<td>A wrapper class for ObjectType::Value values.</td>
+</tr>
+</tbody></table>
 
 <p><br id="api-ffi"></p>
 <h3 id='cu-logmessage'>Cu::LogMessage</h3>

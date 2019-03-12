@@ -22,6 +22,8 @@ v 6-0.63
 EngMsgToStr
 - Updated getSystemFunctionDefaultName() to have typename_of, typename_of, have_same_typename, are_type, and equal_type_value.
 
+docs
+- Updated
 
 ===================
 2019/3/11
