@@ -31,22 +31,6 @@ void handler(int sig) {
   exit(1);
 }
 
-struct MethodSource {
-	char a;
-
-	MethodSource()
-		: a('a')
-	{}
-
-	bool run( Cu::FFIServices& ffi ) {
-		ffi.printInfo("Called method source");
-		a++;
-		const util::String c(a);
-		ffi.printInfo( c.c_str() );
-		return true;
-	}
-};
-
 int main() {
 	Cu::Engine engine;
 	CuStd::Printer printer;
@@ -62,18 +46,11 @@ int main() {
 	Cu::StringLib::Basics::addFunctionsToEngine(engine);
 	Cu::System::addFunctionsToEngine(engine);
 
-	//Cu::CallbackWrapper ccw(engine, util::String("set_wrapper"));
-
-	//MethodSource ms;
-	//Cu::addForeignMethodInstance( engine, util::String("method"), &ms, &MethodSource::run );
-
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
-	//std::printf("\n>> \t\tCOPPER LANGUAGE\n>>\t\tConsole Application\n>>\t\t(c) 2016-2018 Nicolaus Anderson\n\n");
+	//std::printf("\n>> \t\tCOPPER LANGUAGE\n>>\t\tConsole Application\n>>\t\t(c) 2016-2019 Nicolaus Anderson\n\n");
 	// ATTENTION: Leave the spaces alone
-	std::printf("\33[92m\n \t\tCOPPER LANGUAGE\n\t\tConsole Application\n\t\t(c) 2016-2018 Nicolaus Anderson\n\33[4m                                                              \33[0m\n");
-
-	//streamLogger.printInputLine();
+	std::printf("\33[92m\n \t\tCOPPER LANGUAGE\n\t\tConsole Application\n\t\t(c) 2016-2019 Nicolaus Anderson\n\33[4m                                                              \33[0m\n");
 
 	Cu::EngineResult::Value  result;
 	int err = 0;

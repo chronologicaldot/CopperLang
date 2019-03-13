@@ -6619,7 +6619,6 @@ Engine::process_sys_are_same_type(
 	}
 	// First parameter, to which all other parameters are compared
 	ObjectType::Value firstType = (*argsIter)->getType();
-	String first( (*argsIter)->typeName() );
 
 	bool same = true;
 	while( argsIter.next() )
@@ -6736,7 +6735,6 @@ Engine::process_sys_have_same_typename(
 		return FuncExecReturn::Ran;
 	}
 	// First parameter, to which all other parameters are compared
-	ObjectType::Value firstType = (*argsIter)->getType();
 	String first( (*argsIter)->typeName() );
 
 	bool same = true;
