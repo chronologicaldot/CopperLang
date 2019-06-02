@@ -1,4 +1,12 @@
 ===================
+2019/6/2
+v 6-0.631
+
+- Fixed possible bug in Node::swapItem() that steals ownership (from the original owner) when the list node isn't the original owner of the item.
+- Corrected the version number.
+
+
+===================
 2019/3/12
 v 6-0.63
 
@@ -24,6 +32,9 @@ EngMsgToStr
 
 docs
 - Updated
+
+console.cpp
+- Updated dates
 
 ===================
 2019/3/11

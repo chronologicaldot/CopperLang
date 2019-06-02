@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.623
+#define COPPER_INTERPRETER_VERSION 0.631
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -2346,10 +2346,20 @@ class ListObject : public Object, public AppendObjectInterface {
 			Object*  temp = pOther.item;
 			pOther.item = item;
 			item = temp;
-			if ( item->getType() == ObjectType::Function )
-				((FunctionObject*)item)->changeOwnerTo(this);
-			if ( pOther.item->getType() == ObjectType::Function )
-				((FunctionObject*)(pOther.item))->changeOwnerTo(&pOther);
+			bool  me_is_pointer = isPointer();
+			bool  other_is_pointer = pOther.isPointer();
+			if ( item->getType() == ObjectType::Function ) {
+				if ( other_is_pointer )
+					((FunctionObject*)item)->changeOwnerTo(this);
+				else
+					((FunctionObject*)item)->own(this);
+			}
+			if ( pOther.item->getType() == ObjectType::Function ) {
+				if ( me_is_pointer )
+					((FunctionObject*)(pOther.item))->changeOwnerTo(&pOther);
+				else
+					((FunctionObject*)(pOther.item))->own(&pOther);
+			}
 		}
 
 		void
