@@ -1,4 +1,4 @@
-CopperLang and the associated project files are Copyright 2016-2018 Nicolaus Anderson.
+CopperLang and the associated project files are Copyright 2016-2019 Nicolaus Anderson.
 
 Paragraph 1: Terms
 
