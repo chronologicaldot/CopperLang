@@ -121,6 +121,7 @@ You are free to use, modify and redistribute this code to your heart's content, 
 	<keyword>equal_type_value</keyword>
 	<keyword>typename_of</keyword>
 	<keyword>have_same_typename</keyword>
+    <keyword>ret_type</keyword>
     <keyword>are_fn</keyword>
     <keyword>are_empty</keyword>
     <keyword>are_bool</keyword>
@@ -133,6 +134,8 @@ You are free to use, modify and redistribute this code to your heart's content, 
     <keyword>copy_of</keyword>
     <keyword>xwsv</keyword>
     <keyword>share_body</keyword>
+    <keyword>realize</keyword>
+    <keyword>new</keyword>
 
     <keyword>not</keyword>
     <keyword>all</keyword>

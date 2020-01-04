@@ -2341,6 +2341,7 @@ Engine::Engine()
 	, stackTracePrintingEnabled(false)
 	, printTokensWhenParsing(false)
 	, nameFilter(REAL_NULL)
+	, customObjectFactory(REAL_NULL)
 {
 	setupSystemFunctions();
 
@@ -3065,6 +3066,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("equal_type_value"), SystemFunction::_equal_type_value);
 	builtinFunctions.insert(String("typename_of"), SystemFunction::_typename);
 	builtinFunctions.insert(String("have_same_typename"), SystemFunction::_have_same_typename);
+	builtinFunctions.insert(String("ret_type"), SystemFunction::_function_return_type);
 	builtinFunctions.insert(String("are_bool"), SystemFunction::_are_bool);
 	builtinFunctions.insert(String("are_string"), SystemFunction::_are_string);
 	builtinFunctions.insert(String("are_list"), SystemFunction::_are_list);
@@ -3074,6 +3076,8 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("assert"), SystemFunction::_assert);
 
 	builtinFunctions.insert(String("copy_of"), SystemFunction::_copy);
+	builtinFunctions.insert(String("realize"), SystemFunction::_construct_from_type);
+	builtinFunctions.insert(String("new"), SystemFunction::_construct_from_name);
 	builtinFunctions.insert(String("xwsv"), SystemFunction::_execute_with_alt_super);
 	builtinFunctions.insert(String("share_body"), SystemFunction::_share_body);
 
@@ -5618,6 +5622,9 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_have_same_typename:
 		return process_sys_have_same_typename(task);
 
+	case SystemFunction::_function_return_type:
+		return process_sys_function_return_type(task);
+
 	case SystemFunction::_are_bool:
 		return process_sys_are_bool(task);
 
@@ -5641,6 +5648,12 @@ Engine::setupBuiltinFunctionExecution(
 
 	case SystemFunction::_copy:
 		return process_sys_copy(task);
+
+	case SystemFunction::_construct_from_type:
+		return process_sys_construct_from_type(task);
+
+	case SystemFunction::_construct_from_name:
+		return process_sys_construct_from_name(task);
 
 	case SystemFunction::_execute_with_alt_super:
 		return process_sys_execute_with_alt_super(task, opStrandStackIter);
@@ -6751,6 +6764,49 @@ Engine::process_sys_have_same_typename(
 }
 
 FuncExecReturn::Value
+Engine::process_sys_function_return_type(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_function_return_type");
+#endif
+	if ( task.args.size() != 1 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_function_return_type, task.args.size(), 1 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
+		lastObject.setWithoutRef(new FunctionObject());
+		return FuncExecReturn::Ran;
+	}
+
+	FunctionObject*  fo;
+	Function*  f;
+	Object*  v;
+
+	if ( isFunctionObject(**argsIter) ) {
+		fo = (FunctionObject*)(*argsIter);
+
+		if ( fo->getFunction(f) ) {
+			if ( f->constantReturn && f->result.obtain(v) ) {
+				lastObject.setWithoutRef(new ObjectTypeObject( v->getType() ));
+			} else {
+				// No way of telling without actually running it.
+				lastObject.setWithoutRef(new ObjectTypeObject(FunctionObject::object_type));
+			}
+		}
+	} else {
+		printSystemFunctionWrongArg( SystemFunction::_function_return_type, 1, 1,
+			(*argsIter)->getType(), FunctionObject::object_type );
+
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
 Engine::process_sys_are_bool(
 	FuncFoundTask& task
 ) {
@@ -6920,6 +6976,129 @@ Engine::process_sys_copy(
 	if ( argsIter.has() ) {
 		lastObject.setWithoutRef( (*argsIter)->copy() );
 	}
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_construct_from_type(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_construct_from_type");
+#endif
+	if ( task.args.size() != 1 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_construct_from_type, task.args.size(), 1 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	// Note that passing in both ObjectTypeObject/type-value and Object is allowed.
+	// You cannot create an ObjectTypeObject/type-value by this method (and it would be meaningless anyways).
+
+	ObjectType::Value  typeToConstruct = FunctionObject::object_type;
+	ObjectTypeObject* typeObject;
+	Object*  returnObject = REAL_NULL;
+	ArgsIter argsIter = task.args.start();
+	if ( (*argsIter)->getType() == ObjectTypeObject::object_type ) {
+		// First scenario: user passed in an object type object to indicate the type
+		typeObject = (ObjectTypeObject*)(*argsIter);
+		typeToConstruct = typeObject->getData();
+	} else {
+		typeToConstruct = (*argsIter)->getType();
+	}
+	switch( typeToConstruct )
+	{
+	case ObjectType::Bool:  returnObject = new BoolObject(false);  break;
+	case ObjectType::String:  returnObject = new StringObject("");  break;
+	case ObjectType::List:  returnObject = new ListObject();  break;
+	case ObjectType::Function:  returnObject = new FunctionObject();  break;
+	case ObjectType::Numeric:
+	case ObjectType::Integer:  returnObject = new IntegerObject(0);  break;
+	case ObjectType::DecimalNum:  returnObject = new DecimalNumObject(0);  break;
+
+	case ObjectType::TypeValue: break; // Unreachable.
+	case ObjectType::Unknown: break; // No associated type but may come up if the user gives their objects this type.
+	case ObjectType::UserTypeStart: break; // Let the user create the type from here.
+
+	case ObjectType::FORCE_32BIT:
+		print( LogLevel::debug, "[DEBUG: System type value illegally passed to construct-object-from-type method." );
+		return FuncExecReturn::ErrorOnRun;
+
+	default:
+		if ( notNull(customObjectFactory) ) {
+			returnObject = customObjectFactory->constructFromType( typeToConstruct );
+		}
+		break;
+	}
+
+	if ( isNull( returnObject ) ) {
+		print( LogLevel::warning, EngineMessage::CouldNotConstructRequestedType );
+		returnObject = new FunctionObject();
+	}
+
+	lastObject.setWithoutRef( returnObject );
+
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_construct_from_name(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_construct_from_name");
+#endif
+	if ( task.args.size() != 1 ) {
+		printSystemFunctionWrongArgCount( SystemFunction::_construct_from_name, task.args.size(), 1 );
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	ArgsIter  argsIter = task.args.start();
+	if ( !isStringObject(**argsIter) ) {
+		printSystemFunctionWrongArg( SystemFunction::_construct_from_name, 1, 1,
+			(*argsIter)->getType(), StringObject::object_type );
+
+		return FuncExecReturn::ErrorOnRun;
+	}
+
+	StringObject* nameObject = (StringObject*)(*argsIter);
+	String name = nameObject->getString();
+	Object*  returnObject = REAL_NULL;
+
+#ifdef COPPER_ENABLE_CONSTRUCTING_BUILTINS_BY_NAME
+	if ( name.equals(BoolObject::StaticTypeName()) ) {
+		returnObject = new BoolObject(false);
+	}
+	else if ( name.equals(StringObject::StaticTypeName()) ) {
+		returnObject = new StringObject("");
+	}
+	else if ( name.equals(IntegerObject::StaticTypeName()) ) {
+		returnObject = new IntegerObject();
+	}
+	else if ( name.equals(DecimalNumObject::StaticTypeName()) ) {
+		returnObject = new DecimalNumObject();
+	}
+	else if ( name.equals(ListObject::StaticTypeName()) ) {
+		returnObject = new ListObject();
+	}
+	else if ( name.equals(FunctionObject::StaticTypeName()) ) {
+		returnObject = new FunctionObject();
+	}
+	else if ( name.equals(ObjectTypeObject::StaticTypeName()) ) {
+		returnObject = new ObjectTypeObject();
+	}
+	else
+#endif // COPPER_ENABLE_CONSTRUCTING_BUILTINS_BY_NAME
+	if ( customObjectFactory ) {
+		returnObject = customObjectFactory->constructFromName(name);
+	}
+
+	if ( isNull( returnObject ) ) {
+		print( LogLevel::warning, EngineMessage::CouldNotConstructRequestedType );
+		returnObject = new FunctionObject();
+	}
+
+	lastObject.setWithoutRef(returnObject);
+
 	return FuncExecReturn::Ran;
 }
 

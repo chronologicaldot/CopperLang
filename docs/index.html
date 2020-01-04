@@ -640,6 +640,23 @@ Returns <code>true</code> if all of the <em>type_value</em> objects have the sam
 <aside class="notice">
 In this function, the types are compared based on their return from the virtual method <code>Cu::Object::typeName()</code>.
 </aside>
+<h3 id='ret_type-fn-implementation-dependent'>ret_type( <em>fn</em> ) (implementation-dependent)</h3>
+<p>If the given function has a constant return, this function will return the <em>type-value</em> of the object to be returned.</p>
+<pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">
+</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="nb">ret</span><span class="p">(</span><span class="mi">3</span><span class="p">)}</span><span class="w">
+</span></code></pre>
+<p>Constant-return functions are those whose return is immediately knowable upon their creation. They are of two types: 1) created from direct assignment, 2) created with return of static data. See sidebar code.</p>
+
+<p>Only the former type is supported in the original virtual machine. The latter will always return &quot;fn&quot;.</p>
+<pre class="highlight copper tab-copper"><code><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">++</span><span class="p">(</span><span class="kr">this</span><span class="o">.</span><span class="n">c</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="nb">ret</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="cm"># The following saves the return type to "a" #</span><span class="w">
+</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ret_type</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="w">
+</span><span class="cm"># The following not only saves the type to "a" but increments "b.c" #</span><span class="w">
+</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">type_of</span><span class="p">(</span><span class="n">b</span><span class="o">:</span><span class="p">)</span><span class="w">
+</span></code></pre>
+<p>This system function this avoids the need to call the given function explicitly, which may trigger chains of function calls. For example, see sidebar code.</p>
+
+<p>Due to its dependence on the underlying architecture of the virtual machine and its ignoring of the rule that variables merely contain functions, this function is not considered standard.</p>
 <h3 id='are_fn'>are_fn( ... )</h3>
 <p>Returns <code>true</code> if all of the given arguments are of type object-function.</p>
 <h3 id='are_empty'>are_empty( ... )</h3>
@@ -660,8 +677,19 @@ In this function, the types are compared based on their return from the virtual 
 <p>Throws an error if <em>condition</em> does not resolve to <code>true</code>.</p>
 <h3 id='copy_of-arg'>copy_of( <em>arg</em> )</h3>
 <p>Returns an independent copy of the given argument.</p>
-<h3 id='xwsv-super_variable-call_variable-call_args'>xwsv( <em>super_variable</em>, <em>call_variable</em>, <em>call_args</em> ... )</h3>
-<p>Calls <em>call_variable</em> with the extra arguments and sets the &quot;super&quot; variable to <em>super_variable</em>.</p>
+<h3 id='xwsv-super_variable-call_variable-call_args'>xwsv( <em>super_variable</em>, <em>call_variable</em>, <em>call_args</em> ... )</h3><pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="o">.</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">
+</span><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">print</span><span class="p">(</span><span class="kr">super</span><span class="o">.</span><span class="n">c</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="o">:</span><span class="w"> </span><span class="cm"># Prints 5 #</span><span class="w">
+</span><span class="n">d</span><span class="o">.</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">
+</span><span class="n">xwsv</span><span class="p">(</span><span class="n">d</span><span class="w"> </span><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints 10 #</span><span class="w">
+</span></code></pre>
+<p>Calls <em>call_variable</em> with the extra arguments and sets the &quot;super&quot; variable to <em>super_variable</em>. The &quot;super&quot; variable is the variable whose member is the variable whose function is being run.</p>
+<h3 id='share_body-fn-fn'>share_body( <em>fn</em>, <em>fn</em> )</h3>
+<p>Causes the second object-function to inherit the body of the first object-function. This allows object-functions to retain their members and members&#39; values.</p>
+<h3 id='realize-type_value-realize-object'>realize( <em>type_value</em> ) / realize( <em>object</em> )</h3>
+<p>If given a <em>type-value</em> object, it returns an instance of the object represented by the given type value. If given any other type of object, it creates and returns an instance of the same type of object. Upon failure to create the desired type, it returns an empty function.</p>
+<h3 id='new-type_name'>new( <em>type_name</em> )</h3>
+<p>Returns an instance of the object whose type name is given. Upon failure to create that type, it returns an empty function.</p>
 <h3 id='not-boolean_arg'>not( <em>boolean_arg</em> )</h3>
 <p>Returns the opposite boolean value of <em>boolean_arg</em>.</p>
 <h3 id='all-boolean_arg'>all( <em>boolean_arg</em> ... )</h3>
@@ -863,7 +891,7 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
 </span><span class="n">r</span><span class="o">:</span><span class="w"> </span><span class="cm"># Prints warning of empty function container #</span><span class="w">
 
 </span><span class="cm"># Strings can be checked for matching value and concatenated #</span><span class="w">
-</span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="nb">matching</span><span class="p">(</span><span class="s">"fn"</span><span class="p">,</span><span class="w"> </span><span class="nb">type_of</span><span class="p">(</span><span class="n">s</span><span class="o">:</span><span class="p">))</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="nb">matching</span><span class="p">(</span><span class="s">"fn"</span><span class="p">,</span><span class="w"> </span><span class="n">typename_of</span><span class="p">(</span><span class="n">s</span><span class="o">:</span><span class="p">))</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
     </span><span class="n">print</span><span class="p">(</span><span class="w"> </span><span class="nb">concat</span><span class="p">(</span><span class="w"> </span><span class="s">"some "</span><span class="p">,</span><span class="w"> </span><span class="s">"string "</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
@@ -935,6 +963,8 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
 <p>The Engine has a built-in filter for determining if certain sets of bytes compose valid names, but a custom filter can be added using the Engine method <code>setNameFilter()</code>. See the <a href="#api">API</a> for more information.</p>
 
 <p>An instance of an engine isn&#39;t useful on its own. You will need to add <a href="#foreign-functions">foreign functions</a> to it. Some have been provided. See the <a href="#provided-extensions">provided extensions section</a> for more information.</p>
+
+<p>It is possible to add your own custom objects to the virtual machine. This can be done by either returning them from a foreign function you implement or via your implementation of <code>Cu::CustomObjectFactory</code> given to the engine via <code>Engine::setCustomObjectFactory</code>. See <a href="#custom-object-factory">Custom Object Factory</a>.</p>
 <h2 id='compiling-the-virtual-machine'>Compiling the Virtual Machine</h2>
 <p>If you wish to test the virtual machine, a premake5 project file has been provided. Premake can generate both GCC make files and Visual Studio project files.</p>
 
@@ -1034,6 +1064,25 @@ Some Linux distro repositories have a version of premake, but be sure to check i
 <p><code>isSameData()</code> returns true when the data for both objects is the same. For example, it may return true when two numeric types use the same representation and have the same value. It could also be used for checking if pointer addresses to data are the same. The primary usage of this method is for equality but is not the same as numeric equality.</p>
 
 <p><code>supportsInterface()</code> returns true if the object can be safely casted to the class type represented by the given <code>ObjectType::Value</code> value.</p>
+
+<p><br id="custom-object-factory"></p>
+<h3 id='custom-object-factory'>Custom Object Factory</h3>
+<p>It is possible to add custom objects to the virtual machine by directly returning them from a foreign function. However, the engine is unaware of the ability to create them.</p>
+
+<p><code>CustomObjectFactory</code> is an abstract class that, if given to the engine, will be used for creating instances of objects via the system functions <code>realize()</code> and <code>new()</code>. A single instance of the factory class can be given to the engine via <code>Engine::setCustomObjectFactory( CustomObjectFactory )</code>. Note that the engine will not reference-count this class, so it must not be deleted before the engine is done using it.</p>
+
+<p>There are two virtual methods, both of which must return a singly-reference-counted object or REAL_NULL.</p>
+
+<ul>
+<li>virtual Object* constructFromType( ObjectType::Value )</li>
+<li>virtual Object* constructFromName( const String&amp; )</li>
+</ul>
+
+<p>How these methods interpret their given arguments is up to the user, but to establish convention, <code>UserTypeStart</code> from <code>ObjectType::Value</code> ought to be the basis for your user-defined object type-values. Moreover, the string name ought to be (the return) from a static member function of the class of the object being instanced.</p>
+
+<aside class="notice">
+The overall process of calling foreign functions and creating custom objects with (more than one of) them may be faster than creating custom objects with CustomObjectFactory::constructFromName() because of the possible string comparison in the latter. However, the virtual machine's hash table implementation (RHHash, see [API](#api)) can be employed to avoid the need for complete string comparison.
+</aside>
 
 <p><br id="provided-extensions"></p>
 <h2 id='provided-extensions'>Provided Extensions</h2>

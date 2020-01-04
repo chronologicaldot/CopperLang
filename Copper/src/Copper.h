@@ -91,12 +91,12 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.631
+#define COPPER_INTERPRETER_VERSION 0.64
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 3.2
+#define COPPER_LANG_VERSION 3.3
 
 // ******* Language modifications *******
 
@@ -135,6 +135,10 @@
 //! Allows for bounds-checking on integers
 // Slow but safe. Requires <limits>, however.
 //#define ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
+
+//! Allows for built-in-types to be creatable with the construct_from_name system function.
+// Disabled by default because there are other ways of creating these. Moreover, it slows down the instancing of custom user objects.
+//#define COPPER_ENABLE_CONSTRUCTING_BUILTINS_BY_NAME
 
 
 // ******* Error templates *******
@@ -489,6 +493,10 @@ struct EngineMessage {
 	// Usually, the other error will be printed. This just indicates that the problem is within a function body.
 	UserFunctionBodyError,
 
+	// WARNING
+	// The object type requested could not be constructed. This will especially happen for objects that require initialization parameters.
+	CouldNotConstructRequestedType,
+
 	// UNKNOWN
 	CustomMessage,
 
@@ -705,6 +713,7 @@ struct SystemFunction {
 	_equal_type_value,
 	_typename,
 	_have_same_typename,
+	_function_return_type, // value-type / return type "ret_type"
 	_are_bool,
 	_are_string,
 	_are_list,
@@ -713,8 +722,10 @@ struct SystemFunction {
 	_are_decimal,
 	_assert,
 	_copy,
-	_execute_with_alt_super, // "xwsv"
+	_execute_with_alt_super, // "xwsv", execute with super variable
 	_share_body,
+	_construct_from_type, // "realize"
+	_construct_from_name, // "new"
 
 	_make_list,		// "list"
 	_list_size,		// "length"
@@ -3346,6 +3357,27 @@ struct EngineEndProcCallback {
 class NullOpcodeStrandException {};
 #endif
 
+//*********** Custom Object Factory Interface *********
+/*
+	Custom objects for Copper are normally created by adding a foreign function that creates them.
+	However, objects can also be constructed by implementing this interface and passing it to the engine via
+	Engine::setCustomObjectFactory().
+
+	Both constructFromType() and constructFromName() must return objects with a single-reference-count or monads.
+	This interface is used by the system functions:
+		- construct_from_type ("realize") - Uses type-value (ObjectTypeObject)
+		- construct_from_name ("new") - Uses strings (StringObject)
+*/
+struct CustomObjectFactory {
+	virtual ~CustomObjectFactory() {}
+
+	//! Create objects by custom type. Return a single-reference-counted object.
+	virtual Object* constructFromType( ObjectType::Value ) { return REAL_NULL; }
+
+	//! Create objects by custom name. Return a single-reference-counted object.
+	virtual Object* constructFromName( const String& ) { return REAL_NULL; }
+};
+
 //*************** MAIN INTERPRETER CLASS **************
 
 class Engine {
@@ -3367,6 +3399,7 @@ class Engine {
 	bool stackTracePrintingEnabled;
 	bool printTokensWhenParsing;
 	bool (* nameFilter)(const String& pName);
+	CustomObjectFactory* customObjectFactory;
 
 public:
 	Engine(); // remember to initialize the logger
@@ -3409,6 +3442,11 @@ public:
 	Such a filter can be used to check for different Unicode formats. */
 	void setNameFilter( bool(*filter)(const String&) ) {
 		nameFilter = filter;
+	}
+
+	// Set the Custom Object Factory, useful for instancing custom objects in the engine
+	void setCustomObjectFactory( CustomObjectFactory* factory ) {
+		customObjectFactory = factory;
 	}
 
 	/* Add an external/foreign function to the virtual machine, accessible from within Copper.
@@ -3813,6 +3851,7 @@ protected:
 	FuncExecReturn::Value	process_sys_equal_type_value(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_typename(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_have_same_typename(	FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_function_return_type(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_bool(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_string(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_list(		FuncFoundTask& task );
@@ -3821,6 +3860,8 @@ protected:
 	FuncExecReturn::Value	process_sys_are_decimal(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_assert(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_copy(			FuncFoundTask& task );
+	FuncExecReturn::Value   process_sys_construct_from_type(	FuncFoundTask& task );
+	FuncExecReturn::Value   process_sys_construct_from_name(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_execute_with_alt_super( FuncFoundTask& task, OpStrandStackIter&	opStrandStackIter );
 	FuncExecReturn::Value   process_sys_share_body(		FuncFoundTask& task );
 

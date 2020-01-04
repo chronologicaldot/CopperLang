@@ -1,4 +1,31 @@
 ===================
+2019/12/30
+v 6-0.64
+
+- Added ret_type() Copper method:
+-- SystemFunction::_function_return_type
+-- Engine::process_sys_function_return_type()
+- Added "realize" for creating instances of objects from type-values
+-- SystemFunction::_construct_from_type
+-- EngineMessage::CouldNotConstructRequestedType
+-- Engine::process_sys_construct_from_type()
+- Added "new" for creating instances of objects from string names
+-- SystemFunction::_construct_from_name
+-- EngineMessage::process_sys_construct_from_name()
+- Added new warning EngineMessage, CouldNotConstructRequestedType.
+- Added and integrated usage of CustomObjectFactory (for users to create their own objects via construct_from_type and construct_from_name).
+- Bumped up the language version to 3.3.
+
+EngMsgToStr.cpp
+- Updated getSystemFunctionName() to return strings for _function_return_type, _share_body, _construct_from_type, and _construct_from_name.
+- Updated getStringFromEngineMessage() to return string for CouldNotConstructRequestedType.
+
+docs
+- Added info for function_return_type, share_body, construct_from_type, and construct_from_name.
+- Added info for CustomObjectFactory.
+
+
+===================
 2019/6/2
 v 6-0.631
 

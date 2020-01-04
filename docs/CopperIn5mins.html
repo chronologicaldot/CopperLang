@@ -231,7 +231,7 @@ o = <red>{}</red>
 r: <grey># Prints warning of empty function container #</grey>
 
 <grey># Strings can be checked for matching value and concatenated #</grey>
-if <red>( matches<orange>("fn" type_of<green>(s:)</green>)</orange> ) {
+if <red>( matches<orange>("fn" typename_of<green>(s:)</green>)</orange> ) {
 	print<orange>( concat<green>( "some " "string " )</green> )</orange>
 }</red>
 

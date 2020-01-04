@@ -374,6 +374,11 @@ getStringFromEngineMessage(
 		errLevel = EngineErrorLevel::error;
 		return "Function body contains errors.";
 
+	// WARNING
+	// The object type requested could not be constructed. This will especially happen for objects that require initialization parameters.
+	case EngineMessage::CouldNotConstructRequestedType:
+		return "Could not construct requested type.";
+
 	case EngineMessage::COUNT:
 		return "INFO: tick.";
 		break;
@@ -454,6 +459,9 @@ getSystemFunctionDefaultName(
 	case SystemFunction::_have_same_typename:
 		return "have_same_typename";
 
+	case SystemFunction::_function_return_type:
+		return "ret_type";
+
 	case SystemFunction::_are_bool:
 		return "are_bool";
 
@@ -480,6 +488,15 @@ getSystemFunctionDefaultName(
 
 	case SystemFunction::_execute_with_alt_super:
 		return "xwsv";
+
+	case SystemFunction::_share_body:
+		return "share_body";
+
+	case SystemFunction::_construct_from_type:
+		return "realize";
+
+	case SystemFunction::_construct_from_name:
+		return "new";
 
 
 	case SystemFunction::_make_list:
