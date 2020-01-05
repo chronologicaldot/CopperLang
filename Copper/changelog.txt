@@ -15,7 +15,7 @@ v 6-0.64
 - Added new warning EngineMessage, CouldNotConstructRequestedType.
 - Added and integrated usage of CustomObjectFactory (for users to create their own objects via construct_from_type and construct_from_name).
 - Bumped up the language version to 3.3.
-- Fixed bug in are_numeric (isNumeric()) that tried exact match of numeric type instead of checking for interface support.
+- Fixed bug in are_number (isNumeric()) that tried exact match of numeric type instead of checking for interface support.
 
 EngMsgToStr.cpp
 - Updated getSystemFunctionName() to return strings for _function_return_type, _share_body, _construct_from_type, and _construct_from_name.
