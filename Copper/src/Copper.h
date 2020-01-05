@@ -3342,7 +3342,8 @@ inline bool
 isNumericObject(
 	const Object& pObject
 ) {
-	return pObject.getType() == ObjectType::Numeric;
+	//return pObject.getType() == ObjectType::Numeric;
+	return pObject.supportsInterface( ObjectType::Numeric );
 }
 
 //--------------------------------
