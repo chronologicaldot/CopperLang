@@ -73,6 +73,7 @@ public:
 	Decimal
 	getNanosecondsValue() const {
 		return (Integer)data.tv_nsec;
+		// Should also add data.tv_sec*1000000
 	}
 
 	Decimal
