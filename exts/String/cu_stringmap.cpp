@@ -23,7 +23,7 @@ Map::call( FFIServices&  ffi ) {
 		|| !ffi.demandArgType(0, ObjectType::String)
 		|| !ffi.demandArgType(1, ObjectType::Function)
 	) {
-		return NONFATAL;
+		return ForeignFunc::NONFATAL;
 	}
 
 	util::String  srcString = ((StringObject&)ffi.arg(0)).getString();
@@ -63,12 +63,12 @@ Map::call( FFIServices&  ffi ) {
 		case EngineResult::Error:
 			clearMapFunction();
 			ffi.printError("Error during call to given map function.");
-			return NONFATAL;
+			return ForeignFunc::NONFATAL;
 
 		default:
 			// Engine is done
 			clearMapFunction();
-			return EXIT;
+			return ForeignFunc::EXIT;
 		}
 
 		if ( keep )
@@ -77,7 +77,7 @@ Map::call( FFIServices&  ffi ) {
 	clearMapFunction();
 	String  finalString( rebuild );
 	ffi.setNewResult(new StringObject(finalString));
-	return FINISHED;
+	return ForeignFunc::FINISHED;
 }
 
 bool
