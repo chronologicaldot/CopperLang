@@ -44,7 +44,8 @@ Overwrite( FFIServices&  ffi ) {
 			return ForeignFunc::FINISHED;
 		}
 
-		baseIndex = 0 - baseIndex;
+		topIndex = 0 - baseIndex;
+		baseIndex = 0;
 	}
 
 	for (; topIndex < topString.size() && baseIndex < baseString.size(); ++baseIndex, ++topIndex) {
