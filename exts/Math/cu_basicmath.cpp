@@ -262,6 +262,7 @@ Avg::call( FFIServices& ffi ) {
 	NumericObject*  countObject = new IntegerObject(count);
 	nextObject = totalObject->divide( *countObject );
 	ffi.setNewResult( nextObject );
+	totalObject->deref();
 	countObject->deref();
 
 	return ForeignFunc::FINISHED;
