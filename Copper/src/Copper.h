@@ -1701,13 +1701,13 @@ public:
 
 	void changeOwnerTo( Owner* pNewOwner );
 
-	// Should store in a better storage variable, not some open pointer
+	// (Should store in a better storage variable, not some open pointer, but it's easier to use this way)
 	bool getFunction( Function*& storage );
 
 	// Used for assignment, which only requires copying
 	void setFrom( FunctionObject& pOther );
 
-	// Createa a new function from the body of the given one (also copies constant return)
+	// Create a new function from the body of the given one (also copies constant return)
 	void createFromBody( Function& );
 
 	// FunctionObject* copy()
