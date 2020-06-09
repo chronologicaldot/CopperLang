@@ -163,8 +163,7 @@ Power::call(
 		return NONFATAL;
 
 	Decimal  base;
-	Object* arg;
-	Integer  index = 1;
+	UInteger  index = 1;
 	if ( ffi.getArgCount() >= 1 )
 		base = ((NumericObject&)ffi.arg(index)).getDecimalValue();
 
@@ -204,7 +203,6 @@ PickMin::call( FFIServices& ffi ) {
 		return ForeignFunc::NONFATAL;
 
 	NumericObject*  current = (NumericObject*)&(ffi.arg(0));
-	NumericObject*  next = REAL_NULL;
 	UInteger index = 1;
 	for (; index < ffi.getArgCount(); ++index) {
 		if ( current->isGreaterThan( (NumericObject&)ffi.arg(index) ) ) {
@@ -225,7 +223,6 @@ PickMax::call( FFIServices& ffi ) {
 		return ForeignFunc::NONFATAL;
 
 	NumericObject*  current = (NumericObject*)&(ffi.arg(0));
-	NumericObject*  next = REAL_NULL;
 	UInteger index = 1;
 	for (; index < ffi.getArgCount(); ++index) {
 		if ( ((NumericObject&)ffi.arg(index)).isGreaterThan(*current) ) {

@@ -1,4 +1,11 @@
 ===========
+2020/6/9
+
+cu_basicmath
+- Cleaned up unused variables.
+
+
+===========
 2019/3/11
 
 cu_systime
