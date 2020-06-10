@@ -1,7 +1,6 @@
 // Copyright 2018 Nicolaus Anderson
 
 #define CU_MATH_USE_C_LIMITS 1
-//#define CU_MATH_USE_STRING_CONVERSIONS 1
 
 #include "cu_basicmath.h"
 #include <math.h>
