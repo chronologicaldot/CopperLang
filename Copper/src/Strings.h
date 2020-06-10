@@ -67,8 +67,10 @@ public:
 	bool equalsIgnoreCase( const String& pOther ) const;
 	int toInt() const;				// TODO: Speed up
 	unsigned long toUnsignedLong() const;
-	float toFloat() const;			// FIXME: Handle NaN and infinity
-	double toDouble() const;		// FIXME: Handle NaN and infinity
+	float toFloat() const;			// TODO: Handle NaN and infinity
+	double toDouble() const;		// TODO: Handle NaN and infinity
+	void fromInt( int );
+	void fromDouble( double, uint prec=6 ); // Allows for precision setting
 	void purgeNonPrintableASCII();
 	bool contains( char c ) const;
 	unsigned char numberType() const; // return 0 for no type, 1 for integer, 2 for decimal

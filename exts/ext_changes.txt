@@ -3,6 +3,7 @@
 
 cu_basicmath
 - Cleaned up unused variables.
+- Removed dependence on <sstream> for number-to-string conversion.
 
 
 ===========

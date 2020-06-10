@@ -624,7 +624,8 @@ unsigned long String::toUnsignedLong() const
 
 float String::toFloat() const
 {
-	// FIXME: Doesn't handle infinity or NaN bits.
+	// TODO: Doesn't handle infinity or NaN bits.
+	// Pain: https://stackoverflow.com/questions/570669/checking-if-a-double-or-float-is-nan-in-c
 	if ( len == 0 )
 		return 0;
 	float little = 0;
@@ -659,7 +660,8 @@ float String::toFloat() const
 
 double String::toDouble() const
 {
-	// FIXME: Doesn't handle infinity or NaN bits.
+	// TODO: Doesn't handle infinity or NaN bits.
+	// Pain: https://stackoverflow.com/questions/570669/checking-if-a-double-or-float-is-nan-in-c
 	if ( len == 0 )
 		return 0;
 	double little = 0;
@@ -690,6 +692,66 @@ double String::toDouble() const
 	if ( flip )
 		big = -big;
 	return big;
+}
+
+void String::fromInt( int  value )
+{
+	if ( value == 0 ) {
+		delete[] str;
+		str = new char[2];
+		str[0] = '0';
+		str[1] = '\0';
+		len = 1;
+		return;
+	}
+
+	CharList total;
+	bool isNeg = value < 0;
+	int n = isNeg? -value : value;
+	while ( n != 0 ) {
+		total.push_front( char( n%10 + '0' ) );
+		n /= 10;
+	}
+	if ( isNeg )
+		total.push_front( char('-') );
+
+	*this = total;
+}
+
+void String::fromDouble( double  value, uint prec )
+{
+	if ( value < .000001 && value > -.000001 ) {
+		delete[] str;
+		str = new char[2];
+		str[0] = '0';
+		str[1] = '\0';
+		len = 1;
+		return;
+	}
+
+	// We only preserve accuracy up to 6 places behind the decimal.
+	CharList total;
+	bool isNeg = value < 0;
+	double ntop = isNeg? -value : value;
+	long top = ntop;
+	double fraction = ntop - top;
+	uint i = 0;
+
+	while ( i != prec ) {
+		fraction *= 10;
+		total.push_back( char( int(fraction) + '0' ) ); // floor(fraction)
+		fraction -= int(fraction); // Chop top
+		++i;
+	}
+	total.push_front('.');
+	while ( top > 0 ) {
+		total.push_front( char( top % 10 + '0' ) );
+		top /= 10;
+	}
+	if ( isNeg )
+		total.push_front('-');
+
+	*this = total;
 }
 
 void String::purgeNonPrintableASCII()

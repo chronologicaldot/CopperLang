@@ -1,9 +1,16 @@
 // Copyright 2018 Nicolaus Anderson
+
+#define CU_MATH_USE_C_LIMITS 1
+
 #include "cu_basicmath.h"
 #include <math.h>
 //#include <climits>
+
+#ifdef CU_MATH_USE_C_LIMITS
 #include <limits>
-#include <sstream>
+//#else
+//#define DECIMAL_ROUNDING_ERROR 0.000001
+#endif
 
 namespace Cu {
 namespace Numeric {
@@ -59,17 +66,6 @@ addFunctionsToEngine(
 	addNewForeignFunc(engine, "ceiling", new Ceiling() );
 }
 
-/*
-	REFERENCE for a string operations lib
-void Int::writeToString(
-	String& out
-) const {
-	std::ostringstream os;
-	if ( os << value )
-		out = os.str().c_str();
-}
-*/
-
 ForeignFunc::Result
 IntegerCast::call(
 	FFIServices&  ffi
@@ -106,19 +102,27 @@ ForeignFunc::Result
 ToString(
 	FFIServices& ffi
 ) {
-	if ( ! ffi.demandArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
+	if ( ! ffi.demandMinArgCount(1) || ! ffi.demandArgType(0, ObjectType::Numeric) )
 		return ForeignFunc::NONFATAL;
 
-	std::stringstream  sstream;
+	UInteger precision = 6;
+	if ( ffi.getArgCount() == 2 ) {
+		if ( ffi.arg(1).supportsInterface( ObjectType::Numeric ) ) {
+			precision = ((NumericObject&)ffi.arg(1)).getIntegerValue();
+		}
+	}
+
 	NumericObject& arg = (NumericObject&) ffi.arg(0);
+	util::String  str;
 	if ( arg.supportsInterface( ObjectType::DecimalNum ) ) {
-		sstream << arg.getDecimalValue();
+		str.fromDouble( arg.getDecimalValue(), precision );
 	} else {
-		sstream << arg.getIntegerValue();
+		str.fromInt( arg.getIntegerValue() );
 	}
 	ffi.setNewResult(
-		new StringObject(sstream.str().c_str())
+		new StringObject(str)
 	);
+//#endif // CU_MATH_USE_STRING_CONVERSIONS
 	return ForeignFunc::FINISHED;
 }
 
@@ -126,9 +130,11 @@ ForeignFunc::Result
 DecimalInfinity(
 	FFIServices& ffi
 ) {
+#ifdef CU_MATH_USE_C_LIMITS
 	ffi.setNewResult(
 		new DecimalNumObject( std::numeric_limits<double>::infinity() )
 	);
+#endif
 	return ForeignFunc::FINISHED;
 }
 
