@@ -5,6 +5,9 @@ cu_basicmath
 - Cleaned up unused variables.
 - Removed dependence on <sstream> for number-to-string conversion.
 
+cu_stringbasics
+- Cleaned up warnings for signed-unsigned comparisons.
+
 
 ===========
 2019/3/11

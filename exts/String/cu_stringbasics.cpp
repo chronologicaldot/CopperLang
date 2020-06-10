@@ -27,12 +27,15 @@ Overwrite( FFIServices&  ffi ) {
 		return ForeignFunc::NONFATAL;
 	}
 
+	// WARNING: You can't use this function with strings exceeding INT_MAX because we need to have index values
+	// that are negative (for overwriting start position).
+
 	String&  baseString = ((StringObject&) ffi.arg(0)).getString();
 	Integer  baseIndex = ((NumericObject&) ffi.arg(1)).getIntegerValue();
 	String&  topString = ((StringObject&) ffi.arg(2)).getString();
 
 	// Location of the index puts the topString after the baseString's last character
-	if ( baseIndex >= baseString.size() ) {
+	if ( baseIndex >= static_cast<Integer>(baseString.size()) ) {
 		return ForeignFunc::FINISHED;
 	}
 
@@ -48,7 +51,10 @@ Overwrite( FFIServices&  ffi ) {
 		baseIndex = 0;
 	}
 
-	for (; topIndex < topString.size() && baseIndex < baseString.size(); ++baseIndex, ++topIndex) {
+	for (; topIndex < static_cast<Integer>(topString.size())
+		&& baseIndex < static_cast<Integer>(baseString.size());
+		++baseIndex, ++topIndex)
+	{
 		baseString.set(baseIndex, topString[topIndex]);
 	}
 
@@ -66,7 +72,7 @@ Length( FFIServices&  ffi ) {
 	}
 
 	Integer  total = 0;
-	Integer  i = 0;
+	UInteger  i = 0;
 	for (; i < ffi.getArgCount(); ++i) {
 		total += ((StringObject&)ffi.arg(i)).getString().size();
 	}
