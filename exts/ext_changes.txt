@@ -1,4 +1,14 @@
 ===========
+2020/9/29
+
+cu_stringbasics
+- Changed ByteAt to CharAt.
+
+cu_bytebasics
+- Created
+
+
+===========
 2020/6/9
 
 cu_basicmath

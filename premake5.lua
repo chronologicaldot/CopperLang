@@ -45,6 +45,7 @@ project "Copper"
 		"exts/String/cu_stringmap.h", "exts/String/cu_stringmap.cpp",
 		"exts/String/cu_stringbasics.h", "exts/String/cu_stringbasics.cpp",
 		"exts/System/cu_info.h", "exts/System/cu_info.cpp",
+		"exts/Byte/cu_bytebasics.h", "exts/Byte/cu_bytebasics.cpp",
 	}
 
 	excludes

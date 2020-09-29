@@ -11,7 +11,7 @@ namespace Basics {
 	addFunctionsToEngine( Engine&  engine ) {
 		addForeignFuncInstance(engine, "str_overwrite", &Overwrite);
 		addForeignFuncInstance(engine, "str_byte_length", &Length);
-		addForeignFuncInstance(engine, "str_byte_at", &ByteAt);
+		addForeignFuncInstance(engine, "str_char_at", &CharAt);
 	}
 
 }
@@ -82,7 +82,7 @@ Length( FFIServices&  ffi ) {
 }
 
 ForeignFunc::Result
-ByteAt( FFIServices&  ffi ) {
+CharAt( FFIServices&  ffi ) {
 	if ( ! ffi.demandArgCount(2)
 		|| ! ffi.demandArgType(0, ObjectType::String)
 		|| ! ffi.demandArgType(1, ObjectType::Numeric)

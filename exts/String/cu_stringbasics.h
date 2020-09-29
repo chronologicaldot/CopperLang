@@ -21,7 +21,7 @@ ForeignFunc::Result
 Length( FFIServices& );
 
 ForeignFunc::Result
-ByteAt( FFIServices& );
+CharAt( FFIServices& );
 
 }}
 

@@ -130,7 +130,7 @@
 #define CU_FUNCTION_SCOPE_SIZE 10
 
 //! Initial size of stack frame scope
-#define CU_STACK_FRAME_SCOPE_SIZE 100
+#define CU_STACK_FRAME_SCOPE_SIZE 50
 
 //! Allows for bounds-checking on integers
 // Slow but safe. Requires <limits>, however.
