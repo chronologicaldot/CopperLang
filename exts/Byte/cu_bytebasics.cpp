@@ -64,8 +64,7 @@ ByteObject::get( Integer index ) {
 
 void
 ByteObject::flipbit( Integer index ) {
-	cu_byte mask = 1 << index;
-	data &= ~mask;
+	data ^= 1 << index;
 }
 
 void
