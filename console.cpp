@@ -34,6 +34,7 @@ void handler(int sig) {
 
 bool NameFilter(const util::String& pName) {
 	// Empty. Could be used to check for valid Unicode, e.g. utf-8.
+	return true;
 }
 
 int main() {
