@@ -306,7 +306,7 @@ FlipAllBits( FFIServices& ffi ) {
 ForeignFunc::Result
 OperateAnd( FFIServices& ffi ) {
 	if ( ffi.demandMinArgCount(2)
-		|| ! ffi.demandAllArgTypes( ByteObject::StaticByteType() )
+		|| ! ffi.demandAllArgsType( ByteObject::StaticByteType() )
 	) {
 		return ForeignFunc::NONFATAL;
 	}
@@ -319,14 +319,14 @@ OperateAnd( FFIServices& ffi ) {
 		b &= ((ByteObject&)ffi.arg(i)).data;
 	}
 
-	ffi.setNewResult( new ByteObject( b );
+	ffi.setNewResult( new ByteObject( b ) );
 	return ForeignFunc::FINISHED;
 }
 
 ForeignFunc::Result
 OperateOr( FFIServices& ffi ) {
 	if ( ffi.demandMinArgCount(2)
-		|| ! ffi.demandAllArgTypes( ByteObject::StaticByteType() )
+		|| ! ffi.demandAllArgsType( ByteObject::StaticByteType() )
 	) {
 		return ForeignFunc::NONFATAL;
 	}
@@ -339,14 +339,14 @@ OperateOr( FFIServices& ffi ) {
 		b |= ((ByteObject&)ffi.arg(i)).data;
 	}
 
-	ffi.setNewResult( new ByteObject( b );
+	ffi.setNewResult( new ByteObject( b ) );
 	return ForeignFunc::FINISHED;
 }
 
 ForeignFunc::Result
 OperateXor( FFIServices& ffi ) {
 	if ( ffi.demandMinArgCount(2)
-		|| ! ffi.demandAllArgTypes( ByteObject::StaticByteType() )
+		|| ! ffi.demandAllArgsType( ByteObject::StaticByteType() )
 	) {
 		return ForeignFunc::NONFATAL;
 	}
@@ -359,7 +359,7 @@ OperateXor( FFIServices& ffi ) {
 		b ^= ((ByteObject&)ffi.arg(i)).data;
 	}
 
-	ffi.setNewResult( new ByteObject( b );
+	ffi.setNewResult( new ByteObject( b ) );
 	return ForeignFunc::FINISHED;
 }
 
