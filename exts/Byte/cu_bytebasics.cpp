@@ -16,6 +16,9 @@ namespace Basics {
 		addForeignFuncInstance(engine, "byte_get_bit_as_str", &GetBitAsString);
 		addForeignFuncInstance(engine, "byte_flip_bit", &FlipBit);
 		addForeignFuncInstance(engine, "byte_flip", &FlipAllBits);
+		addForeignFuncInstance(engine, "byte_and", &OperateAnd);
+		addForeignFuncInstance(engine, "byte_or", &OperateOr);
+		addForeignFuncInstance(engine, "byte_xor", &OperateXor);
 		addForeignFuncInstance(engine, "byte_clear", &Clear);
 	}
 
@@ -70,6 +73,21 @@ ByteObject::flipbit( Integer index ) {
 void
 ByteObject::flipall() {
 	data = ~data;
+}
+
+ByteObject::cu_byte
+ByteObject::operateAnd( ByteObject& other ) {
+	return data & other.data;
+}
+
+ByteObject::cu_byte
+ByteObject::operateOr( ByteObject& other ) {
+	return data | other.data;
+}
+
+ByteObject::cu_byte
+ByteObject::operateXor( ByteObject& other ) {
+	return data ^ other.data;
 }
 
 void
@@ -283,6 +301,66 @@ FlipAllBits( FFIServices& ffi ) {
 
 	((ByteObject&)ffi.arg(0)).flipall();
 	return ForeignFunc::FINISHED; // Implicit return of empty function
+}
+
+ForeignFunc::Result
+OperateAnd( FFIServices& ffi ) {
+	if ( ffi.demandMinArgCount(2)
+		|| ! ffi.demandAllArgTypes( ByteObject::StaticByteType() )
+	) {
+		return ForeignFunc::NONFATAL;
+	}
+
+	ByteObject::cu_byte b = 0;
+	b = ((ByteObject&)ffi.arg(0)).data;
+
+	Integer i = 1;
+	for (; i < ffi.getArgCount(); ++i) {
+		b &= ((ByteObject&)ffi.arg(i)).data;
+	}
+
+	ffi.setNewResult( new ByteObject( b );
+	return ForeignFunc::FINISHED;
+}
+
+ForeignFunc::Result
+OperateOr( FFIServices& ffi ) {
+	if ( ffi.demandMinArgCount(2)
+		|| ! ffi.demandAllArgTypes( ByteObject::StaticByteType() )
+	) {
+		return ForeignFunc::NONFATAL;
+	}
+
+	ByteObject::cu_byte b = 0;
+	b = ((ByteObject&)ffi.arg(0)).data;
+
+	Integer i = 1;
+	for (; i < ffi.getArgCount(); ++i) {
+		b |= ((ByteObject&)ffi.arg(i)).data;
+	}
+
+	ffi.setNewResult( new ByteObject( b );
+	return ForeignFunc::FINISHED;
+}
+
+ForeignFunc::Result
+OperateXor( FFIServices& ffi ) {
+	if ( ffi.demandMinArgCount(2)
+		|| ! ffi.demandAllArgTypes( ByteObject::StaticByteType() )
+	) {
+		return ForeignFunc::NONFATAL;
+	}
+
+	ByteObject::cu_byte b = 0;
+	b = ((ByteObject&)ffi.arg(0)).data;
+
+	Integer i = 1;
+	for (; i < ffi.getArgCount(); ++i) {
+		b ^= ((ByteObject&)ffi.arg(i)).data;
+	}
+
+	ffi.setNewResult( new ByteObject( b );
+	return ForeignFunc::FINISHED;
 }
 
 ForeignFunc::Result

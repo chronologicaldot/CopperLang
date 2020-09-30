@@ -149,5 +149,5 @@ A number of helper classes have been provided for adding functions and class met
 
 ## Legal
 
-The Copper Virtual Machine as given in the files included are copyright 2016-2019 Nicolaus Anderson.
+The Copper Virtual Machine as given in the files included are copyright 2016-2020 Nicolaus Anderson.
 License details are provided in license.txt.

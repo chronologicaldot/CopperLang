@@ -3,9 +3,24 @@
 
 cu_stringbasics
 - Changed ByteAt to CharAt.
+- Added documentation.
 
 cu_bytebasics
-- Created
+- Created.
+- Added OperatorAnd, OperatorOr, and OperatorXor.
+- Added documentation.
+
+cu_stringmap
+- Added documentation.
+
+cu_info
+- Added documentation.
+
+cu_systime
+- Added documentation.
+
+cu_basicmath
+- Added documentation.
 
 
 ===========

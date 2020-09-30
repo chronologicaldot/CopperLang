@@ -12,6 +12,42 @@ namespace Cu {
 namespace ByteLib {
 
 namespace Basics {
+/*
+	Creates the following Copper functions in the given Copper Engine:
+
+byte( [string] )
+	Creates a ByteObject (byte) from a string representing the byte as 1s and 0s.
+
+byte_to_str[ [byte] )
+	Returns a string with 1s and 0s representing the bits of the given byte.
+
+byte_set_bit( [byte], [int n], [bool setting] )
+	Sets the given byte's n'th bit to the given setting. true = 1, false = 0.
+
+byte_get_bit_as_int( [byte], [int n] )
+	Returns the n'th bit of the given byte as an integer 1 or 0.
+
+byte_get_bit_as_str( [byte], [int n] )
+	Returns the n'th bit of the given byte as a string "1" or "0".
+
+byte_flip_bit( [byte], [int n] )
+	Flips the n'th bit of the given byte.
+
+byte_flip( [byte] )
+	Flips all the bits of the given byte.
+
+byte_and( [byte], [byte], ... )
+	Bitwise and's all the given bytes.
+
+byte_or( [byte], [byte], ... )
+	Bitwise or's all the given bytes.
+
+byte_xor( [byte], [byte], ... )
+	Bitwise xor's all the given bytes.
+
+byte_clear( [byte] )
+	Sets all the byte's bits to zero. (Faster than creating a new byte of all zeros.)
+*/
 	void addFunctionsToEngine( Engine& );
 }
 
@@ -59,6 +95,9 @@ struct ByteObject : public NumericObject {
 	bool get( Integer index );
 	void flipbit( Integer index );
 	void flipall();
+	cu_byte operateAnd( ByteObject& );	// &
+	cu_byte operateOr( ByteObject& );	// |
+	cu_byte operateXor( ByteObject& );	// ^
 
 
 		// NumericObject methods
@@ -111,7 +150,7 @@ struct ByteObject : public NumericObject {
 #endif
 };
 
-// NOTE: Attempting to create bytes from integers turns out to be more complicated that worth doing.
+// NOTE: Attempting to create bytes from integers turns out to be more complicated than worth doing.
 
 ForeignFunc::Result
 CreateFromString( FFIServices& );
@@ -136,6 +175,15 @@ FlipBit( FFIServices& );
 
 ForeignFunc::Result
 FlipAllBits( FFIServices& );
+
+ForeignFunc::Result
+OperateAnd( FFIServices& );
+
+ForeignFunc::Result
+OperateOr( FFIServices& );
+
+ForeignFunc::Result
+OperateXor( FFIServices& );
 
 ForeignFunc::Result
 Clear( FFIServices& );

@@ -17,6 +17,21 @@ namespace Cu {
 #endif
 
 	// You should really just use me. :)
+/*
+	Creates the following functions in the Copper engine:
+
+get_time()
+	Returns the current time of the application's running, not the system time.
+
+get_seconds( [clocktime] )
+	Returns the seconds of the given clock time.
+
+get_milliseconds( [clocktime] )
+	Returns the milliseconds of the given clock time.
+
+get_nanoseconds( [clocktime] )
+	Returns the nanoseconds of the given clock time.
+*/
 void
 addFunctionsToEngine(
 	Engine&		engine

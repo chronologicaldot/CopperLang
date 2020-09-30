@@ -32,6 +32,10 @@ void handler(int sig) {
   exit(1);
 }
 
+bool NameFilter(const util::String& pName) {
+	// Empty. Could be used to check for valid Unicode, e.g. utf-8.
+}
+
 int main() {
 	Cu::Engine engine;
 	CuStd::Printer printer;
@@ -40,6 +44,8 @@ int main() {
 	engine.addForeignFunction(util::String("print"), &printer);
 	engine.setStackTracePrintingEnabled(true);
 	engine.setPrintTokensWhenParsing(true);
+
+	engine.setNameFilter(&NameFilter); // optional
 
 	Cu::Numeric::addFunctionsToEngine(engine);
 	Cu::Time::addFunctionsToEngine(engine);

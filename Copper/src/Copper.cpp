@@ -2768,7 +2768,7 @@ Engine::resolveTokenType( const String& pName ) {
 
 	// Excluding lower system characters, other characters are valid (Unicode acceptable)
 	// Lower system characters are unknown, not malformed, so check here for lower bound
-	if ( isValidNameCharacter(pName[0]) ) {
+	if ( isValidNameCharacter(pName[0]) || nameFilter ) {
 		if ( isValidName(pName) ) {
 			return TT_name;
 		} else {

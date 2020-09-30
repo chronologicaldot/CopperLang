@@ -7,6 +7,16 @@
 namespace Cu {
 namespace StringLib {
 
+/*
+	To add to your copper engine, simply call Map::addToEngine( engine )
+	Creates the following function in the Copper engine:
+
+string_map( [string], [function] )
+	Calls the given function (map function) for each char/byte in the string.
+	The function is passed the char index and the char (as a StringObject/string).
+	The parameter charKeepPolicy determines if characters of the original string are deleted based on the true/false return of the map function.
+*/
+
 class Map : public ForeignFunc, public Owner {
 	Engine&  engine;
 	FunctionObject*  mapFunction;

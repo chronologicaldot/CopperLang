@@ -3,6 +3,10 @@ v 6-0.641
 
 - Added String::fromInt() and String::fromDouble().
 - Changed CU_STACK_FRAME_SCOPE_SIZE from 100 to 50.
+- Changed Engine::resolveTokenType() to have nameFilter override isValidCharacter() precedence. Allows Unicode.
+
+docs
+- Fixed typo.
 
 
 ===================
