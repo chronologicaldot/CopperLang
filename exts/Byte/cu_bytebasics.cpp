@@ -305,7 +305,7 @@ FlipAllBits( FFIServices& ffi ) {
 
 ForeignFunc::Result
 OperateAnd( FFIServices& ffi ) {
-	if ( ffi.demandMinArgCount(2)
+	if ( ! ffi.demandMinArgCount(2)
 		|| ! ffi.demandAllArgsType( ByteObject::StaticByteType() )
 	) {
 		return ForeignFunc::NONFATAL;
@@ -325,7 +325,7 @@ OperateAnd( FFIServices& ffi ) {
 
 ForeignFunc::Result
 OperateOr( FFIServices& ffi ) {
-	if ( ffi.demandMinArgCount(2)
+	if ( ! ffi.demandMinArgCount(2)
 		|| ! ffi.demandAllArgsType( ByteObject::StaticByteType() )
 	) {
 		return ForeignFunc::NONFATAL;
@@ -345,7 +345,7 @@ OperateOr( FFIServices& ffi ) {
 
 ForeignFunc::Result
 OperateXor( FFIServices& ffi ) {
-	if ( ffi.demandMinArgCount(2)
+	if ( ! ffi.demandMinArgCount(2)
 		|| ! ffi.demandAllArgsType( ByteObject::StaticByteType() )
 	) {
 		return ForeignFunc::NONFATAL;
