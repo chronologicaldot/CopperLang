@@ -1,5 +1,5 @@
 # Copper Lang Interpreter
-This repository contains an interpreter that runs code of the Copper language - a statically-typed, loose syntax programming language. For more information, see the [blog](https://copperlang.wordpress.com) or the [online documentation](https://chronologicaldot.github.io/CopperLang/).
+This repository contains an interpreter that runs code of the Copper language - a statically-typed, simple syntax programming language. For more information, see the [blog](https://copperlang.wordpress.com) or the [online documentation](https://chronologicaldot.github.io/CopperLang/).
 
 ## Table of Contents
 1. Basic Introduction to the Language
@@ -11,7 +11,7 @@ This repository contains an interpreter that runs code of the Copper language - 
 
 The language is described in Copper/docs/CopperLangGuide.html and on the [Copper blog](http://copperlang.wordpress.com).
 
-Copper is a statically typed, loose-syntax language revolving around the concept of function-objects. All variables are instantiated upon declaration and can contain only functions, but functions can return any object. There is no nil/null/void, so the default return from a function is an empty function. The language uses if/elif/else and loop structures.
+Copper is a statically-typed, simple syntax language revolving around the concept of function-objects. All variables are instantiated upon declaration and can contain only functions, but functions can return any object. There is no nil/null/void, so the default return from a function is an empty function. The language uses if/elif/else and loop structures.
 
 Quick example:
 ```Copper
@@ -41,9 +41,9 @@ loop {
 
 ## Interpreter Features
 
-This is a tiny, light-weight, cross-platform interpreter (roughly 250kb) providing only certain basic features essential to the language. The bare-bones interpreter includes functions for boolean comparisons and some for numbers and strings. An extension has been provided for useful numeric functions. Many features have been deliberately excluded from the engine to keep it small and also to allow users to have more control over the permitted flow of data. For example, basic strings are merely byte strands, but the user may create a separate object type to enforce Unicode.
+This is a tiny, light-weight, cross-platform interpreter/engine (roughly 300kb) providing only certain basic features essential to the language. The bare-bones engine includes functions for boolean comparisons and some for numbers and strings. An extension has been provided for useful numeric functions. Many features have been deliberately excluded from the engine to keep it small and also to allow users to have more control over the permitted flow of data. For example, basic strings are merely byte strands, but the user may create a separate object type to enforce Unicode.
 
-The interpreter does not use a garbage collector. The language doesn't require one.
+The engine does not use a garbage collector. The language doesn't require one.
 
 There is only one system dependency in the core code: climits. Other includes are primarily for printing and debugging but aren't necessary.
 
@@ -52,7 +52,7 @@ The code-base is written in cross-platform, standard-agnostic C++ and has been c
 
 ## Project Structure and Building
 
-There are two layers of folders: The inner folder "Copper" contains the basic interpreter itself (with basic printer and logger extensions). The outer folder includes this and the "ext" folder where you can store your extensions to the interpreter.
+There are two layers of folders: The inner folder "Copper" contains the basic interpreter/engine itself (with basic printer and logger extensions). The outer folder includes this and the "ext" folder where you can store your extensions.
 
 There are Premake files provided for making project files for the basic console application and debugging. You don't need them, but they may be helpful. A premake file is provided in the Copper folder. From Premake files, you can create a g++ make file or a Visual Studio file (2015 at highest; see the Premake documentation for other supported versions). The one inside the "Copper" folder can create make and VS project files for the basic interpreter. The one in the outer folder can create make and VS project files for the interpreter with all of the extensions provided in the "ext" folder. You may add your files without modifying the Premake file, but you must rerun the Premake file if you want to create the project files (make or VS) with these new files added (that is, if you don't want to manually add them yourself).
 

@@ -315,7 +315,7 @@ String::String( const char* pString )
 	, len(0)
 {
 	while ( pString[len] != '\0' )
-		len++;
+		++len;
 	str = new char[len+1];
 	uint i = 0;
 	for ( ; i < len; ++i )
@@ -331,7 +331,7 @@ String::String( const String& pString )
 	while ( len < pString.len )
 	{
 		str[len] = pString.str[len];
-		len++;
+		++len;
 	}
 	str[len] = '\0'; // only for returning as c-strings
 }
@@ -349,7 +349,7 @@ String::String( const CharList& pList )
 	CharList::ConstIter i = pList.constStart();
 	do {
 		str[len] = *i;
-		len++;
+		++len;
 	} while ( i.next() );
 	str[len] = '\0'; // only for returning as c-strings
 }
@@ -396,7 +396,7 @@ String& String::operator= ( const String& pString )
 	while ( len < pString.len )
 	{
 		*s = *s2; //str[len] = pString.str[len];
-		len++;
+		++len;
 		++s;
 		++s2;
 	}
@@ -412,7 +412,7 @@ String& String::operator= ( const char* pString )
 	len = 0;
 	delete[] str;
 	while ( pString[len] != '\0' )
-		len++;
+		++len;
 	str = new char[len+1];
 	uint i = 0;
 	char* s = str;
@@ -443,7 +443,7 @@ String& String::operator= ( const CharList& pList )
 	char* s = str;
 	do {
 		*s = *i; // str[len] = *i;
-		//len++; // Now is set before loop
+		//++len; // Now is set before loop
 		++s;
 	} while ( i.next() );
 	*s = '\0'; //str[len] = '\0'; // only for returning as c-strings
@@ -635,7 +635,7 @@ float String::toFloat() const
 	bool flip = false;
 	bool deci = false;
 	if ( str[0] == '-' ) {
-		i++;
+		++i;
 		flip = true;
 	}
 	for ( ; i < len; ++i ) {
@@ -671,7 +671,7 @@ double String::toDouble() const
 	bool flip = false;
 	bool deci = false;
 	if ( str[0] == '-' ) {
-		i++;
+		++i;
 		flip = true;
 	}
 	for ( ; i < len; ++i ) {
