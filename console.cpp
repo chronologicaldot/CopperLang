@@ -16,6 +16,7 @@
 #include "exts/String/cu_stringbasics.h"
 #include "exts/System/cu_info.h"
 #include "exts/Byte/cu_bytebasics.h"
+#include "exts/FileIO/cu_fileio.h"
 
 // function by tgamblin
 // https://stackoverflow.com/questions/77005/how-to-generate-a-stacktrace-when-my-gcc-c-app-crashes
@@ -54,6 +55,7 @@ int main() {
 	Cu::StringLib::Basics::addFunctionsToEngine(engine);
 	Cu::System::addFunctionsToEngine(engine);
 	Cu::ByteLib::Basics::addFunctionsToEngine(engine);
+	Cu::FileIO::Basics::addFunctionsToEngine(engine);
 
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);

@@ -1,12 +1,12 @@
 ===========
-2020/9/29
+2020/9/29 - 10/2
 
 cu_stringbasics
 - Changed ByteAt to CharAt.
 - Added documentation.
 
 cu_bytebasics
-- Created.
+- Created and debugged.
 - Added OperatorAnd, OperatorOr, and OperatorXor.
 - Added documentation.
 
@@ -20,6 +20,10 @@ cu_systime
 - Added documentation.
 
 cu_basicmath
+- Added documentation.
+
+cu_fileio
+- Created and debugged.
 - Added documentation.
 
 
