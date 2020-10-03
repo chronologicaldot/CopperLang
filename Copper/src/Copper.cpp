@@ -7017,7 +7017,7 @@ Engine::process_sys_construct_from_type(
 
 	case ObjectType::TypeValue: break; // Unreachable.
 	case ObjectType::Unknown: break; // No associated type but may come up if the user gives their objects this type.
-	case ObjectType::UserTypeStart: break; // Let the user create the type from here.
+	//case ObjectType::UserTypeStart: break; // Let the user create the type from here.
 
 	case ObjectType::FORCE_32BIT:
 		print( LogLevel::debug, "[DEBUG: System type value illegally passed to construct-object-from-type method." );
