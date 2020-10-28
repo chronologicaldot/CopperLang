@@ -8,6 +8,9 @@ v 6-0.641
 docs
 - Fixed typo.
 
+CuAccessHelper.h
+- Created
+
 
 ===================
 2019/12/30 - 2020/1/5
