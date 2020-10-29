@@ -11,6 +11,7 @@ namespace Basics {
 	addFunctionsToEngine( Engine&  engine ) {
 		addForeignFuncInstance(engine, "byte", &CreateFromString);
 		addForeignFuncInstance(engine, "byte_to_str", &ToString);
+		addForeignFuncInstance(engine, "byte_to_char", &ToCharValue);
 		addForeignFuncInstance(engine, "byte_set_bit", &SetBit);
 		addForeignFuncInstance(engine, "byte_get_bit_as_int", &GetBitAsInteger);
 		addForeignFuncInstance(engine, "byte_get_bit_as_str", &GetBitAsString);
@@ -47,6 +48,11 @@ bool
 ByteObject::supportsInterface( ObjectType::Value  typeValue ) const {
 	return typeValue == ObjectType::Numeric
 		|| typeValue == ByteObject::StaticByteType();
+}
+
+String
+ByteObject::charValue() const {
+	return String((char)data);
 }
 
 void
@@ -216,6 +222,16 @@ ToString( FFIServices& ffi ) {
 	sc.push_back( byte.get(0) ? '1' : '0' );
 
 	ffi.setNewResult( new StringObject( String(sc) ) );
+	return ForeignFunc::FINISHED;
+}
+
+ForeignFunc::Result
+ToCharValue( FFIServices& ffi ) {
+	if ( ! ffi.demandArgType(0, ByteObject::StaticByteType() ) )
+		return ForeignFunc::NONFATAL;
+
+	ByteObject byte = ((ByteObject&)ffi.arg(0));
+	ffi.setNewResult( new StringObject( byte.charValue() ) );
 	return ForeignFunc::FINISHED;
 }
 

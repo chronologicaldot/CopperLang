@@ -91,6 +91,7 @@ struct ByteObject : public NumericObject {
 
 		// Type specific methods
 
+	String charValue() const;
 	void set( Integer index, bool on );
 	bool get( Integer index );
 	void flipbit( Integer index );
@@ -160,6 +161,9 @@ ToString( FFIServices& );
 
 ForeignFunc::Result
 SetBit( FFIServices& );
+
+ForeignFunc::Result
+ToCharValue( FFIServices& );
 
 // Extra: Could add a function that sets a range of bits.
 // See: https://www.geeksforgeeks.org/set-bits-given-range-number/

@@ -1,5 +1,5 @@
 ===========
-2020/9/29 - 10/2
+2020/9/29 - 10/28
 
 cu_stringbasics
 - Changed ByteAt to CharAt.
@@ -9,6 +9,7 @@ cu_bytebasics
 - Created and debugged.
 - Added OperatorAnd, OperatorOr, and OperatorXor.
 - Added documentation.
+- Added byte_to_char.
 
 cu_stringmap
 - Added documentation.
