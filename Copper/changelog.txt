@@ -9,7 +9,7 @@ docs
 - Fixed typo.
 
 CuAccessHelper.h
-- Created
+- Created and syntax errors fixed
 
 
 ===================

@@ -33,9 +33,8 @@ AccessHelper::getMember( util::String name, bool createIfNotFound ) {
 
 	Variable* var;
 	if ( createIfNotFound ) {
-		if ( scope->getVariable(name, var) ) {
-			return var->getRawContainer();
-		}
+		scope->getVariable(name, var);
+		return var->getRawContainer();
 	} else {
 		if ( scope->findVariable(name, var) ) {
 			return var->getRawContainer();
@@ -48,7 +47,7 @@ AccessHelper::getMember( util::String name, bool createIfNotFound ) {
 Object*
 AccessHelper::getMemberData( util::String name ) {
 	FunctionObject* fo = getMember(name);
-	Function* f = REAL_NULl;
+	Function* f = REAL_NULL;
 
 	if ( fo ) {
 		fo->getFunction(f);
