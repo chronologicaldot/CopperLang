@@ -26,6 +26,9 @@ file_mode_append()
 file_open( [String file_path], [FileModeObject mode] )
 	Attempts to open a file. Returns a FileObject.
 
+file_is_open( [FileObject file] )
+	Returns true if the file object is to an open file. False if not.
+
 file_name( [FileObject file] )
 	Returns a string of the file name.
 
