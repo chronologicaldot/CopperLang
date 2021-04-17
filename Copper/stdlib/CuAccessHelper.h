@@ -3,7 +3,7 @@
 #ifndef CU_ACCESS_HELPER_H
 #define CU_ACCESS_HELPER_H
 
-#include <Copper.h>
+#include "../src/Copper.h"
 
 namespace Cu {
 
@@ -45,4 +45,4 @@ public:
 
 } // end namespace
 
-#endif // CUIRR3D_ATTR_HELPER_H
+#endif // CU_ACCESS_HELPER_H
