@@ -60,6 +60,18 @@ AccessHelper::getMemberData( util::String name ) {
 	return REAL_NULL;
 }
 
+bool
+AccessHelper::getMemberAsBool( util::String name ) {
+	Object* o = getMemberData(name);
+
+	if ( !o ) return 0;
+
+	if ( o->supportsInterface( ObjectType::Bool ) ) {
+		return ((BoolObject*)o)->getValue();
+	}
+	return 0;
+}
+
 Integer
 AccessHelper::getMemberAsInteger( util::String name ) {
 	Object* o = getMemberData(name);

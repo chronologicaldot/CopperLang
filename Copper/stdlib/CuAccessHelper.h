@@ -33,6 +33,9 @@ public:
 	Object* getMemberData( util::String name );
 
 	//!
+	bool getMemberAsBool( util::String name );
+
+	//!
 	Integer getMemberAsInteger( util::String name );
 
 	//!
