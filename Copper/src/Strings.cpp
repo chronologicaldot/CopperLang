@@ -206,7 +206,7 @@ CharList& CharList::operator= ( const CharList& pOther )
 CharList& CharList::append( const CharList& pOther )
 {
 	ConstIter i = pOther.constStart();
-	if ( i.atEnd() ) return *this;
+	if ( i.atEnd() && pOther.size() != 1 ) return *this;
 	do {
 		push_back( *i );
 	} while ( i.next() );
@@ -217,7 +217,7 @@ CharList& CharList::append( const String& pString )
 {
 	uint i = 0;
 	uint s = pString.size();
-	for ( ; i < s; i++ )
+	for ( ; i < s; ++i )
 	{
 		push_back( pString[i] );
 	}

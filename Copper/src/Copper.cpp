@@ -3042,6 +3042,7 @@ Engine::setupSystemFunctions() {
 	print(LogLevel::debug, "[DEBUG: Engine::setupSystemFunctions");
 #endif
 	builtinFunctions.insert(String(CONSTANT_FUNCTION_RETURN), SystemFunction::_return);
+	builtinFunctions.insert(String("are_available"), SystemFunction::_are_available);
 	//builtinFunctions.insert(String("own"), SystemFunction::_own); // handled as SRPS
 	builtinFunctions.insert(String("not"), SystemFunction::_not);
 	builtinFunctions.insert(String("all"), SystemFunction::_all);
@@ -5550,6 +5551,9 @@ Engine::setupBuiltinFunctionExecution(
 	case SystemFunction::_return:
 		return process_sys_return(task);
 
+	case SystemFunction::_are_available:
+		return process_sys_are_available(task);
+
 	case SystemFunction::_not:
 		process_sys_not(task);
 		break;
@@ -6155,6 +6159,38 @@ Engine::process_sys_return(
 		lastObject.set( task.args.getFirst() );
 	}
 	return FuncExecReturn::Return;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_are_available(
+	FuncFoundTask& task
+) {
+#ifdef COPPER_DEBUG_ENGINE_MESSAGES
+	print(LogLevel::debug, "[DEBUG: Engine::process_sys_are_available");
+#endif
+	bool result = true;
+	String argValue;
+	Integer argIndex = 1;
+	ArgsIter argsIter = task.args.start();
+	if ( argsIter.has() )
+	do {
+		if ( isStringObject(**argsIter) ) {
+			argValue = ((StringObject*)(*argsIter))->getString();
+			result = builtinFunctions.getBucketData(argValue) != 0
+					|| foreignFunctions.getBucketData(argValue) != 0;
+		} else {
+			print( LogMessage::create(LogLevel::warning)
+				.SystemFunctionId( SystemFunction::_are_available )
+				.Message(EngineMessage::SystemFunctionBadArg)
+				.ArgIndex(argIndex).ArgCount(task.args.size())
+				.GivenArgType((*argsIter)->getType())
+				.ExpectedArgType(ObjectType::String)
+			);
+		}
+		++argIndex;
+	} while ( argsIter.next() && result );
+	lastObject.setWithoutRef(new BoolObject(result));
+	return FuncExecReturn::Ran;	
 }
 
 FuncExecReturn::Value

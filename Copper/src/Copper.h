@@ -91,12 +91,12 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.641
+#define COPPER_INTERPRETER_VERSION 0.642
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 3.3
+#define COPPER_LANG_VERSION 3.4
 
 // ******* Language modifications *******
 
@@ -692,6 +692,7 @@ struct SystemFunction {
 	enum Value {
 	_unset = 0, // NOT A FUNCTION. Indicates the system function has not been set.
 	_return,
+	_are_available,
 	_not, // "not" is an alternate token for "!" in standard C++
 	_all,
 	_any,
@@ -3831,6 +3832,7 @@ protected:
 	);
 
 	FuncExecReturn::Value	process_sys_return(			FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_available(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_not(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_all(			FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_any(			FuncFoundTask& task );
