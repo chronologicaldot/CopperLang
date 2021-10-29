@@ -1098,10 +1098,12 @@ public:
 
 	//! Indicate interface support
 	// Returns true if this object can be casted to objects of the given type.
+	// Abstracted to force implementation by user.
 	virtual bool
-	supportsInterface( ObjectType::Value ) const {
-		return false;
-	}
+	supportsInterface( ObjectType::Value ) const = 0;
+	// {
+	//	return false; // return type == value; // Standard
+	//}
 
 #ifdef COPPER_USE_DEBUG_NAMES
 	virtual const char*
