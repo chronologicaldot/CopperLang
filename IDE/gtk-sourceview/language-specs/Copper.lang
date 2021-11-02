@@ -76,6 +76,7 @@ You are free to use, modify and redistribute this code to your heart's content, 
     <keyword>own</keyword>
     <keyword>is_ptr</keyword>
     <keyword>is_owner</keyword>
+    <keyword>are_available</keyword>
     <keyword>are_same</keyword>
     <keyword>member</keyword>
     <keyword>member_count</keyword>
