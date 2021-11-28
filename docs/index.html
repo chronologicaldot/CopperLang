@@ -290,7 +290,7 @@
           </li>
       </div>
         <ul class="toc-footer">
-            <li><a href='https://github.com/chronologicaldot/copperlang'>Github Codebase</a></li>
+            <li><a href='https://githum.com/chronologicaldot/copperlang'>Github Codebase</a></li>
             <li><a href='https://copperlang.wordpress.com'>Official Blog</a></li>
             <li><a href='https://github.com/lord/slate'>Documentation Powered by Slate</a></li>
         </ul>
@@ -328,7 +328,7 @@
 <li>Easy to Learn - Very simple syntax (See <a href="#copper-in-5-mins">Copper in 5 minutes</a>.)</li>
 <li>Lightweight (Core code is roughly 300kb)</li>
 <li>No external dependencies</li>
-<li>Highly compressible</li>
+<li>Highly compressable</li>
 <li>IDE support</li>
 </ul>
 
@@ -350,7 +350,7 @@
 <h1 id='the-language-of-copper'>The Language of Copper</h1>
 <p>Copper revolves around the concept of the object-function (or &quot;function-object&quot; if you prefer). Variables in Copper only store object-functions or pointers to them, nothing else. Operators are used only for manipulating function objects. Data manipulation is only done by functions (especially foreign functions).</p>
 
-<p>Copper has a strict set of rules regarding its interpretation. (See <a href="#fundamental-syntax-rules">Fundamental Rules</a>.) As a small set of rules, it reduces the mental focus needed to read the code.</p>
+<p>Copper has a strict set of rules regarding its interpretation. (See <a href="#fundamental-syntax-rules">Fundamental Rules</a>.) As a small set of rules, it reeduces the mental focus needed to read the code.</p>
 
 <p>Comments are created by sandwiching the comment with two pound signs, &quot;#&quot;, one on each side.</p>
 
@@ -601,6 +601,9 @@ HEADS UP! It is possible to violate the principle of stack-based ancestry by cre
 <aside class="notice">
 Though not part of the language specifications, it is possible to leave out <code>ret</code> if the function is at its end. This results in an implicit return of the last-encountered object in the function code-body processing.
 </aside>
+<h3 id='are_available-name'>are_available( <em>name</em> )</h3>
+<p>Accepts any number of strings.
+Returns true if each of those strings is the name of an available built-in or foreign function.</p>
 <h3 id='are_same'>are_same( ... )</h3>
 <p>Returns <code>true</code> if all of the given arguments point to the same function.</p>
 <h3 id='member-object-member_name'>member( <em>object</em>, <em>member_name</em> )</h3><pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">
@@ -654,7 +657,7 @@ In this function, the types are compared based on their return from the virtual 
 </span><span class="cm"># The following not only saves the type to "a" but increments "b.c" #</span><span class="w">
 </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">type_of</span><span class="p">(</span><span class="n">b</span><span class="o">:</span><span class="p">)</span><span class="w">
 </span></code></pre>
-<p>This system function this avoids the need to call the given function explicitly, which may trigger chains of function calls. For example, see sidebar code.</p>
+<p>This system function avoids the need to call the given function explicitly, which may trigger chains of function calls. For example, see sidebar code.</p>
 
 <p>Due to its dependence on the underlying architecture of the virtual machine and its ignoring of the rule that variables merely contain functions, this function is not considered standard.</p>
 <h3 id='are_fn'>are_fn( ... )</h3>
@@ -675,15 +678,31 @@ In this function, the types are compared based on their return from the virtual 
 <p>Returns <code>true</code> if all of the given arguments are of type number with decimal.</p>
 <h3 id='assert-condition'>assert( <em>condition</em> )</h3>
 <p>Throws an error if <em>condition</em> does not resolve to <code>true</code>.</p>
-<h3 id='copy_of-arg'>copy_of( <em>arg</em> )</h3>
+<h3 id='copy_of-arg'>copy_of( <em>arg</em> )</h3><pre class="highlight copper tab-copper"><code><span class="cm"># The function belonging to local variable "b" dies when the function ends because it is bound to "b", but an unowned copy can live after the return from "a". #</span><span class="w">
+</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
+ </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">print</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+ </span><span class="nb">ret</span><span class="p">(</span><span class="nb">copy_of</span><span class="p">(</span><span class="n">b</span><span class="p">))</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="o">:</span><span class="w">
+</span><span class="cm"># Copying is necessary for lists to own the function given to them. #</span><span class="w">
+</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">print</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">list</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="cm"># List contains pointer to "a" #</span><span class="w">
+</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">list</span><span class="p">(</span><span class="nb">copy_of</span><span class="p">(</span><span class="n">a</span><span class="p">))</span><span class="w"> </span><span class="cm"># List contains independent copy of "a" #</span><span class="w">
+</span></code></pre>
 <p>Returns an independent copy of the given argument.</p>
+
+<aside class="notice">
+This function is very useful for the return of data bound in lifetime to local variables. See sidebar for example. It is also necessary for providing a list with a copy of a function-object from a variable so that the list owns the copy.
+</aside>
 <h3 id='xwsv-super_variable-call_variable-call_args'>xwsv( <em>super_variable</em>, <em>call_variable</em>, <em>call_args</em> ... )</h3><pre class="highlight copper tab-copper"><code><span class="n">a</span><span class="o">.</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">
 </span><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">print</span><span class="p">(</span><span class="kr">super</span><span class="o">.</span><span class="n">c</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
 </span><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="o">:</span><span class="w"> </span><span class="cm"># Prints 5 #</span><span class="w">
 </span><span class="n">d</span><span class="o">.</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">
-</span><span class="n">xwsv</span><span class="p">(</span><span class="n">d</span><span class="w"> </span><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints 10 #</span><span class="w">
+</span><span class="nb">xwsv</span><span class="p">(</span><span class="n">d</span><span class="w"> </span><span class="n">a</span><span class="o">.</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="cm"># Prints 10 #</span><span class="w">
 </span></code></pre>
-<p>Calls <em>call_variable</em> with the extra arguments and sets the &quot;super&quot; variable to <em>super_variable</em>. The &quot;super&quot; variable is the variable whose member is the variable whose function is being run.</p>
+<p>&quot;eXecute With Super Variable&quot;</p>
+
+<p>Calls <em>call_variable</em> with the extra arguments and sets the &quot;super&quot; variable to <em>super_variable</em>. The &quot;super&quot; variable is by default the variable whose member is the variable whose function is being run. In the example function call expression a.b(), &quot;a&quot; is the parent that the &quot;super&quot; variable is defaulted to being.</p>
 <h3 id='share_body-fn-fn'>share_body( <em>fn</em>, <em>fn</em> )</h3>
 <p>Causes the second object-function to inherit the body of the first object-function. This allows object-functions to retain their members and members&#39; values.</p>
 <h3 id='realize-type_value-realize-object'>realize( <em>type_value</em> ) / realize( <em>object</em> )</h3>
@@ -882,7 +901,7 @@ HEADS UP! The Copper Engine will not notify you of invalid code in a function's 
 
 </span><span class="cm"># Sub-lists have to be made from valid indexes</span><span class="err">
 </span><span class="cm">that map to the range 0 to list size. #</span><span class="w">
-</span><span class="n">q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">sublist</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="n">length</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="p">))</span><span class="w">
+</span><span class="n">q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">sublist</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="nb">length</span><span class="p">(</span><span class="n">o</span><span class="o">:</span><span class="p">))</span><span class="w">
 
 </span><span class="cm"># Sub-lists are linked to the items in the original object. #</span><span class="w">
 </span><span class="n">r</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="nb">item_at</span><span class="p">(</span><span class="n">q</span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">
@@ -2144,8 +2163,8 @@ Do not try to create your own opcode strands to feed to the engine. Do not try t
 </span><span class="n">isprime</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w">
     </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w">
     </span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">gte</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="n">n</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
-        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">equal</span><span class="p">(</span><span class="n">%</span><span class="p">(</span><span class="n">n</span><span class="o">:</span><span class="w"> </span><span class="n">i</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nb">ret</span><span class="p">(</span><span class="k">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="nb">gte</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="n">n</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="nb">equal</span><span class="p">(</span><span class="n">%</span><span class="p">(</span><span class="n">n</span><span class="o">:</span><span class="w"> </span><span class="n">i</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nb">ret</span><span class="p">(</span><span class="k">false</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
         </span><span class="n">++</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="p">)</span><span class="w">
     </span><span class="p">}</span><span class="w">
     </span><span class="nb">ret</span><span class="p">(</span><span class="k">true</span><span class="p">)</span><span class="w">
@@ -2154,7 +2173,7 @@ Do not try to create your own opcode strands to feed to the engine. Do not try t
     </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">
     </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w">
     </span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">gte</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="n">n</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="nb">gte</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="n">n</span><span class="o">:</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
         </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">isprime</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
             </span><span class="n">++</span><span class="p">(</span><span class="n">count</span><span class="o">:</span><span class="p">)</span><span class="w">
         </span><span class="p">}</span><span class="w">
@@ -2221,7 +2240,7 @@ Do not try to create your own opcode strands to feed to the engine. Do not try t
  </span><span class="n">f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fib_gen</span><span class="o">:</span><span class="w">
  </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">
  </span><span class="kr">loop</span><span class="w"> </span><span class="p">{</span><span class="w">
-  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">equal</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="nb">equal</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">stop</span><span class="w"> </span><span class="p">}</span><span class="w">
   </span><span class="n">++</span><span class="p">(</span><span class="n">i</span><span class="o">:</span><span class="p">)</span><span class="w">
   </span><span class="n">print</span><span class="p">(</span><span class="s">"fib "</span><span class="w"> </span><span class="n">i</span><span class="o">:</span><span class="w"> </span><span class="s">" = "</span><span class="w"> </span><span class="n">f</span><span class="o">:</span><span class="w"> </span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span><span class="w">
  </span><span class="p">}</span><span class="w">
