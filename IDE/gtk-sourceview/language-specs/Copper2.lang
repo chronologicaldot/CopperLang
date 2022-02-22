@@ -163,6 +163,8 @@ You are free to use, modify and redistribute this code to your heart's content, 
     <keyword>equal</keyword>
     <keyword>gt</keyword>
     <keyword>gte</keyword>
+    <keyword>lt</keyword>
+    <keyword>lte</keyword>
     <keyword>abs</keyword>
     <keyword>add</keyword>
     <keyword>sbtr</keyword>
