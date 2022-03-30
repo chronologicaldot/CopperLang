@@ -1,4 +1,4 @@
-// Copyright 2016-2019 Nicolaus Anderson
+// Copyright 2016-2022 Nicolaus Anderson
 
 #include <execinfo.h>
 #include <signal.h>
@@ -14,6 +14,7 @@
 #include "exts/Time/cu_systime.h"
 #include "exts/String/cu_stringmap.h"
 #include "exts/String/cu_stringbasics.h"
+#include "exts/String/cu_stringlistconcat.h"
 #include "exts/System/cu_info.h"
 #include "exts/Byte/cu_bytebasics.h"
 #include "exts/FileIO/cu_fileio.h"
@@ -53,6 +54,7 @@ int main() {
 	Cu::Time::addFunctionsToEngine(engine);
 	Cu::StringLib::Map::addToEngine(engine);
 	Cu::StringLib::Basics::addFunctionsToEngine(engine);
+	Cu::StringLib::StringListConcat::addToEngine(engine);
 	Cu::System::addFunctionsToEngine(engine);
 	Cu::ByteLib::Basics::addFunctionsToEngine(engine);
 	Cu::FileIO::Basics::addFunctionsToEngine(engine);
