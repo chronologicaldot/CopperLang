@@ -564,6 +564,7 @@ This MUST be a buffered stream - that is, one possessing another byte.
 atEOS() is to return false if another byte is in the buffer or guaranteed to be (such as from stdin).
 */
 struct ByteStream {
+	virtual ~ByteStream() {};
 	virtual char getNextByte()=0;
 	virtual bool atEOS()=0;
 };
