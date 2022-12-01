@@ -56,11 +56,11 @@ tan( [numeric] )
 
 floor( [numeric] )
 	Returns the floor value of the given DecimalNumObject/dcml number.
-	ex: 5.1 returns 6
+	ex: 5.1 returns 5
 
 ceiling( [numeric] )
-	Returns the floor value of the given DecimalNumObject/dcml number.
-	ex: 5.1 returns 5
+	Returns the ceiling value of the given DecimalNumObject/dcml number.
+	ex: 5.1 returns 6
 */
 void
 addFunctionsToEngine(

@@ -3266,12 +3266,11 @@ Engine::interpretToken(
 		//throw (UInteger)TT_comment;
 
 	//---------------
+	case TT_end_main:
 	case TT_exit:
 		// Add this token
 		context.addNewOperation( new Opcode(Opcode::Exit) );
 		break;
-
-	// TODO: Also setup the end_main token.
 
 	//---------------
 	case TT_end_segment:
