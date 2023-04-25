@@ -836,7 +836,7 @@ IntegerObject::add( const NumericObject&  other ) {
 NumericObject*
 IntegerObject::subtract( const NumericObject&  other ) {
 #ifdef ENABLE_COPPER_NUMERIC_BOUNDS_CHECKS
-	Integer oi = other).getIntegerValue();
+	Integer oi = other.getIntegerValue();
 	// detect overflow
 	if ( oi < 0 && value > std::numeric_limits<Integer>::max() + oi ) {
 		return new IntegerObject(std::numeric_limits<Integer>::max());

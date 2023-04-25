@@ -178,6 +178,7 @@ static const Decimal DECIMAL_ROUNDING_ERROR = 0.0000001;
 
 struct OSInfo {
 	enum OSType {
+		OS_Unknown,
 		OS_Windows32,
 		OS_Windows64,
 		OS_Apple_Mac,
