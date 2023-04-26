@@ -7,6 +7,7 @@ v 6-0.642
 - Added TT_end_main handling.
 - Added OS_Unknown
 - Fixed typo in IntegerObject::subtract that caused on error when bounds checks were enabled.
+- Fixed process_sys_num_chain_num(). Now returns first value when only one number given.
 
 
 ===================

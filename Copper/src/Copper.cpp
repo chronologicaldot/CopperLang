@@ -7793,6 +7793,7 @@ Engine::process_sys_num_chain_num(
 		if ( isNumericObject(**argsIter) ) {
 			startNumber = (NumericObject*)*argsIter;
 			startNumber->ref(); // Treat as new
+			resultNumber = startNumber; // For setting lastObject if only one number
 		} else {
 			printSystemFunctionWrongArg( functionId, 1, 0, (*argsIter)->getType(), NumericObject::object_type, false );
 			return FuncExecReturn::Ran;
