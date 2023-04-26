@@ -15,11 +15,18 @@ namespace Basics {
 /*
 	Creates the following Copper functions in the given Copper Engine:
 
-byte( [string] )
+byte( [string], [int index] )
+	Returns a byte constructed from the character at the given index.
+	Index defaults to 0.
+
+byte_from_str
 	Creates a ByteObject (byte) from a string representing the byte as 1s and 0s.
 
-byte_to_str[ [byte] )
+byte_to_str( [byte] )
 	Returns a string with 1s and 0s representing the bits of the given byte.
+
+byte_to_char( [byte] )
+	Returns a string of a single character constructed from this byte.
 
 byte_set_bit( [byte], [int n], [bool setting] )
 	Sets the given byte's n'th bit to the given setting. true = 1, false = 0.
@@ -164,6 +171,9 @@ SetBit( FFIServices& );
 
 ForeignFunc::Result
 ToCharValue( FFIServices& );
+
+ForeignFunc::Result
+FromCharValue( FFIServices& );
 
 // Extra: Could add a function that sets a range of bits.
 // See: https://www.geeksforgeeks.org/set-bits-given-range-number/

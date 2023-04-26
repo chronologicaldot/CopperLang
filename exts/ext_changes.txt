@@ -4,6 +4,10 @@
 cu_stringbasics
 - Added SubString.
 
+cu_bytebasics
+- Changed byte to byte_from_str()
+- Added byte_from_char(), changed it to byte(), for supporting new native bit sequences.
+
 
 ===========
 2020/9/29 - 10/28

@@ -9,9 +9,10 @@ namespace Basics {
 
 	void
 	addFunctionsToEngine( Engine&  engine ) {
-		addForeignFuncInstance(engine, "byte", &CreateFromString);
+		addForeignFuncInstance(engine, "byte_from_str", &CreateFromString);
 		addForeignFuncInstance(engine, "byte_to_str", &ToString);
 		addForeignFuncInstance(engine, "byte_to_char", &ToCharValue);
+		addForeignFuncInstance(engine, "byte", &FromCharValue);
 		addForeignFuncInstance(engine, "byte_set_bit", &SetBit);
 		addForeignFuncInstance(engine, "byte_get_bit_as_int", &GetBitAsInteger);
 		addForeignFuncInstance(engine, "byte_get_bit_as_str", &GetBitAsString);
@@ -232,6 +233,35 @@ ToCharValue( FFIServices& ffi ) {
 
 	ByteObject byte = ((ByteObject&)ffi.arg(0));
 	ffi.setNewResult( new StringObject( byte.charValue() ) );
+	return ForeignFunc::FINISHED;
+}
+
+ForeignFunc::Result
+FromCharValue( FFIServices& ffi )
+{
+	Integer index = 0;
+	ByteObject::cu_byte byte = 0;
+
+	if ( ! ffi.demandArgCountRange(1,2)
+		|| ! ffi.demandArgType(0, ObjectType::String)
+	) {
+		return ForeignFunc::NONFATAL;
+	}
+	if ( ffi.getArgCount() == 2 ) {
+		if ( ! ffi.demandArgType(1, ObjectType::Numeric) )
+			return ForeignFunc::NONFATAL;
+		index = ((NumericObject&)ffi.arg(1)).getIntegerValue();
+	}
+
+	util::String& str = ((StringObject&)ffi.arg(0)).getString();
+	if ( str.size() != 0 ) {
+		while ( index < 0 ) {
+			index += str.size();
+		}
+		byte = (ByteObject::cu_byte) str[index];
+	}
+	
+	ffi.setNewResult( new ByteObject(byte) );
 	return ForeignFunc::FINISHED;
 }
 
