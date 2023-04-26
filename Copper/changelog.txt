@@ -8,6 +8,7 @@ v 6-0.642
 - Added OS_Unknown
 - Fixed typo in IntegerObject::subtract that caused on error when bounds checks were enabled.
 - Fixed process_sys_num_chain_num(). Now returns first value when only one number given.
+- Removed TT_function_end_run, which did nothing.
 
 
 ===================

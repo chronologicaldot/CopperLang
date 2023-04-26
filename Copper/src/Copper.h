@@ -635,10 +635,6 @@ enum TokenType {
 	Parameter-less call of a function. */
 	TT_immediate_run,
 
-	/* End function run
-	This is passed to all tasks that are still active when a function ends. */
-	TT_function_end_run,
-
 	/* Name
 	Obeys name character limit (255 max). Begins with a letter and contains no special characters.
 	It may have unicode characters, but not reserved or special characters. */
