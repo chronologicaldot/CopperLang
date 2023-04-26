@@ -1,4 +1,4 @@
-// Copyright 2016-2022 Nicolaus Anderson
+// Copyright 2016-2023 Nicolaus Anderson
 
 #include <execinfo.h>
 #include <signal.h>
@@ -61,9 +61,9 @@ int main() {
 
 	signal(SIGSEGV, handler);
 	std::setbuf(stdout,0);
-	//std::printf("\n>> \t\tCOPPER LANGUAGE\n>>\t\tConsole Application\n>>\t\t(c) 2016-2019 Nicolaus Anderson\n\n");
+	//std::printf("\n>> \t\tCOPPER LANGUAGE\n>>\t\tConsole Application\n>>\t\t(c) 2016-2023 Nicolaus Anderson\n\n");
 	// ATTENTION: Leave the spaces alone
-	std::printf("\33[92m\n \t\tCOPPER LANGUAGE\n\t\tConsole Application\n\t\t(c) 2016-2019 Nicolaus Anderson\n\33[4m                                                              \33[0m\n");
+	std::printf("\33[92m\n \t\tCOPPER LANGUAGE\n\t\tConsole Application\n\t\t(c) 2016-2023 Nicolaus Anderson\n\33[4m                                                              \33[0m\n");
 
 	Cu::EngineResult::Value  result;
 	int err = 0;
