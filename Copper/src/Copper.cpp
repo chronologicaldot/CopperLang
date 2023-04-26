@@ -2760,6 +2760,8 @@ Engine::resolveTokenType( const String& pName ) {
 			return TT_num_integer;
 		case 2:
 			return TT_num_decimal;
+		case 3:
+			return TT_binary;
 		default:
 			print(LogLevel::warning, EngineMessage::MalformedNumber);
 			return TT_string;
@@ -3443,6 +3445,13 @@ Engine::interpretToken(
 		break;
 
 	//---------------
+	
+	case TT_binary:
+		code = new Opcode(Opcode::CreateString, currToken.name.convertBinary(), false);
+		context.addNewOperation(code);
+		break;
+
+	//---------------
 	default:
 		// Unhandled token
 		print(LogLevel::error, EngineMessage::TokenNotHandled);
@@ -3659,6 +3668,7 @@ Engine::ParseFunctionBuild_CollectParameters(
 			case TT_string:
 			case TT_num_integer:
 			case TT_num_decimal:
+			case TT_binary:
 				task->state = FuncBuildParseTask::State::AwaitAssignment;
 				return ParseTask::Result::interpret_token;
 
@@ -4050,6 +4060,7 @@ Engine::ParseFuncFound_ValidateAssignment(
 	case TT_string:
 	case TT_num_integer:
 	case TT_num_decimal:
+	case TT_binary:
 		task->state = FuncFoundParseTask::CompleteAssignment;
 		return ParseTask::Result::interpret_token;
 
@@ -4178,6 +4189,7 @@ Engine::ParseFuncFound_CollectParams(
 	case TT_string:
 	case TT_num_integer:
 	case TT_num_decimal:
+	case TT_binary:
 		task->waitingOnAssignment = true;
 		return ParseTask::Result::interpret_token;
 

@@ -754,6 +754,35 @@ void String::fromDouble( double  value, uint prec )
 	*this = total;
 }
 
+String String::convertBinary() const
+{
+	if ( len == 0 ) {
+		return String();
+	}
+
+	if ( (len - 1)%8 != 0 ) {
+		//fromInt(0); return false; // Fail
+		return String();
+	}
+	
+	uint numBytes = len / 8;
+	uint i = 0;
+	CharList bytes;
+	unsigned char byte = 0;
+	for(; i < numBytes; ++i) {
+		byte |= (str[i] == '1' ? 1 : 0) << 7;
+		byte |= (str[i+1] == '1' ? 1 : 0) << 6;
+		byte |= (str[i+2] == '1' ? 1 : 0) << 5;
+		byte |= (str[i+3] == '1' ? 1 : 0) << 4;
+		byte |= (str[i+4] == '1' ? 1 : 0) << 3;
+		byte |= (str[i+5] == '1' ? 1 : 0) << 2;
+		byte |= (str[i+6] == '1' ? 1 : 0) << 1;
+		byte |= (str[i+7] == '1' ? 1 : 0);
+		bytes.append(byte);
+	}
+	return String(bytes);
+}
+
 void String::purgeNonPrintableASCII()
 {
 	// Using a list because we want the array to be the exact size of its occupancy
@@ -781,15 +810,23 @@ unsigned char String::numberType() const {
 	uint i = 0;
 	char* s = str;
 	unsigned char type = 1; // Integer type
+	bool binary_ok = true;
 	for ( ; i < len; ++i, ++s ) {
 		if ( (*s >= '0' && *s <= '9') ) {
+			if ( *s != '0' && *s != '1' )
+				binary_ok = false;
 			continue;
 		} else if ( *s == '.' ) {
+			binary_ok = false;
 			if ( type == 2 ) // Second decimal found! Bad number format!
 				return 0;
 			type = 2; // Decimal type
 			continue;
 		} else {
+			if ( i == len - 1 && *s == 'b' && binary_ok && (len-1)%8==0 ) {
+				type = 3; // Binary type
+				break;
+			}
 			return 0; // No numeric type
 		}
 	}

@@ -1,4 +1,4 @@
-// Copyright 2016 Nicolaus Anderson
+// Copyright 2016-2023 Nicolaus Anderson
 
 #ifndef COPPER_LANG_H
 #define COPPER_LANG_H
@@ -91,12 +91,12 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.642
+#define COPPER_INTERPRETER_VERSION 0.65
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 3.4
+#define COPPER_LANG_VERSION 3.6
 
 // ******* Language modifications *******
 
@@ -673,16 +673,16 @@ enum TokenType {
 	Used for hiding a single character. It is used only in run(). Process will give an error. */
 	TT_escape_character,
 
-	/* Hex value
-	Given in the format 0xNNNN..., this is a bit sequence.
-	This seems less useful since I will have binary. */
-	//TT_hex,
-
 	/* Binary
 	Given in the format nnnnnb where n=0 or 1, this is a bit sequence.
 	ex: 10010100b
 	An error is thrown if the bit sequence length is not evenly divisible by 8. */
-	//TT_binary, // Not yet implemented
+	TT_binary,
+
+	/* Hex value
+	Given in the format 0xNNNN..., this is a bit sequence.
+	This seems less useful since I will have binary. */
+	//TT_hex,
 };
 
 

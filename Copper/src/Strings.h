@@ -71,6 +71,7 @@ public:
 	double toDouble() const;		// TODO: Handle NaN and infinity
 	void fromInt( int );
 	void fromDouble( double, uint prec=6 ); // Allows for precision setting
+	String convertBinary() const;
 	void purgeNonPrintableASCII();
 	bool contains( char c ) const;
 	unsigned char numberType() const; // return 0 for no type, 1 for integer, 2 for decimal

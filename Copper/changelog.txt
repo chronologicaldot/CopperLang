@@ -1,8 +1,15 @@
 ===================
+v 6-0.65
+
+- Added support for tokens of binary digits. Currently converted to string.
+- Changed language version to 3.6
+
+
+===================
 v 6-0.642
 
 - Added are_available() Copper function.
-- Changed language version to 3.4.
+- Changed language version to 3.4, then 3.5
 - Fixed bug in CharList::append(const CharList&) which failed to account for size of 1.
 - Added TT_end_main handling.
 - Added OS_Unknown
