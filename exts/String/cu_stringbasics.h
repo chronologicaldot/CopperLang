@@ -17,8 +17,11 @@ str_overwrite( [string], [int index], [string other] )
 str_byte_length( [string] )
 	Returns the number of bytes in the given string.
 
-str_char_at( [string, [int index] )
+str_char_at( [string], [int index] )
 	Returns the byte character at the given index.
+
+str_substr( [string], [int start_index], [string end_index] )
+	Returns a copy substring of the given string between start and end indexes.
 */
 	void
 	addFunctionsToEngine( Engine& );
@@ -33,6 +36,9 @@ Length( FFIServices& );
 
 ForeignFunc::Result
 CharAt( FFIServices& );
+
+ForeignFunc::Result
+SubString( FFIServices& );
 
 }}
 

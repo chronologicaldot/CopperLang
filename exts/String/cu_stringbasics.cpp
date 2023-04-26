@@ -12,6 +12,7 @@ namespace Basics {
 		addForeignFuncInstance(engine, "str_overwrite", &Overwrite);
 		addForeignFuncInstance(engine, "str_byte_length", &Length);
 		addForeignFuncInstance(engine, "str_char_at", &CharAt);
+		addForeignFuncInstance(engine, "str_substr", &SubString);
 	}
 
 }
@@ -95,6 +96,37 @@ CharAt( FFIServices&  ffi ) {
 
 	const char  c = str[idx];
 	ffi.setNewResult( new StringObject( util::String(c) ) );
+	return ForeignFunc::FINISHED;
+}
+
+ForeignFunc::Result
+SubString( FFIServices& ffi ) {
+	if ( ! ffi.demandArgCount(3)
+		|| ! ffi.demandArgType(0, ObjectType::String)
+		|| ! ffi.demandArgType(1, ObjectType::Numeric)
+		|| ! ffi.demandArgType(2, ObjectType::Numeric)
+	) {
+		return ForeignFunc::NONFATAL;
+	}
+
+	String&  str = ((StringObject&) ffi.arg(0)).getString();
+	Integer  idx = ((NumericObject&) ffi.arg(1)).getIntegerValue();
+	Integer  end = ((NumericObject&) ffi.arg(2)).getIntegerValue();
+	
+	util::CharList substr;
+
+	if ( str.size() ) {
+		while ( idx < 0 )
+			idx += str.size();
+		while ( end < 0 )
+			end += str.size();
+		
+		for(; idx < str.size() && idx <= end; ++idx)
+		{
+			substr.append(str[idx]);
+		}
+	}
+	ffi.setNewResult( new StringObject( util::String(substr) ) );
 	return ForeignFunc::FINISHED;
 }
 
