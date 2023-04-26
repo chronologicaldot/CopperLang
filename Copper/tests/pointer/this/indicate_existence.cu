@@ -1,5 +1,5 @@
 a = {
-	assert( is_fn(this) )
-	assert( not( is_empty(this) ) )
+	assert( are_fn(this) )
+	assert( not( are_empty(this) ) )
 }
 a()
