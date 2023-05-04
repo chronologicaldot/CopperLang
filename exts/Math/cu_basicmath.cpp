@@ -20,6 +20,9 @@ getIntegerValue( Object&  object ) {
 	if ( isNumericObject(object) ) {
 		return ((NumericObject&)object).getIntegerValue();
 	}
+	else if ( isStringObject(object) ) {
+		return ((StringObject&)object).getIntegerValue();
+	}
 	return 0;
 }
 
@@ -27,6 +30,9 @@ Decimal
 getDecimalValue( Object&  object ) {
 	if ( isNumericObject(object) ) {
 		return ((NumericObject&)object).getDecimalValue();
+	}
+	else if ( isStringObject(object) ) {
+		return ((StringObject&)object).getDecimalValue();
 	}
 	return 0;
 }
@@ -92,7 +98,7 @@ DecimalCast::call(
 
 	Decimal  value = 0;
 	if ( ffi.getArgCount() == 1 )
-		value = getDecimalValue(ffi.arg(1));
+		value = getDecimalValue(ffi.arg(0));
 
 	ffi.setNewResult( new DecimalNumObject( value ) );
 	return ForeignFunc::FINISHED;

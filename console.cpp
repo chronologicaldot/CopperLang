@@ -15,6 +15,7 @@
 #include "exts/String/cu_stringmap.h"
 #include "exts/String/cu_stringbasics.h"
 #include "exts/String/cu_stringlistconcat.h"
+#include "exts/String/cu_stringcasts.h"
 #include "exts/System/cu_info.h"
 #include "exts/Byte/cu_bytebasics.h"
 #include "exts/FileIO/cu_fileio.h"
@@ -55,6 +56,7 @@ int main() {
 	Cu::StringLib::Map::addToEngine(engine);
 	Cu::StringLib::Basics::addFunctionsToEngine(engine);
 	Cu::StringLib::StringListConcat::addToEngine(engine);
+	Cu::StringLib::Casts::addFunctionsToEngine(engine);
 	Cu::System::addFunctionsToEngine(engine);
 	Cu::ByteLib::Basics::addFunctionsToEngine(engine);
 	Cu::FileIO::Basics::addFunctionsToEngine(engine);
