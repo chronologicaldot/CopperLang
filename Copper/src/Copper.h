@@ -1217,6 +1217,9 @@ class VarAddress : public Ref {
 	Node*  tail;
 
 public:
+	// Optimization: track when value is a system function name
+	SystemFunction::Value sysFuncValue;
+
 	// For access only
 	class Iterator {
 		friend VarAddress;
@@ -1276,11 +1279,13 @@ public:
 	VarAddress()
 		: head(REAL_NULL)
 		, tail(REAL_NULL)
+		, sysFuncValue(SystemFunction::_unset)
 	{}
 
 	VarAddress( const VarAddress&  pOther )
 		: head(REAL_NULL)
 		, tail(REAL_NULL)
+		, sysFuncValue(SystemFunction::_unset)
 	{
 		if ( isNull(pOther.head) )
 			return;
@@ -3272,6 +3277,7 @@ public:
 
 // Accepts an address in string format and converts it to an address
 // Can be used to reverse the effect of addressToString()
+// DO NOT USE FOR SYSTEM FUNCTION NAMES!
 VarAddress createAddress( const char* textAddress );
 
 // Accepts an address and returns a string
