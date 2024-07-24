@@ -91,7 +91,7 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.65
+#define COPPER_INTERPRETER_VERSION 0.7
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
@@ -1300,6 +1300,8 @@ public:
 			tail->post = m;
 			tail = m;
 		}
+		
+		sysFuncValue = pOther.sysFuncValue;
 	}
 
 	~VarAddress() {

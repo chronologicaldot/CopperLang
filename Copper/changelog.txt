@@ -1,4 +1,10 @@
 ===================
+v 6-0.7
+
+- Optimized variable address resolution, making calls to built-in functions O(1) speed.
+
+
+===================
 v 6-0.65
 
 - Added support for tokens of binary digits. Currently converted to string.

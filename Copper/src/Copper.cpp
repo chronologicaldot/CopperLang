@@ -3893,6 +3893,8 @@ Engine::parseFuncFoundTask(
 	print(LogLevel::debug, "[DEBUG: Engine::parseFuncFoundTask");
 #endif
 	ParseTask::Result::Value r;
+	
+	RobinHoodHash<SystemFunction::Value>::BucketData* sysFuncBucketData;
 
 	switch( task->state ) {
 	case FuncFoundParseTask::Start:
@@ -3900,6 +3902,13 @@ Engine::parseFuncFoundTask(
 		r = moveToFirstUnusedToken(context, srcDone);
 		if ( r != ParseTask::Result::task_done )
 			return r;
+			
+		// Optimization: Track if this is a system function, so we don't need to match the name during runtime
+		sysFuncBucketData = builtinFunctions.getBucketData(task->code->getAddressData()->first());
+		if ( sysFuncBucketData )
+		{
+			task->code->getAddressData()->sysFuncValue = sysFuncBucketData->item;
+		}
 
 		// It is possible that this is a chain of member names, connected by the member link.
 		while( context.peekAtToken().type == TT_member_link ) {
@@ -5531,6 +5540,8 @@ Engine::setupBuiltinFunctionExecution(
 	//RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
 	//	= builtinFunctions.getBucketData(*addrIter);
 
+	// This code is being optimized out.
+/*
 	RobinHoodHash<SystemFunction::Value>::BucketData* bucketData
 		= builtinFunctions.getBucketData(task.getAddress().first());
 
@@ -5539,6 +5550,13 @@ Engine::setupBuiltinFunctionExecution(
 		return FuncExecReturn::NoMatch;
 	}
 	// Else, bucketData found...
+*/
+	// Optimization
+	SystemFunction::Value funcName = task.getAddress().sysFuncValue;
+	if ( funcName == SystemFunction::_unset )
+	{
+		return FuncExecReturn::NoMatch;
+	} // else
 
 	// Built-in function names should only have one name
 	if ( ! task.getAddress().hasOne() ) {
@@ -5547,7 +5565,8 @@ Engine::setupBuiltinFunctionExecution(
 		return FuncExecReturn::ErrorOnRun;
 	}
 
-	SystemFunction::Value funcName = bucketData->item;
+	// This code is being optimized out. See above
+	//SystemFunction::Value funcName = bucketData->item;
 
 	// Built-in function buckets only contain the name of the function to be run.
 	// While they could contain a "header" for indicating what they accept, the reality is that
@@ -6003,11 +6022,20 @@ Engine::resolveVariableAddress(
 
 	// Should return REAL_NULL if the address belongs to a non-variable, such as a
 	// built-in function or foreign function.
-
+	
+	// Original code that seems to be a second or two faster than the new code. Why?
+/*
 	RobinHoodHash<SystemFunction::Value>::BucketData* sfBucket
 		= builtinFunctions.getBucketData( address.first() );
 	if ( sfBucket != 0 ) { // Error, but handling is determined by the method that calls this one
 		//print(LogLevel::warning, "Attempt to use standard access on a built-in function.");
+		print(LogLevel::warning, EngineMessage::SystemFuncInvalidAccess);
+		return REAL_NULL;
+	}
+*/
+	// Optimization that actually slowed things down
+	if ( address.sysFuncValue != SystemFunction::_unset )
+	{
 		print(LogLevel::warning, EngineMessage::SystemFuncInvalidAccess);
 		return REAL_NULL;
 	}
