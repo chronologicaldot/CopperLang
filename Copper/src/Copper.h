@@ -91,12 +91,12 @@
 
 // ******* Virtual machine version *******
 
-#define COPPER_INTERPRETER_VERSION 0.7
+#define COPPER_INTERPRETER_VERSION 0.71
 #define COPPER_INTERPRETER_BRANCH 6
 
 // ******* Language version *******
 
-#define COPPER_LANG_VERSION 3.6
+#define COPPER_LANG_VERSION 4
 
 // ******* Language modifications *******
 
@@ -127,10 +127,14 @@
 #define PARSER_OPENBODY_MAX_COUNT 350
 
 //! Initial size of function scope
-#define CU_FUNCTION_SCOPE_SIZE 10
+#define CU_FUNCTION_SCOPE_SIZE 8
+// util::ERHHS_SMALL
+// was 10
 
 //! Initial size of stack frame scope
-#define CU_STACK_FRAME_SCOPE_SIZE 50
+#define CU_STACK_FRAME_SCOPE_SIZE 32
+// util::ERHHS_BIG
+// was 50
 
 //! Allows for bounds-checking on integers
 // Slow but safe. Requires <limits>, however.
@@ -514,6 +518,7 @@ struct ObjectType {
 		Function	= 0, // Also handles pointers
 
 		// Built-in data
+		Nil,
 		Bool,
 		String,
 		List,
@@ -713,6 +718,7 @@ struct SystemFunction {
 	_typename,
 	_have_same_typename,
 	_function_return_type, // value-type / return type "ret_type"
+	_are_nil,
 	_are_bool,
 	_are_string,
 	_are_list,
@@ -1713,7 +1719,7 @@ public:
 	bool getFunction( Function*& storage );
 
 	// Used for assignment, which only requires copying
-	void setFrom( FunctionObject& pOther );
+	//void setFrom( FunctionObject& pOther );
 
 	// Create a new function from the body of the given one (also copies constant return)
 	void createFromBody( Function& );
@@ -1835,6 +1841,34 @@ public:
 
 //-------------------
 // ****** DATA CLASSES ******
+
+class NilObject : public Object {
+public:
+	static const ObjectType::Value object_type = ObjectType::Nil;
+	
+	NilObject() : Object(ObjectType::Nil) {}
+	virtual Object* copy() { return new NilObject(); }
+
+	virtual void
+	writeToString(String& out) const {
+		out = "{nil}";
+	}
+
+	virtual const char*
+	typeName() const {
+		return StaticTypeName();
+	}
+	
+	static const char*
+	StaticTypeName() {
+		return "bool";
+	}
+
+	virtual bool
+	supportsInterface( ObjectType::Value v ) const {
+		return v == ObjectType::Nil;
+	}
+};
 
 class BoolObject : public Object {
 	bool value;
@@ -3317,6 +3351,13 @@ isEmptyFunctionObject(
 }
 
 inline bool
+isNilObject(
+	const Object& pObject
+) {
+	return ( pObject.getType() == ObjectType::Nil );
+}
+
+inline bool
 isBoolObject(
 	const Object& pObject
 ) {
@@ -3863,6 +3904,7 @@ protected:
 	FuncExecReturn::Value	process_sys_typename(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_have_same_typename(	FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_function_return_type(		FuncFoundTask& task );
+	FuncExecReturn::Value	process_sys_are_nil(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_bool(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_string(		FuncFoundTask& task );
 	FuncExecReturn::Value	process_sys_are_list(		FuncFoundTask& task );

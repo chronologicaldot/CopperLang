@@ -1,4 +1,11 @@
 ===========
+2024/8/17
+
+- Corrected for-loop int comparisons to cast Integer to UInteger for comparisons with size().
+- Removed const qualifiers from static type return functions where qualifier would be discarded anyways.
+
+
+===========
 2023/4/25 - 5/4
 
 cu_stringbasics

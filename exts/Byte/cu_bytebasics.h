@@ -91,7 +91,7 @@ struct ByteObject : public NumericObject {
 	virtual bool
 	supportsInterface( ObjectType::Value  typeValue ) const;
 
-	static const ObjectType::Value
+	static ObjectType::Value
 	StaticByteType() {
 		return static_cast<ObjectType::Value>( CU_BYTE_TYPE );
 	}

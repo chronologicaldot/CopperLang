@@ -190,6 +190,9 @@ Opcode::~Opcode() {
 
 	else if ( dtype == ODT_Address )
 		address->deref();
+		
+	else if ( dtype == ODT_CodeIndex )
+		delete data.target;
 }
 
 Opcode::Type
@@ -549,7 +552,7 @@ bool FunctionObject::getFunction( Function*& storage ) {
 #endif
 	return funcBox.obtain(storage);
 }
-
+/*
 void FunctionObject::setFrom( FunctionObject& pOther ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionObject::setFrom [%p]\n", (void*)this);
@@ -564,7 +567,7 @@ void FunctionObject::setFrom( FunctionObject& pOther ) {
 		throw SettingNullFunctionInContainerException();
 	}
 }
-
+*/
 void FunctionObject::createFromBody( Function&  source ) {
 	Function*  f = new Function();
 	f->set(source, false);
@@ -1195,6 +1198,7 @@ const char*
 ObjectTypeObject::dataToString() const {
 	switch( data ) {
 	case ObjectType::Function: return "{Function Type}";
+	case ObjectType::Nil: return "{Nil type}";
 	case ObjectType::Bool: return "{Bool Type}";
 	case ObjectType::String: return "{String Type}";
 	case ObjectType::List: return "{List Type}";
@@ -2334,8 +2338,10 @@ Engine::Engine()
 	, opcodeStrandStack()
 	, activeOpcodeStrandStack(&opcodeStrandStack)
 	, endMainCallback(REAL_NULL)
-	, builtinFunctions(50)
-	, foreignFunctions(100)
+	//, builtinFunctions(50)
+	, builtinFunctions(64)
+	//, foreignFunctions(100)
+	, foreignFunctions(128)
 	, ignoreBadForeignFunctionCalls(false)
 	, ownershipChangingEnabled(false)
 	, stackTracePrintingEnabled(false)
@@ -2711,7 +2717,7 @@ Engine::setVariableByAddress(
 			break;
 		}
 	} else {
-		lastObject.setWithoutRef(new FunctionObject());
+		lastObject.setWithoutRef(new NilObject()); // was new FunctionObject, but that's pointless.
 	}
 }
 
@@ -3070,6 +3076,7 @@ Engine::setupSystemFunctions() {
 	builtinFunctions.insert(String("typename_of"), SystemFunction::_typename);
 	builtinFunctions.insert(String("have_same_typename"), SystemFunction::_have_same_typename);
 	builtinFunctions.insert(String("ret_type"), SystemFunction::_function_return_type);
+	builtinFunctions.insert(String("are_nil"), SystemFunction::_are_nil);
 	builtinFunctions.insert(String("are_bool"), SystemFunction::_are_bool);
 	builtinFunctions.insert(String("are_string"), SystemFunction::_are_string);
 	builtinFunctions.insert(String("are_list"), SystemFunction::_are_list);
@@ -4609,9 +4616,9 @@ Engine::parseLoopStructure(
 	print(LogLevel::debug, "[DEBUG: Engine::parseLoopStructure");
 #endif
 
-	switch( task->state ) {
-
-	case LoopStructureParseTask::Start:
+	// This is outside the switch case because compilers think case-fallthrough is an error, which it's not an error here
+	if ( task->state == LoopStructureParseTask::Start )
+	{
 		// First token is the loop
 #ifdef COPPER_STRICT_CHECKS
 		if ( context.peekAtToken().type != TT_loop )
@@ -4635,6 +4642,12 @@ Engine::parseLoopStructure(
 
 		// Scan the body first to make sure that it's all there. Once that's confirmed, I can collect the tokens.
 		task->state = LoopStructureParseTask::CollectBody;
+	}
+
+	switch( task->state ) {
+
+	case LoopStructureParseTask::Start:
+		break;
 
 	case LoopStructureParseTask::CollectBody:
 
@@ -4667,9 +4680,8 @@ Engine::parseLoopStructure(
 			//print(LogLevel::error, "Stream ended before loop structure was completed.");
 			print(LogLevel::error, EngineMessage::StreamHaltedParsingNotDone);
 			return ParseTask::Result::syntax_error;
-		} else {
-			return ParseTask::Result::need_more;
-		}
+		} // else
+		return ParseTask::Result::need_more;
 
 	case LoopStructureParseTask::AwaitFinish:
 		return ParseLoop_AwaitFinish(task, context);
@@ -4677,6 +4689,8 @@ Engine::parseLoopStructure(
 	default:
 		throw BadParserStateException();
 	}
+	// Should never be reached
+	return ParseTask::Result::task_done;
 }
 
 ParseTask::Result::Value
@@ -5169,7 +5183,7 @@ Engine::operate(
 		if ( notNull(variable) ) {
 			lastObject.set( variable->getRawContainer() );
 		} else {
-			lastObject.setWithoutRef( new FunctionObject() );
+			lastObject.setWithoutRef( new NilObject() ); // was new FunctionObject, but that's pointless
 		}
 		break;
 
@@ -5395,7 +5409,8 @@ Engine::runFunctionObject(
 	}
 
 	// Set default result value (required especially for empty functions)
-	lastObject.setWithoutRef(new FunctionObject());
+	//lastObject.setWithoutRef(new FunctionObject()); // <- REALLY SLOW!
+	lastObject.setWithoutRef(new NilObject());
 
 	// Parse function body if not done yet.
 	// If function body contained errors, return error.
@@ -5503,7 +5518,8 @@ Engine::setupFunctionExecution(
 	print(LogLevel::debug, "[DEBUG: Engine::setupFunctionExecution");
 #endif
 	// Protect from polution and allow for functions to have a default return.
-	lastObject.setWithoutRef(new FunctionObject());
+	//lastObject.setWithoutRef(new FunctionObject()); <- WAY TOO FREAKING SLOW
+	lastObject.setWithoutRef(new NilObject()); // Alittle slow because of dynamic allocation, but far faster than the above
 	FuncExecReturn::Value result;
 
 	if ( ! task.getAddress().has() )
@@ -5658,6 +5674,9 @@ Engine::setupBuiltinFunctionExecution(
 
 	case SystemFunction::_function_return_type:
 		return process_sys_function_return_type(task);
+		
+	case SystemFunction::_are_nil:
+		return process_sys_are_nil(task);
 
 	case SystemFunction::_are_bool:
 		return process_sys_are_bool(task);
@@ -5816,7 +5835,7 @@ Engine::setupForeignFunctionExecution(
 	case ForeignFunc::NONFATAL:
 		if ( ignoreBadForeignFunctionCalls )
 			break;
-		// Pass through
+		return FuncExecReturn::ErrorOnRun;
 
 	case ForeignFunc::FATAL:
 		return FuncExecReturn::ErrorOnRun;
@@ -6096,7 +6115,7 @@ Engine::run_Own(
 #ifdef COPPER_DEBUG_ENGINE_MESSAGES
 	print(LogLevel::debug, "[DEBUG: Engine::run_Own");
 #endif
-	lastObject.setWithoutRef(new FunctionObject());
+	lastObject.setWithoutRef(new NilObject()); // was new FunctionObject but that's pointless
 	if ( !ownershipChangingEnabled ) {
 		//print(LogLevel::warning, "Ownership changing is disabled.");
 		print(LogLevel::warning, EngineMessage::PointerNewOwnershipDisabled);
@@ -6546,7 +6565,7 @@ Engine::process_sys_set_member(
 	if ( task.args.size() != 3 ) {
 		printSystemFunctionWrongArgCount( SystemFunction::_set_member, task.args.size(), 3 );
 
-		lastObject.setWithoutRef(new FunctionObject());
+		//lastObject.setWithoutRef(new NilObject()); // was new FunctionObject. Unnecessary.
 		return FuncExecReturn::ErrorOnRun;
 	}
 	// First parameter should be the parent function of the members
@@ -6591,7 +6610,7 @@ Engine::process_sys_set_member(
 	// Third parameter can be anything
 	argsIter.next();
 	parentFunc->getPersistentScope().setVariableFrom( memberName, *argsIter, false );
-	lastObject.setWithoutRef(new FunctionObject());
+	//lastObject.setWithoutRef(new NilObject()); // was new FunctionObject. Unnecessary.
 	return FuncExecReturn::Ran;
 }
 
@@ -6645,7 +6664,7 @@ Engine::process_sys_union(
 	ArgsIter  argsIter = task.args.start();
 	if ( !argsIter.has() ) {
 		//print(LogLevel::info, "union function called without parameters. Default return is empty function.");
-		lastObject.setWithoutRef(new FunctionObject());
+		//lastObject.setWithoutRef(new NilObject()); // was new FunctionObject. Unnecessary.
 		return FuncExecReturn::Ran;
 	}
 	FunctionObject*  finalFC = new FunctionObject();
@@ -6852,7 +6871,7 @@ Engine::process_sys_function_return_type(
 
 	ArgsIter argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		lastObject.setWithoutRef(new FunctionObject());
+		//lastObject.setWithoutRef(new NilObject()); // was new FunctionObject. Unnecessary.
 		return FuncExecReturn::Ran;
 	}
 
@@ -6878,6 +6897,25 @@ Engine::process_sys_function_return_type(
 		return FuncExecReturn::ErrorOnRun;
 	}
 
+	return FuncExecReturn::Ran;
+}
+
+FuncExecReturn::Value
+Engine::process_sys_are_nil(
+	FuncFoundTask& task
+) {
+	ArgsIter argsIter = task.args.start();
+	if ( !argsIter.has() ) {
+		lastObject.setWithoutRef(new BoolObject(false));
+		return FuncExecReturn::Ran;
+	}
+	// Check all parameters
+	bool out = true;
+	do {
+		out = isNilObject(**argsIter);
+		if ( !out) break;
+	} while ( argsIter.next() );
+	lastObject.setWithoutRef(new BoolObject(out));
 	return FuncExecReturn::Ran;
 }
 
@@ -7082,6 +7120,7 @@ Engine::process_sys_construct_from_type(
 	}
 	switch( typeToConstruct )
 	{
+	case ObjectType::Nil: returnObject = new NilObject(); break;
 	case ObjectType::Bool:  returnObject = new BoolObject(false);  break;
 	case ObjectType::String:  returnObject = new StringObject("");  break;
 	case ObjectType::List:  returnObject = new ListObject();  break;
@@ -7107,7 +7146,7 @@ Engine::process_sys_construct_from_type(
 
 	if ( isNull( returnObject ) ) {
 		print( LogLevel::warning, EngineMessage::CouldNotConstructRequestedType );
-		returnObject = new FunctionObject();
+		returnObject = new NilObject();
 	}
 
 	lastObject.setWithoutRef( returnObject );
@@ -7140,6 +7179,9 @@ Engine::process_sys_construct_from_name(
 	Object*  returnObject = REAL_NULL;
 
 #ifdef COPPER_ENABLE_CONSTRUCTING_BUILTINS_BY_NAME
+	if ( name.equals(NilObject::StaticTypeName()) ) {
+		returnObject = new NilObject();
+	}
 	if ( name.equals(BoolObject::StaticTypeName()) ) {
 		returnObject = new BoolObject(false);
 	}
@@ -7169,7 +7211,7 @@ Engine::process_sys_construct_from_name(
 
 	if ( isNull( returnObject ) ) {
 		print( LogLevel::warning, EngineMessage::CouldNotConstructRequestedType );
-		returnObject = new FunctionObject();
+		returnObject = new NilObject();
 	}
 
 	lastObject.setWithoutRef(returnObject);

@@ -75,7 +75,7 @@ public:
 	virtual bool
 	supportsInterface( ObjectType::Value  typeValue ) const;
 
-	static const ObjectType::Value
+	static ObjectType::Value
 	StaticClockTimeType() {
 		return static_cast<ObjectType::Value>( CU_CLOCK_TIME_TYPE );
 	}

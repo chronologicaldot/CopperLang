@@ -43,7 +43,7 @@ convert_bytestr_to_dcml( const String& s )
 	char* ptr = (char*)&dest;
 	Integer bytecount = sizeof(Decimal);
 	Integer i=0;
-	for (i = 0; i < bytecount && i < s.size(); ++i)
+	for (i = 0; i < bytecount && (UInteger)i < s.size(); ++i)
 	{
 		ptr[i] = s[i];
 	}

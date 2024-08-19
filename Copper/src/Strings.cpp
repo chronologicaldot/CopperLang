@@ -306,7 +306,7 @@ String::String()
 	: str(0)
 	, len(0)
 {
-	str = new char[len];
+	str = new char[len+1]; // fixed bad assignement thanks to valgrind
 	str[0] = '\0'; // only for returning as c-strings
 }
 
@@ -376,9 +376,9 @@ String::steal( String& pSource ) {
 		return;
 
 	if ( str )
-		delete str;
+		delete[] str;
 	str = pSource.str;
-	pSource.str = 0;
+	pSource.str = new char[1];
 	len = pSource.len;
 	pSource.len = 0;
 }
@@ -429,7 +429,7 @@ String& String::operator= ( const char* pString )
 
 String& String::operator= ( const CharList& pList )
 {
-	delete str;
+	delete[] str;
 	len = 0;
 	if ( ! pList.has() ) {
 		str = new char[1];

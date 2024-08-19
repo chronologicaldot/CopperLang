@@ -121,7 +121,7 @@ SubString( FFIServices& ffi ) {
 		while ( end < 0 )
 			end += str.size();
 		
-		for(; idx < str.size() && idx <= end; ++idx)
+		for(; (UInteger)idx < str.size() && idx <= end; ++idx)
 		{
 			substr.append(str[idx]);
 		}

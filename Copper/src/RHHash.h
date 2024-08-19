@@ -53,9 +53,19 @@ public:
 			clear();
 		}
 
+		Bucket& operator= (const Bucket& b) {
+			if ( b.data ) {
+				data = new BucketData(b.data->name, b.data->item);
+			} else {
+				data = 0;
+			}
+			wasOccupied = false;
+			return *this;
+		}
+
 		void clear() {
 			if ( data ) {
-				delete data; // This line is causing the crash
+				delete data; // This line was causing a crash
 				data = 0;
 				wasOccupied = true;
 			}
@@ -92,6 +102,12 @@ RobinHoodHash<T>::RobinHoodHash(uint pInitSize)
 	: size(pInitSize)
 	, occupancy(0)
 {
+	// NOTE: These loops don't seem to impact speed much, and they provide safety.
+	// Create a power of 2 size
+	uint realSize = 1;
+	for(; realSize < size; realSize <<= 1);
+	size = realSize;
+
 	//buckets = new Bucket[size]();
 	buckets = new Bucket[size];
 	uint i = 0;
@@ -144,12 +160,17 @@ typename RobinHoodHash<T>::Bucket* RobinHoodHash<T>::get(uint pIndex) {
 
 template<class T>
 void RobinHoodHash<T>::jump(uint& pIndex) {
-	pIndex = (pIndex + 1) % size; // Safe jump
+	//pIndex = (pIndex + 1) % size; // Safe jump - REALLY SLOW
+	// The following requires a size of a power of 2
+	// See https://craftinginterpreters.com/optimization.html
+	pIndex = (pIndex + 1) & (size - 1);
 }
 
 template<class T>
 uint RobinHoodHash<T>::getInitKey(const String& pName) {
-	return pName.keyValue() % size;
+	//return pName.keyValue() % size; // REALLY SLOW
+	// The following requires a size of a power of 2
+	return pName.keyValue() & (size - 1);
 }
 
 template<class T>
@@ -196,6 +217,8 @@ T* RobinHoodHash<T>::insert(const String& pName, T pItem) {
 		// else data != 0
 		if ( bucket->data->name.equals(floatData->name) ) {
 			// Replacing data should only be done directly, via getBucketdata()
+			// Smelled like a memory leak, so I started deleting floatData.
+			delete floatData;
 			return itemPtr;
 		}
 		// Compare delays to reach
@@ -237,6 +260,8 @@ T* RobinHoodHash<T>::insert(const String& pName) {
 		// else data != 0
 		if ( bucket->data->name.equals(floatData->name) ) {
 			// Replacing data should only be done directly, via getBucketdata()
+			// Smelled like a memory leak, so I started deleting floatData.
+			delete floatData;
 			return itemPtr;
 		}
 		// Compare delays to reach

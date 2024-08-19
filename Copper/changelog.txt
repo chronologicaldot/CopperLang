@@ -1,7 +1,14 @@
 ===================
-v 6-0.7
+v 6-0.71
 
 - Optimized variable address resolution, making calls to built-in functions O(1) speed.
+- Fixed memory leaks with strings.
+- Fixed memory leak in opcode for not deleting target
+- Added NilObject type
+- Changed Engine::setupFunctionExecution() to set lastObject to new NilObject to save speed.
+- Added are_nil() function to Engine
+- Changed language version to 4 since it now has nil.
+- Changed many other new FunctionObject constructions in Engine functions returning this as default value.
 
 
 ===================

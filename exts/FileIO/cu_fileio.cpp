@@ -185,7 +185,7 @@ FileObject::read( void* filebuffer, size_t bytecount ) {
 
 Integer
 FileObject::write( const util::String&  in ) {
-	if ( !isOpen() || mode != _WRITE && mode != _APPEND )
+	if ( !isOpen() || (mode != _WRITE && mode != _APPEND) )
 		return 0;
 
 	Integer written = (Integer) fwrite(in.c_str(), 1, (size_t)in.size(), file);

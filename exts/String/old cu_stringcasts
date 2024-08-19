@@ -1,0 +1,43 @@
+struct StoI {
+	union {
+		unsigned char s[sizeof(Integer)];
+		Integer i;
+	} data;
+};
+
+// Unknown number of bytes for Integer.
+// C version
+Integer convert_bytestr_to_int( const String& s )
+{
+	unsigned char src[sizeof(Integer)];
+	Integer dest;
+	Integer bytecount = sizeof(Integer);
+	Integer i=0;
+	//StoI caster;
+	if ( OSInfo::isSystemBigEndian() )
+	{
+		for (i = 0; i < bytecount && i < s.size(); ++i) {
+			src[bytecount - i - 1] = s[i];
+			//caster.data.s[bytecount - i - 1] = s[i];
+		}
+		for (; i < bytecount; ++i)
+		{
+			src[bytecount - i - 1] = 0;
+			//caster.data.s[bytecount - i - 1] = 0;
+		}
+	} else {
+		for (i = 0; i < bytecount && i < s.size(); ++i)
+		{
+			src[i] = s[i];
+			//caster.data.s[i] = s[i];
+		}
+		for (; i < bytecount; ++i)
+		{
+			src[i] = 0;
+			//caster.data.s[i] = 0;
+		}
+	}
+	dest = *static_cast<Integer*>src;
+	//dest = caster.data.i;
+	return dest;
+};

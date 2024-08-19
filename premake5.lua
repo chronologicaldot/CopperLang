@@ -20,9 +20,11 @@ workspace "Copper"
 		warnings "Extra"
 
 	filter { "configurations:DebugAll", "action:gmake" }
-		buildoptions " -g"
+		buildoptions " -rdynamic -g -ggdb -O0 -pg"
+		--buildoptions "  -rdynamic -g -O0 -Wall -static -pg"
+		linkoptions " -pg "
 
-	filter { "configurations:DebugFe" }
+	filter { "configurations:DebugFe or DebugAll" }
 		flags { "FatalWarnings" }
 
 	filter { "configurations:DebugFe", "action:gmake" }

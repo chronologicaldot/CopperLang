@@ -96,7 +96,7 @@ struct FileModeObject : public Object {
 		return typeValue == StaticFileModeType();
 	}
 
-	static const ObjectType::Value
+	static ObjectType::Value
 	StaticFileModeType() {
 		return static_cast<ObjectType::Value>( CU_FILEMODE_TYPE );
 	}
@@ -169,7 +169,7 @@ public:
 		return typeValue == StaticFileType();
 	}
 
-	static const ObjectType::Value
+	static ObjectType::Value
 	StaticFileType() {
 		return static_cast<ObjectType::Value>( CU_FILE_TYPE );
 	}
