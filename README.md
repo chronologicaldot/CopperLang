@@ -11,7 +11,7 @@ This repository contains an interpreter that runs code of the Copper language - 
 
 The language is described in Copper/docs/CopperLangGuide.html and on the [Copper blog](http://copperlang.wordpress.com).
 
-Copper is a statically-typed, simple syntax language revolving around the concept of function-objects. All variables are instantiated upon declaration and can contain only functions, but functions can return any object. There is no nil/null/void, so the default return from a function is an empty function. The language uses if/elif/else and loop structures.
+Copper is a statically-typed, simple syntax language revolving around the concept of function-objects. All variables are instantiated upon declaration and can contain only functions, but functions can return any object. The language uses if/elif/else and loop structures.
 
 Quick example:
 ```Copper
