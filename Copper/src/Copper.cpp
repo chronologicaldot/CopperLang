@@ -461,7 +461,7 @@ FunctionObject::FunctionObject(Function* pFunction, UInteger id)
 	funcBox.set(pFunction);
 }
 
-FunctionObject::FunctionObject()
+FunctionObject::FunctionObject( bool init )
 	: Object(FunctionObject::object_type)
 	, funcBox()
 	, owner(REAL_NULL)
@@ -471,7 +471,13 @@ FunctionObject::FunctionObject()
 	std::printf("[DEBUG: FunctionObject constructor 2 [%p]\n", (void*)this);
 #endif
 	type = ObjectType::Function;
-	funcBox.setWithoutRef(new Function());
+	if ( init ) {
+		funcBox.setWithoutRef(new Function()); // This is the original code prior to Aug 28, 2024, which works fine
+	} else {
+		// This caused a segmentation fault because old createInitialized code (now changed) assumed the function existed
+		// so I had to modify FunctionObject::getFunction
+		funcBox.setWithoutRef(REAL_NULL);
+	}
 }
 
 FunctionObject::FunctionObject(const FunctionObject& pOther)
@@ -550,7 +556,15 @@ bool FunctionObject::getFunction( Function*& storage ) {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: FunctionObject::getFunction [%p]\n", (void*)this);
 #endif
-	return funcBox.obtain(storage);
+	// Old approach before change in FunctionObject(bool)
+	//return funcBox.obtain(storage);
+	
+	// New approach
+	if ( ! funcBox.obtain(storage) ) {
+		funcBox.setWithoutRef(new Function());
+		funcBox.obtain(storage);
+	}
+	return true;
 }
 /*
 void FunctionObject::setFrom( FunctionObject& pOther ) {

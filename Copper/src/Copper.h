@@ -1698,7 +1698,7 @@ public:
 
 	explicit FunctionObject(Function* pFunction, UInteger id=0);
 
-	FunctionObject();
+	FunctionObject( bool init = false );
 
 	// Should only be used for data transfer where the old copy immediately dies
 	FunctionObject(const FunctionObject& pOther);
@@ -1729,7 +1729,7 @@ public:
 
 	// Create a function container initialized to a copy of the given data
 	static FunctionObject* createInitialized(Object* pData) {
-		FunctionObject* fc = new FunctionObject();
+		FunctionObject* fc = new FunctionObject(true);
 		Function* f;
 		fc->getFunction(f);
 		if ( notNull(pData) ) {
@@ -1741,7 +1741,7 @@ public:
 
 	// Create a function container initialized to the given data
 	static FunctionObject* createInitializedNoCopy(Object* pData) {
-		FunctionObject* fc = new FunctionObject();
+		FunctionObject* fc = new FunctionObject(true);
 		Function* f;
 		fc->getFunction(f);
 		if ( notNull(pData) ) {

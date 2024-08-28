@@ -9,6 +9,7 @@ v 6-0.71
 - Added are_nil() function to Engine
 - Changed language version to 4 since it now has nil.
 - Changed many other new FunctionObject constructions in Engine functions returning this as default value.
+- Changed FunctionObject constructor to instantiate function only when requested, and changed FunctionObject::getFunction to always instantiate.
 
 
 ===================
