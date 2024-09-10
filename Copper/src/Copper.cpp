@@ -609,7 +609,7 @@ Object* FunctionObject::copy() {
 
 
 Variable::Variable()
-	: box(new FunctionObject())
+	: box(new FunctionObject(false))
 {
 #ifdef COPPER_VAR_LEVEL_MESSAGES
 	std::printf("[DEBUG: Variable constructor [%p]\n", (void*)this);
@@ -636,7 +636,7 @@ Variable::reset() {
 #endif
 	box->disown(this);
 	box->deref();
-	box = new FunctionObject();
+	box = new FunctionObject(true);
 	box->own(this);
 }
 

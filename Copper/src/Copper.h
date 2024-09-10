@@ -1698,7 +1698,7 @@ public:
 
 	explicit FunctionObject(Function* pFunction, UInteger id=0);
 
-	FunctionObject( bool init = false );
+	FunctionObject( bool init = true );
 
 	// Should only be used for data transfer where the old copy immediately dies
 	FunctionObject(const FunctionObject& pOther);
