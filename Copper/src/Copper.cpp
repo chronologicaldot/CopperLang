@@ -557,14 +557,16 @@ bool FunctionObject::getFunction( Function*& storage ) {
 	std::printf("[DEBUG: FunctionObject::getFunction [%p]\n", (void*)this);
 #endif
 	// Old approach before change in FunctionObject(bool)
-	//return funcBox.obtain(storage);
+	return funcBox.obtain(storage);
 	
-	// New approach
+	// This approach causes a memory leak because own() isn't always called
+	/*
 	if ( ! funcBox.obtain(storage) ) {
 		funcBox.setWithoutRef(new Function());
 		funcBox.obtain(storage);
 	}
 	return true;
+	*/
 }
 /*
 void FunctionObject::setFrom( FunctionObject& pOther ) {
@@ -730,7 +732,7 @@ Variable::getFunction(Logger* logger) {
 	// This happens when this variable is a pointer and the variable-it-points-to changes.
 	box->disown(this);
 	box->deref();
-	box = new FunctionObject();
+	box = new FunctionObject(true); // version 0.71 change: Initialize function because it's needed now
 	box->own(this);
 	box->getFunction(f);
 	return f;

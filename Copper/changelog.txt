@@ -1,4 +1,10 @@
 ===================
+v 6-0.711
+
+- Reverted FunctionObject::getFunction() to no longer always instantiate function because this caused memory leaks with cyclic referencing. Instead, changed Variable::getFunction() to instatiate function and own it when the function was finally needed.
+
+
+===================
 v 6-0.71
 
 - Optimized variable address resolution, making calls to built-in functions O(1) speed.
