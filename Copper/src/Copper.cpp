@@ -725,9 +725,11 @@ Variable::getFunction(Logger* logger) {
 	// else:
 	// I need to print the variable name (which is only in the scope now)
 	// and it would be good to have all the stack info (which can be obtained otherwise).
-	if ( notNull(logger) ) {
-		logger->print(LogLevel::warning, EngineMessage::NoFunctionInContainer);
-	}
+	// Removed warning because FunctionObject is not initialized by default anymore, so this comes up
+	// whenever a member is accessed without initializing the base variable.
+	//if ( notNull(logger) ) {
+	//	logger->print(LogLevel::warning, EngineMessage::NoFunctionInContainer);
+	//}
 	// Conveniently reset this variable if the function no longer exists.
 	// This happens when this variable is a pointer and the variable-it-points-to changes.
 	box->disown(this);

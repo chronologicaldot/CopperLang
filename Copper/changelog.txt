@@ -3,6 +3,7 @@ v 6-0.711
 
 - Reverted FunctionObject::getFunction() to no longer always instantiate function because this caused memory leaks with cyclic referencing. Instead, changed Variable::getFunction() to instatiate function and own it when the function was finally needed.
 - Changed FunctionObject(bool) constructor to always true parameter (expected value), whereas Variable constructor sets it to false (to save memory).
+- Removed warning of no function container in Variable::getFunction because functions are not initialized in variables by default anymore.
 
 
 ===================
