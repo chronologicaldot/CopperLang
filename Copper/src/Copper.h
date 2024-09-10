@@ -1861,7 +1861,7 @@ public:
 	
 	static const char*
 	StaticTypeName() {
-		return "bool";
+		return "nil";
 	}
 
 	virtual bool

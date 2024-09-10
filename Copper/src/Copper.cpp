@@ -6681,8 +6681,8 @@ Engine::process_sys_union(
 #endif
 	ArgsIter  argsIter = task.args.start();
 	if ( !argsIter.has() ) {
-		//print(LogLevel::info, "union function called without parameters. Default return is empty function.");
-		//lastObject.setWithoutRef(new NilObject()); // was new FunctionObject. Unnecessary.
+		print(LogLevel::info, "union function called without parameters. Default return is empty function.");
+		lastObject.setWithoutRef(new FunctionObject()); // I want the default return of union to be empty function
 		return FuncExecReturn::Ran;
 	}
 	FunctionObject*  finalFC = new FunctionObject();
